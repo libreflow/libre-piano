@@ -32,6 +32,28 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
+/* Loi de Hick : regrouper les 8 contrôles en 4 sections sémantiques
+   réduit la charge cognitive ; le séparateur matérialise la frontière. */
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.control-group + .control-group {
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 0.75rem;
+}
+
+@media (max-width: 880px) {
+  .control-group + .control-group {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
 .playback-controls select {
   border-radius: 8px;
   border: 1px solid var(--border-strong);
@@ -206,7 +228,8 @@ button:active:not(:disabled) {
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: var(--text-primary);
-  padding: 0.25rem 0.4rem;
+  padding: 0.35rem 0.4rem;
+  min-height: 24px;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
@@ -288,6 +311,13 @@ button:active:not(:disabled) {
 .track-list input[type="checkbox"] {
   margin-top: 0.25rem;
   accent-color: var(--play);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* Toute la ligne cliquable : cible confortable (loi de Fitts) */
+.track-list label {
   cursor: pointer;
 }
 
@@ -473,7 +503,8 @@ button:active:not(:disabled) {
   font-size: 0.8rem;
   font-weight: 600;
   font-family: inherit;
-  padding: 0.35rem 0.7rem;
+  padding: 0.45rem 0.8rem;
+  min-height: 24px;
   border-radius: 6px;
   cursor: pointer;
   transition:

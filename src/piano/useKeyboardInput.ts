@@ -9,6 +9,7 @@ interface KeyboardHandlers {
   noteOff: (note: string) => void;
   onSustainChange: (on: boolean) => void;
   releaseSustained: () => void;
+  onTogglePlayback?: () => void;
 }
 
 // Clavier PC -> touches du piano (désactivé pendant la lecture auto)
@@ -20,6 +21,7 @@ export function useKeyboardInput({
   noteOff,
   onSustainChange,
   releaseSustained,
+  onTogglePlayback,
 }: KeyboardHandlers) {
   const activeKeyboardKeys = useRef<Set<string>>(new Set());
   const sustainRef = useRef(false);
@@ -38,6 +40,14 @@ export function useKeyboardInput({
         if (!sustainRef.current && !isPlayingRef.current) {
           sustainRef.current = true;
           onSustainChange(true);
+        }
+        return;
+      }
+      if (e.code === "Enter" && onTogglePlayback) {
+        const target = e.target as HTMLElement;
+        if (!target.closest("button, select, input, a")) {
+          e.preventDefault();
+          onTogglePlayback();
         }
         return;
       }
@@ -71,7 +81,15 @@ export function useKeyboardInput({
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [isPlayingRef, keyToNote, noteOn, noteOff, onSustainChange, releaseSustain]);
+  }, [
+    isPlayingRef,
+    keyToNote,
+    noteOn,
+    noteOff,
+    onSustainChange,
+    onTogglePlayback,
+    releaseSustain,
+  ]);
 
   return { sustainRef };
 }

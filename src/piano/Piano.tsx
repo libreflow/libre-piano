@@ -182,6 +182,10 @@ export default function Piano() {
     noteOff,
     onSustainChange: setSustainOn,
     releaseSustained,
+    onTogglePlayback: () => {
+      if (isPlayingRef.current) stopPlaybackAndClear();
+      else void playSong();
+    },
   });
 
   // Arrêt de la lecture + nettoyage des touches en surbrillance
@@ -304,7 +308,9 @@ export default function Piano() {
   return (
     <div className="piano-wrap">
       {status === "loading" && (
-        <div className="piano-loading">Chargement des sons du piano…</div>
+        <div className="piano-loading" role="status" aria-live="polite">
+          Chargement des sons du piano…
+        </div>
       )}
       {status === "error" && (
         <div className="piano-loading">
@@ -312,121 +318,128 @@ export default function Piano() {
         </div>
       )}
 
-      <div className="playback-controls">
-        <select
-          value={selectedSongId}
-          onChange={(e) => setSelectedSongId(e.target.value)}
-          disabled={isPlaying}
-        >
-          {allSongs.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.source === "imported" ? `♪ ${s.title}` : s.title}
-            </option>
-          ))}
-        </select>
-
-        <label className="speed-label">
-          Vitesse
-          <input
-            type="range"
-            min={SPEED_MIN_PERCENT}
-            max={SPEED_MAX_PERCENT}
-            step={SPEED_STEP_PERCENT}
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
+      <div className="playback-controls" role="toolbar" aria-label="Contrôles du piano">
+        <div className="control-group" aria-label="Lecture">
+          <select
+            value={selectedSongId}
+            onChange={(e) => setSelectedSongId(e.target.value)}
             disabled={isPlaying}
-          />
-          <span>{speed}%</span>
-        </label>
+          >
+            {allSongs.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.source === "imported" ? `♪ ${s.title}` : s.title}
+              </option>
+            ))}
+          </select>
 
-        <label className="speed-label volume">
-          <VolumeIcon />
-          <input
-            type="range"
-            min={VOLUME_MIN_PERCENT}
-            max={VOLUME_MAX_PERCENT}
-            step={5}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-          />
-          <span>{volume}%</span>
-        </label>
-
-        {!isPlaying ? (
-          <button className="play-btn" onClick={playSong} disabled={status !== "ready"}>
-            <PlayIcon /> Lecture
-          </button>
-        ) : (
-          <button className="stop-btn" onClick={stopPlaybackAndClear}>
-            <StopIcon /> Arrêter
-          </button>
-        )}
-
-        <button
-          className="import-btn"
-          onClick={handleImportClick}
-          disabled={isPlaying || isImporting}
-        >
-          {isImporting ? (
-            "Import…"
-          ) : (
-            <>
-              <ImportIcon /> Importer
-            </>
-          )}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".mid,.midi"
-          onChange={handleFileChange}
-          style={{ display: "none" }}
-        />
-
-        <div className="segmented" role="radiogroup" aria-label="Disposition du clavier">
-          {(["azerty", "qwerty"] as const).map((layout) => (
-            <button
-              key={layout}
-              role="radio"
-              aria-checked={keyboardLayout === layout}
-              className={keyboardLayout === layout ? "seg-active" : ""}
-              onClick={() => setKeyboardLayout(layout)}
-              title={`Disposition ${layout.toUpperCase()}`}
-            >
-              <KeyboardIcon />
-              {layout.toUpperCase()}
+          {!isPlaying ? (
+            <button className="play-btn" onClick={playSong} disabled={status !== "ready"}>
+              <PlayIcon /> Lecture
             </button>
-          ))}
+          ) : (
+            <button className="stop-btn" onClick={stopPlaybackAndClear}>
+              <StopIcon /> Arrêter
+            </button>
+          )}
+
+          <button
+            className="import-btn"
+            onClick={handleImportClick}
+            disabled={isPlaying || isImporting}
+          >
+            {isImporting ? (
+              "Import…"
+            ) : (
+              <>
+                <ImportIcon /> Importer
+              </>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".mid,.midi"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
         </div>
 
-        <button
-          className="import-btn"
-          onClick={() => setShowKeyLabels((v) => !v)}
-          title="Afficher/masquer les lettres sur les touches"
-          aria-pressed={showKeyLabels}
-        >
-          <TagsIcon />
-          {showKeyLabels ? "Masquer lettres" : "Afficher lettres"}
-        </button>
+        <div className="control-group" aria-label="Réglages">
+          <label className="speed-label">
+            Vitesse
+            <input
+              type="range"
+              min={SPEED_MIN_PERCENT}
+              max={SPEED_MAX_PERCENT}
+              step={SPEED_STEP_PERCENT}
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              disabled={isPlaying}
+            />
+            <span>{speed}%</span>
+          </label>
 
-        <button
-          className="import-btn"
-          onClick={toggleFullscreen}
-          aria-pressed={isFullscreen}
-        >
-          {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
-          {isFullscreen ? "Quitter" : "Plein écran"}
-        </button>
+          <label className="speed-label volume">
+            <VolumeIcon />
+            <input
+              type="range"
+              min={VOLUME_MIN_PERCENT}
+              max={VOLUME_MAX_PERCENT}
+              step={5}
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+            />
+            <span>{volume}%</span>
+          </label>
+        </div>
 
-        <span
-          className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
-          title="Maintenir la barre d'espace = pédale de sustain"
-        >
-          <SustainIcon />
-          {sustainOn ? "Sustain" : "Espace"}
-        </span>
+        <div className="control-group" aria-label="Disposition du clavier">
+          <div className="segmented" role="radiogroup" aria-label="AZERTY ou QWERTY">
+            {(["azerty", "qwerty"] as const).map((layout) => (
+              <button
+                key={layout}
+                role="radio"
+                aria-checked={keyboardLayout === layout}
+                className={keyboardLayout === layout ? "seg-active" : ""}
+                onClick={() => setKeyboardLayout(layout)}
+                title={`Disposition ${layout.toUpperCase()}`}
+              >
+                <KeyboardIcon />
+                {layout.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="control-group" aria-label="Affichage">
+          <button
+            className="import-btn"
+            onClick={() => setShowKeyLabels((v) => !v)}
+            title="Afficher/masquer les lettres sur les touches"
+            aria-pressed={showKeyLabels}
+          >
+            <TagsIcon />
+            {showKeyLabels ? "Masquer lettres" : "Afficher lettres"}
+          </button>
+
+          <button
+            className="import-btn"
+            onClick={toggleFullscreen}
+            aria-pressed={isFullscreen}
+          >
+            {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
+            {isFullscreen ? "Quitter" : "Plein écran"}
+          </button>
+
+          <span
+            className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
+            title="Maintenir la barre d'espace = pédale de sustain"
+          >
+            <SustainIcon />
+            {sustainOn ? "Sustain" : "Espace"}
+          </span>
+        </div>
       </div>
-
       <div className="loop-controls">
         <label className="loop-toggle">
           <input
