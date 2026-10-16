@@ -306,6 +306,8 @@ button:active:not(:disabled) {
 /* ---------- Clavier ---------- */
 
 .piano {
+  --key-w: 60px;
+  --key-h: 220px;
   position: relative;
   display: block;
   width: calc(var(--white-keys) * var(--key-w));
@@ -319,7 +321,6 @@ button:active:not(:disabled) {
 }
 
 .key {
-  --key-w: 60px;
   position: absolute;
   top: 0;
   border: 1px solid #0d0e18;

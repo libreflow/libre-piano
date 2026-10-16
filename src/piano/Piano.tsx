@@ -465,11 +465,7 @@ export default function Piano() {
 
       <div
         className={`piano ${isPlaying ? "piano-readonly" : ""}`}
-        style={{
-          ["--white-keys" as any]: WHITE_KEY_COUNT,
-          ["--key-w" as any]: "60px",
-          ["--key-h" as any]: "220px",
-        }}
+        style={{ ["--white-keys" as any]: WHITE_KEY_COUNT }}
       >
         {KEYS.filter((k) => !k.isBlack).map((k) => (
           <button
