@@ -28,6 +28,19 @@ import {
   VOLUME_MAX_PERCENT,
   DISPLAY_CHORD_RATIO_THRESHOLD,
 } from "./constants";
+import {
+  PlayIcon,
+  StopIcon,
+  ImportIcon,
+  KeyboardIcon,
+  TagsIcon,
+  ExpandIcon,
+  CollapseIcon,
+  SustainIcon,
+  LoopIcon,
+  VolumeIcon,
+  StarIcon,
+} from "./icons";
 import "./Piano.css";
 
 export default function Piano() {
@@ -307,7 +320,7 @@ export default function Piano() {
         >
           {allSongs.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.source === "imported" ? `📄 ${s.title}` : s.title}
+              {s.source === "imported" ? `♪ ${s.title}` : s.title}
             </option>
           ))}
         </select>
@@ -326,8 +339,8 @@ export default function Piano() {
           <span>{speed}%</span>
         </label>
 
-        <label className="speed-label">
-          🔊
+        <label className="speed-label volume">
+          <VolumeIcon />
           <input
             type="range"
             min={VOLUME_MIN_PERCENT}
@@ -341,11 +354,11 @@ export default function Piano() {
 
         {!isPlaying ? (
           <button className="play-btn" onClick={playSong} disabled={status !== "ready"}>
-            ▶ Lecture automatique
+            <PlayIcon /> Lecture
           </button>
         ) : (
           <button className="stop-btn" onClick={stopPlaybackAndClear}>
-            ⏹ Arrêter
+            <StopIcon /> Arrêter
           </button>
         )}
 
@@ -354,7 +367,13 @@ export default function Piano() {
           onClick={handleImportClick}
           disabled={isPlaying || isImporting}
         >
-          {isImporting ? "Import…" : "📁 Importer un MIDI"}
+          {isImporting ? (
+            "Import…"
+          ) : (
+            <>
+              <ImportIcon /> Importer
+            </>
+          )}
         </button>
         <input
           ref={fileInputRef}
@@ -364,18 +383,21 @@ export default function Piano() {
           style={{ display: "none" }}
         />
 
-        <label className="layout-select">
-          <span aria-hidden="true">⌨</span>
-          <select
-            value={keyboardLayout}
-            onChange={(e) => setKeyboardLayout(e.target.value as KeyboardLayout)}
-            title="Disposition du clavier"
-            aria-label="Disposition du clavier"
-          >
-            <option value="azerty">AZERTY</option>
-            <option value="qwerty">QWERTY</option>
-          </select>
-        </label>
+        <div className="segmented" role="radiogroup" aria-label="Disposition du clavier">
+          {(["azerty", "qwerty"] as const).map((layout) => (
+            <button
+              key={layout}
+              role="radio"
+              aria-checked={keyboardLayout === layout}
+              className={keyboardLayout === layout ? "seg-active" : ""}
+              onClick={() => setKeyboardLayout(layout)}
+              title={`Disposition ${layout.toUpperCase()}`}
+            >
+              <KeyboardIcon />
+              {layout.toUpperCase()}
+            </button>
+          ))}
+        </div>
 
         <button
           className="import-btn"
@@ -383,7 +405,8 @@ export default function Piano() {
           title="Afficher/masquer les lettres sur les touches"
           aria-pressed={showKeyLabels}
         >
-          {showKeyLabels ? "🔡 Masquer labels" : "🔡 Afficher labels"}
+          <TagsIcon />
+          {showKeyLabels ? "Masquer lettres" : "Afficher lettres"}
         </button>
 
         <button
@@ -391,14 +414,16 @@ export default function Piano() {
           onClick={toggleFullscreen}
           aria-pressed={isFullscreen}
         >
-          {isFullscreen ? "🗗 Quitter plein écran" : "⛶ Plein écran"}
+          {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
+          {isFullscreen ? "Quitter" : "Plein écran"}
         </button>
 
         <span
           className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
           title="Maintenir la barre d'espace = pédale de sustain"
         >
-          🦶 Pédale {sustainOn ? "ON" : "(Espace)"}
+          <SustainIcon />
+          {sustainOn ? "Sustain" : "Espace"}
         </span>
       </div>
 
@@ -410,7 +435,7 @@ export default function Piano() {
             onChange={(e) => setLoopEnabled(e.target.checked)}
             disabled={isPlaying}
           />
-          🔁 Boucle A-B
+          <LoopIcon /> Boucle A-B
         </label>
         <label className="loop-bound">
           Début
@@ -462,7 +487,11 @@ export default function Piano() {
                   <span className="track-info">
                     <span className="track-title">
                       {t.name} — {t.noteCount} notes
-                      {t.likelyMelody && " ⭐ probable mélodie"}
+                      {t.likelyMelody && (
+                        <span className="melody-tag">
+                          <StarIcon /> mélodie
+                        </span>
+                      )}
                     </span>
                     <span className="track-details">
                       tessiture {t.pitchRange} ·{" "}

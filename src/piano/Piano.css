@@ -85,10 +85,18 @@ button.stop-btn,
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   transition:
     background 0.15s,
     transform 0.1s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+button svg {
+  flex-shrink: 0;
 }
 
 button:active:not(:disabled) {
@@ -444,26 +452,70 @@ button:active:not(:disabled) {
   }
 }
 
-/* ---------- Sélecteur de disposition ---------- */
+/* ---------- Segmented control (disposition clavier) ---------- */
 
-.layout-select {
-  display: flex;
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  gap: 2px;
+}
+
+.segmented button {
+  display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.9rem;
+  border: none;
+  background: transparent;
   color: var(--text-secondary);
-}
-
-.layout-select select {
-  border-radius: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-input);
-  color: var(--text-primary);
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
-.layout-select select:hover {
-  border-color: var(--accent);
+.segmented button:hover {
+  color: var(--text-primary);
+}
+
+.segmented button.seg-active {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  box-shadow:
+    inset 0 0 0 1px var(--border-strong),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Tag mélodie (sélecteur de pistes) ---------- */
+
+.melody-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #ffd77a;
+  background: rgba(255, 200, 90, 0.12);
+  border: 1px solid rgba(255, 200, 90, 0.35);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.melody-tag svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Slider volume : icône alignée */
+.speed-label.volume svg {
+  color: var(--text-secondary);
 }

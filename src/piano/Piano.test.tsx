@@ -79,11 +79,13 @@ describe("Piano (rendu)", () => {
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
   });
 
-  it("permet de basculer la disposition du clavier", () => {
+  it("permet de basculer la disposition du clavier (segmented control)", () => {
     render(<Piano />);
-    const select = screen.getByLabelText("Disposition du clavier");
-    expect(select).toHaveValue("azerty");
-    fireEvent.change(select, { target: { value: "qwerty" } });
+    // AZERTY par défaut : C3 = Q
+    expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
+    const qwertyBtn = screen.getByRole("radio", { name: /QWERTY/i });
+    fireEvent.click(qwertyBtn);
+    // Après bascule : C3 = A (rangée ASDF)
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("A");
   });
 
