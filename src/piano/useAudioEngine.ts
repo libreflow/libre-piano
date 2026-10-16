@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sampler, getDestination, getTransport, tuneForLowLatency } from "./tone-gate";
-import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "../piano/constants";
+import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "./constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
 
 // Échantillons Salamander Grand Piano, servis localement depuis public/samples
-// (pas de dépendance réseau au lancement). Sampler repitch entre les
+// (pas de dépendance réseau au lancement). Tone.Sampler repitch entre les
 // notes enregistrées, pas besoin d'un échantillon par demi-ton.
-function createSampler(onLoaded: () => void, onError: () => void) {
+function createSampler(onLoaded: () => void, onError: () => void): Sampler {
   const urls: Record<string, string> = {
     A0: "A0.mp3",
     C1: "C1.mp3",
@@ -40,28 +40,53 @@ function createSampler(onLoaded: () => void, onError: () => void) {
     A7: "A7.mp3",
     C8: "C8.mp3",
   };
-  const sampler = new Sampler({
+  return new Sampler({
     urls,
     release: 1,
     baseUrl: "samples/",
     onload: onLoaded,
     onerror: onError,
   }).toDestination();
-  return sampler;
 }
+
+export const SAMPLE_COUNT = 30;
 
 export function useAudioEngine(volume: number) {
   const samplerRef = useRef<Sampler | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
+  // Progression : compte des mp3 effectivement téléchargés, pour afficher
+  // n/30 pendant le chargement plutôt qu'un indicateur indéterminé.
+  const [loadedCount, setLoadedCount] = useState(0);
 
   useEffect(() => {
     let disposed = false;
+    let loaded = 0;
     tuneForLowLatency();
+    // Tone télécharge les samples via fetch : on compte les réponses
+    // .mp3 pour suivre la progression (limite aux samples du piano).
+    const originalFetch = window.fetch;
+    window.fetch = ((input, init) => {
+      const promise = originalFetch(input, init);
+      const url =
+        typeof input === "string" ? input : String((input as URL).toString?.() ?? "");
+      if (url.includes("samples/")) {
+        promise.then(
+          () => {
+            loaded += 1;
+            if (!disposed) setLoadedCount(loaded);
+          },
+          () => {}
+        );
+      }
+      return promise;
+    }) as typeof window.fetch;
     samplerRef.current = createSampler(
       () => !disposed && setStatus("ready"),
       () => !disposed && setStatus("error")
     );
     return () => {
+      window.fetch = originalFetch;
+      disposed = true;
       disposed = true;
       samplerRef.current?.dispose();
       samplerRef.current = null;
@@ -91,5 +116,5 @@ export function useAudioEngine(volume: number) {
     []
   );
 
-  return { samplerRef, status, noteOn, noteOff, triggerAttackRelease };
+  return { samplerRef, status, loadedCount, noteOn, noteOff, triggerAttackRelease };
 }

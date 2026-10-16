@@ -6,16 +6,17 @@ interface Props {
 
 interface State {
   error: Error | null;
+  copied: boolean;
 }
 
 // En React 19, une exception non attrapée démonte toute l'arborescence :
 // sans boundary, un crash laisse un écran vide (juste le fond CSS).
 // On affiche l'erreur pour que le bug soit diagnostiquable.
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, copied: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { error };
+    return { error, copied: false };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {

@@ -11,15 +11,9 @@ import {
   LabelMode,
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
-import {
-  loadMidi,
-  summarizeTracks,
-  buildSongFromTracks,
-  TrackSummary,
-} from "./midi-import";
-import type { Midi } from "@tonejs/midi";
+import { useMidiImport } from "./useMidiImport";
 import { loadPersistedState, savePersistedState } from "./storage";
-import { useAudioEngine } from "./useAudioEngine";
+import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import { useKeyboardInput } from "./useKeyboardInput";
 import {
@@ -42,6 +36,7 @@ import {
   LoopIcon,
   VolumeIcon,
   StarIcon,
+  TrashIcon,
 } from "./icons";
 import "./Piano.css";
 
@@ -75,8 +70,10 @@ export default function Piano() {
   );
   const KEYS = useMemo(() => getKeys(keyboardLayout), [keyboardLayout]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // N'avertir qu'une fois par "session de dépassement" du quota.
+  const quotaWarnedRef = useRef(false);
 
   // Boucle A-B. Les bornes sont clampées : Number("") ou une saisie
   // invalide dans les <input type="number"> donne NaN, qu'on ramène à 0.
@@ -92,19 +89,10 @@ export default function Piano() {
     []
   );
 
-  // Sélecteur de pistes en attente de confirmation.
-  const [pendingImport, setPendingImport] = useState<{
-    midi: Midi;
-    title: string;
-    tracks: TrackSummary[];
-  } | null>(null);
-  const [selectedTrackIndices, setSelectedTrackIndices] = useState<Set<number>>(
-    new Set()
-  );
-
   const {
     samplerRef,
     status,
+    loadedCount,
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
     triggerAttackRelease,
@@ -164,7 +152,11 @@ export default function Piano() {
     });
   }, [samplerRef]);
 
-  const allSongs = [...BUILTIN_SONGS, ...importedSongs];
+  const allSongs = useMemo(() => [...BUILTIN_SONGS, ...importedSongs], [importedSongs]);
+  const selectedSong = useMemo(
+    () => allSongs.find((s) => s.id === selectedSongId),
+    [allSongs, selectedSongId]
+  );
   const { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback } =
     usePlayback(
       status === "ready",
@@ -197,9 +189,40 @@ export default function Piano() {
     setAutoActiveNotes(new Set());
   }, [stopPlayback]);
 
+  const addImportedSong = useCallback((song: Song) => {
+    setImportedSongs((prev) => [...prev, song]);
+    setSelectedSongId(song.id);
+  }, []);
+
+  const {
+    pendingImport,
+    selectedTrackIndices,
+    isImporting,
+    importFile,
+    toggleTrack,
+    confirmImport,
+    cancelImport,
+  } = useMidiImport(addImportedSong, setStatusMessage);
+
+  // Suppression d'un morceau importé (libère aussi le localStorage).
+  const deleteImportedSong = useCallback((id: string) => {
+    setImportedSongs((prev) => {
+      const song = prev.find((s) => s.id === id);
+      if (!song) return prev;
+      if (!window.confirm(`Supprimer "${song.title}" ? Cette action est définitive.`)) {
+        return prev;
+      }
+      return prev.filter((s) => s.id !== id);
+    });
+    setSelectedSongId((current) =>
+      current === id ? (BUILTIN_SONGS[0]?.id ?? "") : current
+    );
+  }, []);
+
   // Persistance : réécrit l'état complet à chaque changement pertinent.
   useEffect(() => {
-    savePersistedState({
+    const saved = savePersistedState({
+      version: 2,
       importedSongs,
       selectedSongId,
       speed,
@@ -209,76 +232,16 @@ export default function Piano() {
       keyboardLayout,
       theme: "dark",
     });
+    // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
+    if (!saved && !quotaWarnedRef.current) {
+      quotaWarnedRef.current = true;
+      setStatusMessage(
+        "Stockage local plein : les derniers réglages ne sont pas sauvegardés. Supprime des morceaux importés pour libérer de l'espace."
+      );
+    } else if (saved) {
+      quotaWarnedRef.current = false;
+    }
   }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout]);
-
-  const handleImportClick = () => {
-    if (isPlaying || isImporting) return;
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setIsImporting(true);
-    setStatusMessage(null);
-    try {
-      const buffer = await file.arrayBuffer();
-      const title = file.name.replace(/\.(mid|midi)$/i, "");
-      const midi = loadMidi(buffer);
-      const tracks = summarizeTracks(midi).filter((t) => t.noteCount > 0);
-      if (tracks.length === 0) {
-        throw new Error("Ce fichier ne contient aucune note exploitable.");
-      }
-      const defaultSelection = tracks.filter((t) => !t.percussion);
-      const toSelect = defaultSelection.length > 0 ? defaultSelection : tracks;
-      setSelectedTrackIndices(new Set(toSelect.map((t) => t.index)));
-      setPendingImport({ midi, title, tracks });
-    } catch (err) {
-      setStatusMessage(
-        `Échec de l'import : ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const toggleTrack = (index: number) => {
-    setSelectedTrackIndices((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  };
-
-  const confirmImport = () => {
-    if (!pendingImport) return;
-    if (selectedTrackIndices.size === 0) {
-      setStatusMessage("Sélectionne au moins une piste à importer.");
-      return;
-    }
-    try {
-      const { song, warnings } = buildSongFromTracks(
-        pendingImport.midi,
-        [...selectedTrackIndices],
-        pendingImport.title
-      );
-      setImportedSongs((prev) => [...prev, song]);
-      setSelectedSongId(song.id);
-      setStatusMessage(
-        warnings.length > 0
-          ? `"${song.title}" importé — ${warnings.join(" ")}`
-          : `"${song.title}" importé avec succès (${song.events.length} notes).`
-      );
-    } catch (err) {
-      setStatusMessage(
-        `Échec de l'import : ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      setPendingImport(null);
-    }
-  };
 
   const toggleFullscreen = async () => {
     try {
@@ -312,7 +275,12 @@ export default function Piano() {
     <div className="piano-wrap">
       {status === "loading" && (
         <div className="piano-loading" role="status" aria-live="polite">
-          Chargement des sons du piano…
+          Chargement des sons du piano… {loadedCount}/{SAMPLE_COUNT}
+          <progress
+            max={SAMPLE_COUNT}
+            value={loadedCount}
+            aria-label="Progression du chargement"
+          />
         </div>
       )}
       {status === "error" && (
@@ -336,6 +304,18 @@ export default function Piano() {
             ))}
           </select>
 
+          {selectedSong?.source === "imported" && (
+            <button
+              className="import-btn delete-song"
+              onClick={() => deleteImportedSong(selectedSong.id)}
+              disabled={isPlaying}
+              title="Supprimer ce morceau importé"
+              aria-label="Supprimer ce morceau importé"
+            >
+              <TrashIcon />
+            </button>
+          )}
+
           {!isPlaying ? (
             <button className="play-btn" onClick={playSong} disabled={status !== "ready"}>
               <PlayIcon /> Lecture
@@ -348,7 +328,7 @@ export default function Piano() {
 
           <button
             className="import-btn"
-            onClick={handleImportClick}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isPlaying || isImporting}
           >
             {isImporting ? (
@@ -363,7 +343,11 @@ export default function Piano() {
             ref={fileInputRef}
             type="file"
             accept=".mid,.midi"
-            onChange={handleFileChange}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void importFile(file);
+            }}
             style={{ display: "none" }}
           />
         </div>
@@ -541,7 +525,7 @@ export default function Piano() {
             ))}
           </ul>
           <div className="track-picker-actions">
-            <button className="import-btn" onClick={() => setPendingImport(null)}>
+            <button className="import-btn" onClick={cancelImport}>
               Annuler
             </button>
             <button className="play-btn" onClick={confirmImport}>

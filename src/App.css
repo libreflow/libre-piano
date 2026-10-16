@@ -138,3 +138,22 @@ body {
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
+
+.app-crash-actions {
+  margin: 0.5rem 0;
+}
+
+.app-crash-actions button {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.app-crash-actions button:hover {
+  border-color: var(--accent);
+}

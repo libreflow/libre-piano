@@ -49,7 +49,7 @@ describe("Piano (rendu)", () => {
 
   it("affiche l'écran de chargement puis le clavier complet (25 touches)", async () => {
     render(<Piano />);
-    expect(await screen.findByText("Chargement des sons du piano…")).toBeInTheDocument();
+    expect(await screen.findByText(/Chargement des sons du piano/)).toBeInTheDocument();
     // Le sampler mocké ne résout jamais onload : le clavier reste rendu
     // derrière l'écran de chargement (les boutons existent dans le DOM).
     const keys = screen

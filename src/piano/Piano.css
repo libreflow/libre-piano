@@ -589,3 +589,30 @@ button:active:not(:disabled) {
 .speed-label.volume svg {
   color: var(--text-secondary);
 }
+
+/* ---------- Bouton supprimer morceau ---------- */
+
+.delete-song {
+  padding: 0.45rem 0.55rem;
+  color: var(--text-secondary);
+}
+
+.delete-song:hover:not(:disabled) {
+  border-color: var(--stop);
+  color: var(--stop);
+  background: rgba(217, 85, 85, 0.08);
+}
+
+/* ---------- Barre de progression du sampler ---------- */
+
+.piano-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.piano-loading progress {
+  width: 120px;
+  accent-color: var(--accent);
+}
