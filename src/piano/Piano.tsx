@@ -6,7 +6,9 @@ import {
   WHITE_KEY_COUNT,
   whiteKeyIndex,
   blackKeyAfterIndex,
+  noteToSolfege,
   KeyboardLayout,
+  LabelMode,
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import {
@@ -67,7 +69,7 @@ export default function Piano() {
   );
   const [speed, setSpeed] = useState(initialState.speed);
   const [volume, setVolume] = useState(initialState.volume);
-  const [showKeyLabels, setShowKeyLabels] = useState(initialState.showKeyLabels);
+  const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
     initialState.keyboardLayout
   );
@@ -202,11 +204,12 @@ export default function Piano() {
       selectedSongId,
       speed,
       volume,
-      showKeyLabels,
+      showKeyLabels: labelMode !== "none",
+      labelMode,
       keyboardLayout,
       theme: "dark",
     });
-  }, [importedSongs, selectedSongId, speed, volume, showKeyLabels, keyboardLayout]);
+  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout]);
 
   const handleImportClick = () => {
     if (isPlaying || isImporting) return;
@@ -412,15 +415,32 @@ export default function Piano() {
         </div>
 
         <div className="control-group" aria-label="Affichage">
-          <button
-            className="import-btn"
-            onClick={() => setShowKeyLabels((v) => !v)}
-            title="Afficher/masquer les lettres sur les touches"
-            aria-pressed={showKeyLabels}
+          <div
+            className="segmented"
+            role="radiogroup"
+            aria-label="Étiquettes des touches"
           >
-            <TagsIcon />
-            {showKeyLabels ? "Masquer lettres" : "Afficher lettres"}
-          </button>
+            {(
+              [
+                ["lettres", "A B C"],
+                ["solfege", "Do Ré"],
+                ["both", "A B C + Do"],
+                ["none", "Rien"],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                role="radio"
+                aria-checked={labelMode === mode}
+                className={labelMode === mode ? "seg-active" : ""}
+                onClick={() => setLabelMode(mode)}
+                title={`Étiquettes : ${label}`}
+              >
+                <TagsIcon />
+                {label}
+              </button>
+            ))}
+          </div>
 
           <button
             className="import-btn"
@@ -545,7 +565,15 @@ export default function Piano() {
             title={k.note}
             aria-label={`Touche ${k.note}`}
           >
-            {showKeyLabels && <span className="key-label">{k.label}</span>}
+            {labelMode !== "none" && (
+              <span className="key-label">
+                {(labelMode === "lettres" || labelMode === "both") && k.label}
+                {labelMode === "solfege" && noteToSolfege(k.note)}
+                {labelMode === "both" && (
+                  <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
+                )}
+              </span>
+            )}
           </button>
         ))}
         {KEYS.filter((k) => k.isBlack).map((k) => (
@@ -559,7 +587,15 @@ export default function Piano() {
             title={k.note}
             aria-label={`Touche ${k.note}`}
           >
-            {showKeyLabels && <span className="key-label">{k.label}</span>}
+            {labelMode !== "none" && (
+              <span className="key-label">
+                {(labelMode === "lettres" || labelMode === "both") && k.label}
+                {labelMode === "solfege" && noteToSolfege(k.note)}
+                {labelMode === "both" && (
+                  <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
+                )}
+              </span>
+            )}
           </button>
         ))}
       </div>

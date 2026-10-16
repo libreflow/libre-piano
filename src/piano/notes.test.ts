@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getKeys,
   getKeyToNote,
+  noteToSolfege,
   MAX_MIDI,
   MIN_MIDI,
   WHITE_KEY_COUNT,
@@ -97,5 +98,24 @@ describe("layout du clavier", () => {
     expect(whiteKeyIndex("X")).toBe(-1);
     expect(blackKeyAfterIndex("C#3")).toBe(0);
     expect(blackKeyAfterIndex("A#4")).toBe(12);
+  });
+});
+
+describe("noteToSolfege", () => {
+  it("convertit les notes naturelles", () => {
+    expect(noteToSolfege("C4")).toBe("Do");
+    expect(noteToSolfege("D3")).toBe("Ré");
+    expect(noteToSolfege("E5")).toBe("Mi");
+    expect(noteToSolfege("F4")).toBe("Fa");
+    expect(noteToSolfege("G4")).toBe("Sol");
+    expect(noteToSolfege("A3")).toBe("La");
+    expect(noteToSolfege("B4")).toBe("Si");
+  });
+
+  it("convertit les dièses", () => {
+    expect(noteToSolfege("C#3")).toBe("Do#");
+    expect(noteToSolfege("D#4")).toBe("Ré#");
+    expect(noteToSolfege("F#4")).toBe("Fa#");
+    expect(noteToSolfege("A#4")).toBe("La#");
   });
 });

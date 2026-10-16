@@ -89,12 +89,30 @@ describe("Piano (rendu)", () => {
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("A");
   });
 
-  it("permet de basculer l'affichage des labels (aria-pressed)", () => {
+  it("bascule les étiquettes entre lettres, solfège et aucune (segmented)", () => {
     render(<Piano />);
-    const btn = screen.getByTitle("Afficher/masquer les lettres sur les touches");
-    expect(btn).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(btn);
-    expect(btn).toHaveAttribute("aria-pressed", "false");
+    const c4 = screen.getByLabelText("Touche C4");
+    // Mode par défaut : lettres -> pas de solfège
+    expect(c4).toHaveTextContent("K");
+    expect(c4).not.toHaveTextContent("Do");
+
+    // Mode solfège
+    const solfegeBtn = screen.getByRole("radio", { name: /Do Ré/i });
+    fireEvent.click(solfegeBtn);
+    expect(c4).toHaveTextContent("Do");
+    expect(c4).not.toHaveTextContent("K");
+
+    // Mode aucune étiquette
+    const noneBtn = screen.getByRole("radio", { name: /Rien/i });
+    fireEvent.click(noneBtn);
+    expect(c4).not.toHaveTextContent("Do");
+  });
+
+  it("affiche les noms de solfège avec dièses corrects", () => {
+    render(<Piano />);
+    const cs3 = screen.getByLabelText("Touche C#3");
+    fireEvent.click(screen.getByRole("radio", { name: /Do Ré/i }));
+    expect(cs3).toHaveTextContent("Do#");
   });
 
   it("joue une note au mousedown sur une touche", () => {

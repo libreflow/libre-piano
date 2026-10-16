@@ -5,6 +5,9 @@
 
 export type KeyboardLayout = "qwerty" | "azerty";
 
+/** Mode d'affichage des étiquettes sur les touches. */
+export type LabelMode = "lettres" | "solfege" | "both" | "none";
+
 export interface PianoKey {
   note: string; // e.g. "C4", "D#4"
   isBlack: boolean;
@@ -123,4 +126,27 @@ export function clampMidiToKeyboard(midi: number): number {
   while (m < MIN_MIDI) m += 12;
   while (m > MAX_MIDI) m -= 12;
   return m;
+}
+
+// Noms de note en notation solfège française (do ré mi fa sol la si).
+const SOLFEGE_BY_LETTER: Record<string, string> = {
+  C: "Do",
+  "C#": "Do#",
+  D: "Ré",
+  "D#": "Ré#",
+  E: "Mi",
+  F: "Fa",
+  "F#": "Fa#",
+  G: "Sol",
+  "G#": "Sol#",
+  A: "La",
+  "A#": "La#",
+  B: "Si",
+};
+
+/** Convertit un nom de note ("C#4") en nom solfège ("Do#"), sans l'octave :
+ * c'est la convention usuelle sur les instruments et méthodes de solfège. */
+export function noteToSolfege(note: string): string {
+  const match = note.match(/^([A-G]#?)/);
+  return match ? (SOLFEGE_BY_LETTER[match[1]] ?? note) : note;
 }
