@@ -1,0 +1,116 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as Tone from "tone";
+import type { Song, SongEvent } from "./songs";
+import { songDuration } from "./songs";
+import { NOTE_HIGHLIGHT_RELEASE_FRACTION, PLAYBACK_END_BUFFER_SEC } from "./constants";
+
+export interface LoopState {
+  loopEnabled: boolean;
+  loopStart: number;
+  loopEnd: number;
+}
+
+export function usePlayback(
+  samplerReady: boolean,
+  allSongs: Song[],
+  selectedSongId: string,
+  speed: number,
+  loop: LoopState,
+  triggerNote: (note: string, duration: number, time: number) => void,
+  onAutoNoteOn: (note: string) => void,
+  onAutoNoteOff: (note: string) => void
+) {
+  const partRef = useRef<Tone.Part<SongEvent> | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  const selectedSongDuration = useMemo(() => {
+    const song = allSongs.find((s) => s.id === selectedSongId);
+    return song ? songDuration(song) : 0;
+  }, [allSongs, selectedSongId]);
+
+  const stopPlayback = useCallback(() => {
+    Tone.getTransport().stop();
+    Tone.getTransport().cancel();
+    partRef.current?.dispose();
+    partRef.current = null;
+    setIsPlaying(false);
+  }, []);
+
+  const playSong = useCallback(async () => {
+    if (!samplerReady || isPlayingRef.current) return;
+    await Tone.start();
+    stopPlayback();
+
+    const song = allSongs.find((s) => s.id === selectedSongId) ?? allSongs[0];
+    if (!song) return;
+    const speedFactor = speed / 100;
+    const fullDuration = songDuration(song);
+
+    // Si la boucle A-B est active, on ne garde que les événements de la
+    // section choisie, retimés pour démarrer à 0.
+    const sectionStart = loop.loopEnabled
+      ? Math.max(0, Math.min(loop.loopStart, fullDuration))
+      : 0;
+    const sectionEnd = loop.loopEnabled
+      ? Math.max(sectionStart + 0.1, Math.min(loop.loopEnd, fullDuration))
+      : fullDuration;
+
+    const windowedEvents = song.events
+      .filter((e) => e.time >= sectionStart && e.time < sectionEnd)
+      .map((e) => ({ ...e, time: e.time - sectionStart }));
+
+    // Les événements sont en secondes absolues (vitesse x1) ; on applique
+    // juste le facteur de vitesse choisi par l'utilisateur.
+    const scaledEvents = windowedEvents.map((e) => ({
+      time: e.time / speedFactor,
+      note: e.note,
+      duration: e.duration / speedFactor,
+    }));
+    const totalDuration = (sectionEnd - sectionStart) / speedFactor;
+
+    const part = new Tone.Part<SongEvent>((time, event) => {
+      triggerNote(event.note, event.duration, time);
+      Tone.getDraw().schedule(() => onAutoNoteOn(event.note), time);
+      Tone.getDraw().schedule(
+        () => onAutoNoteOff(event.note),
+        time + event.duration * NOTE_HIGHLIGHT_RELEASE_FRACTION
+      );
+    }, scaledEvents);
+    part.start(0);
+    if (loop.loopEnabled) {
+      part.loop = true;
+      part.loopStart = 0;
+      part.loopEnd = totalDuration;
+    }
+    partRef.current = part;
+
+    const transport = Tone.getTransport();
+    if (!loop.loopEnabled) {
+      transport.scheduleOnce(() => {
+        Tone.getDraw().schedule(() => stopPlayback(), totalDuration);
+      }, totalDuration + PLAYBACK_END_BUFFER_SEC);
+    }
+
+    transport.start();
+    setIsPlaying(true);
+  }, [
+    allSongs,
+    loop.loopEnabled,
+    loop.loopEnd,
+    loop.loopStart,
+    onAutoNoteOff,
+    onAutoNoteOn,
+    samplerReady,
+    selectedSongId,
+    speed,
+    stopPlayback,
+    triggerNote,
+  ]);
+
+  return { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback };
+}
