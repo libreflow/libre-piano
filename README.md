@@ -7,8 +7,7 @@ automatique, import de fichiers MIDI, et mode apprentissage.
 
 - **Clavier** : 2 octaves (C3–C5), jouable à la souris ou au clavier PC
   (`A S D F G H J L` + `Z X C V B N M 2 3 4` pour les touches noires)
-- **Son** : `Tone.Sampler` avec échantillons réels de piano (Salamander
-  Grand Piano)
+- **Son** : `Tone.Sampler` avec échantillons réels de piano (Salamander Grand Piano, échantillons servis localement)
 - **Lecture automatique** : morceaux de démo intégrés + import de fichiers
   `.mid`/`.midi`, avec sélection de piste (détection heuristique de la
   mélodie vs l'accompagnement), vitesse réglable (50–150 %), boucle A-B
@@ -25,7 +24,7 @@ npm run build           # build frontend (tsc + vite)
 npm run tauri build      # build l'exécutable complet
 npm run lint              # ESLint
 npm run format             # Prettier
-npm run test:midi <fichier.mid>   # teste le parsing MIDI hors UI
+npm test                         # tests unitaires (Vitest)
 ```
 
 Voir [`ROADMAP.md`](./ROADMAP.md) pour le plan d'amélioration détaillé.
