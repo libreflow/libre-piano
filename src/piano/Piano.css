@@ -6,6 +6,8 @@
   align-items: center;
   gap: 1rem;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .piano-loading {
@@ -379,6 +381,8 @@ button:active:not(:disabled) {
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 10px;
+  padding-left: 2px;
+  padding-right: 2px;
   box-sizing: border-box;
   font-family: inherit;
   transition: box-shadow 0.1s;
@@ -457,6 +461,13 @@ button:active:not(:disabled) {
   pointer-events: none;
   text-align: center;
   line-height: 1.15;
+  /* Jamais de débordement : la largeur est bornée par la touche
+     (padding horizontal de la .key), et un texte trop long se termine
+     proprement plutôt que de mordre sur la touche voisine. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Mode "A B C + Do" : la seconde ligne (solfège) est plus discrète. */
@@ -468,6 +479,14 @@ button:active:not(:disabled) {
 
 .key.black .key-label {
   opacity: 0.55;
+  font-size: 0.58rem;
+}
+
+/* La ligne solfège hérite de la contrainte parent (max-width 100%). */
+.key-label .key-label-solfege {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Responsive : le clavier rétrécit plutôt que de déborder. */

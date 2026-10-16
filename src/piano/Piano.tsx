@@ -317,7 +317,8 @@ export default function Piano() {
       )}
       {status === "error" && (
         <div className="piano-loading">
-          Échec du chargement des sons du piano. Redémarre l'application.
+          Impossible de charger les sons du piano. Vérifie l'installation ou réinstalle
+          l'application.
         </div>
       )}
 
@@ -562,7 +563,7 @@ export default function Piano() {
             onMouseDown={() => handleMouseDown(k.note)}
             onMouseUp={() => handleMouseUp(k.note)}
             onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
-            title={k.note}
+            title={`${noteToSolfege(k.note)} (${k.note})`}
             aria-label={`Touche ${k.note}`}
           >
             {labelMode !== "none" && (
@@ -584,7 +585,7 @@ export default function Piano() {
             onMouseDown={() => handleMouseDown(k.note)}
             onMouseUp={() => handleMouseUp(k.note)}
             onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
-            title={k.note}
+            title={`${noteToSolfege(k.note)} (${k.note})`}
             aria-label={`Touche ${k.note}`}
           >
             {labelMode !== "none" && (
