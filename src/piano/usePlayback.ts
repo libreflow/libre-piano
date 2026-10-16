@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as Tone from "tone";
+import { Part, start as toneStart, getDraw, getTransport } from "./tone-gate";
 import type { Song, SongEvent } from "./songs";
 import { songDuration } from "./songs";
 import { NOTE_HIGHLIGHT_RELEASE_FRACTION, PLAYBACK_END_BUFFER_SEC } from "./constants";
@@ -20,7 +20,7 @@ export function usePlayback(
   onAutoNoteOn: (note: string) => void,
   onAutoNoteOff: (note: string) => void
 ) {
-  const partRef = useRef<Tone.Part<SongEvent> | null>(null);
+  const partRef = useRef<Part<SongEvent> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(false);
 
@@ -34,8 +34,8 @@ export function usePlayback(
   }, [allSongs, selectedSongId]);
 
   const stopPlayback = useCallback(() => {
-    Tone.getTransport().stop();
-    Tone.getTransport().cancel();
+    getTransport().stop();
+    getTransport().cancel();
     partRef.current?.dispose();
     partRef.current = null;
     setIsPlaying(false);
@@ -43,7 +43,7 @@ export function usePlayback(
 
   const playSong = useCallback(async () => {
     if (!samplerReady || isPlayingRef.current) return;
-    await Tone.start();
+    await toneStart();
     stopPlayback();
 
     const song = allSongs.find((s) => s.id === selectedSongId) ?? allSongs[0];
@@ -73,10 +73,10 @@ export function usePlayback(
     }));
     const totalDuration = (sectionEnd - sectionStart) / speedFactor;
 
-    const part = new Tone.Part<SongEvent>((time, event) => {
+    const part = new Part<SongEvent>((time, event) => {
       triggerNote(event.note, event.duration, time);
-      Tone.getDraw().schedule(() => onAutoNoteOn(event.note), time);
-      Tone.getDraw().schedule(
+      getDraw().schedule(() => onAutoNoteOn(event.note), time);
+      getDraw().schedule(
         () => onAutoNoteOff(event.note),
         time + event.duration * NOTE_HIGHLIGHT_RELEASE_FRACTION
       );
@@ -89,10 +89,10 @@ export function usePlayback(
     }
     partRef.current = part;
 
-    const transport = Tone.getTransport();
+    const transport = getTransport();
     if (!loop.loopEnabled) {
       transport.scheduleOnce(() => {
-        Tone.getDraw().schedule(() => stopPlayback(), totalDuration);
+        getDraw().schedule(() => stopPlayback(), totalDuration);
       }, totalDuration + PLAYBACK_END_BUFFER_SEC);
     }
 

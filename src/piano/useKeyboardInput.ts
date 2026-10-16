@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import * as Tone from "tone";
+import { start as toneStart } from "./tone-gate";
 import { KEY_TO_NOTE } from "./notes";
 
 interface KeyboardHandlers {
@@ -43,7 +43,7 @@ export function useKeyboardInput({
       const note = KEY_TO_NOTE[key];
       if (!note || activeKeyboardKeys.current.has(key)) return;
       activeKeyboardKeys.current.add(key);
-      await Tone.start();
+      await toneStart();
       noteOn(note);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
