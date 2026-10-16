@@ -21,6 +21,9 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
 // le rendu complet de l'App (header, contrôles, clavier) sans crash.
 vi.mock("./piano/tone-gate", () => ({
   start: vi.fn().mockResolvedValue(undefined),
+  getContext: () => ({ state: "running", lookAhead: 0.1 }),
+  tuneForLowLatency: vi.fn(),
+  ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
   Sampler: MockSampler,
   getTransport: () => ({
     stop: vi.fn(),

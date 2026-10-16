@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sampler, getDestination, getTransport } from "./tone-gate";
+import { Sampler, getDestination, getTransport, tuneForLowLatency } from "./tone-gate";
 import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "../piano/constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
@@ -56,6 +56,7 @@ export function useAudioEngine(volume: number) {
 
   useEffect(() => {
     let disposed = false;
+    tuneForLowLatency();
     samplerRef.current = createSampler(
       () => !disposed && setStatus("ready"),
       () => !disposed && setStatus("error")

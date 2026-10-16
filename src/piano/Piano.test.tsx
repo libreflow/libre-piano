@@ -20,6 +20,9 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
 
 vi.mock("./tone-gate", () => ({
   start: vi.fn().mockResolvedValue(undefined),
+  getContext: () => ({ state: "running", lookAhead: 0.1 }),
+  tuneForLowLatency: vi.fn(),
+  ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
   Sampler: MockSampler,
   getTransport: () => ({
     stop: vi.fn(),

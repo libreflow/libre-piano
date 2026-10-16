@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { start as toneStart } from "./tone-gate";
+import { ensureAudioStarted, getContext } from "./tone-gate";
 import { getKeyToNote, KeyboardLayout } from "./notes";
 
 interface KeyboardHandlers {
@@ -34,7 +34,11 @@ export function useKeyboardInput({
   }, [onSustainChange, releaseSustained]);
 
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    // Débloque l'AudioContext le plus tôt possible (gesture utilisateur
+    // requis par les navigateurs : le mount survient après une interaction
+    // dans Tauri ; sinon le premier keydown s'en charge via ensureStarted).
+    void ensureAudioStarted();
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         e.preventDefault();
         if (!sustainRef.current && !isPlayingRef.current) {
@@ -56,7 +60,7 @@ export function useKeyboardInput({
       const note = keyToNote[key];
       if (!note || activeKeyboardKeys.current.has(key)) return;
       activeKeyboardKeys.current.add(key);
-      await toneStart();
+      if (getContext().state !== "running") void ensureAudioStarted();
       noteOn(note);
     };
     const handleKeyUp = (e: KeyboardEvent) => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { start as toneStart } from "./tone-gate";
+import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
   getKeys,
   WHITE_KEY_COUNT,
@@ -291,9 +291,9 @@ export default function Piano() {
     }
   };
 
-  const handleMouseDown = async (note: string) => {
+  const handleMouseDown = (note: string) => {
     if (isPlayingRef.current) return;
-    await toneStart();
+    if (getContext().state !== "running") void ensureAudioStarted();
     noteOn(note);
   };
   const handleMouseUp = (note: string) => {

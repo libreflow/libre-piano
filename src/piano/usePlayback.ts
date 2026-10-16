@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Part, start as toneStart, getDraw, getTransport } from "./tone-gate";
+import { Part, ensureAudioStarted, getDraw, getTransport } from "./tone-gate";
 import type { Song, SongEvent } from "./songs";
 import { songDuration } from "./songs";
 import { NOTE_HIGHLIGHT_RELEASE_FRACTION, PLAYBACK_END_BUFFER_SEC } from "./constants";
@@ -43,7 +43,7 @@ export function usePlayback(
 
   const playSong = useCallback(async () => {
     if (!samplerReady || isPlayingRef.current) return;
-    await toneStart();
+    await ensureAudioStarted();
     stopPlayback();
 
     const song = allSongs.find((s) => s.id === selectedSongId) ?? allSongs[0];

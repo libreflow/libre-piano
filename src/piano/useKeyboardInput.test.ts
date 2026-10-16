@@ -6,7 +6,10 @@ vi.mock("./notes", () => ({
   getKeyToNote: (layout: string) =>
     layout === "azerty" ? { q: "C3", s: "D3", w: "C#3" } : { a: "C3", s: "D3", z: "C#3" },
 }));
-vi.mock("./tone-gate", () => ({ start: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("./tone-gate", () => ({
+  ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
+  getContext: () => ({ state: "running" }),
+}));
 
 function press(type: "keydown" | "keyup", key: string, opts?: KeyboardEventInit) {
   const e = new KeyboardEvent(type, {
