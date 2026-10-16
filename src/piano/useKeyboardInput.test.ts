@@ -3,7 +3,8 @@ import { renderHook, act } from "@testing-library/react";
 import { useKeyboardInput } from "./useKeyboardInput";
 
 vi.mock("./notes", () => ({
-  KEY_TO_NOTE: { a: "C3", s: "D3", z: "C#3" },
+  getKeyToNote: (layout: string) =>
+    layout === "azerty" ? { q: "C3", s: "D3", w: "C#3" } : { a: "C3", s: "D3", z: "C#3" },
 }));
 vi.mock("./tone-gate", () => ({ start: vi.fn().mockResolvedValue(undefined) }));
 

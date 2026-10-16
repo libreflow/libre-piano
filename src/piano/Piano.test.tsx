@@ -55,10 +55,12 @@ describe("Piano (rendu)", () => {
     expect(keys).toHaveLength(25);
   });
 
-  it("affiche les morceaux intégrés dans le sélecteur", () => {
+  it("affiche les morceaux intégrés dans le sélecteur (une seule option par chanson)", () => {
     render(<Piano />);
-    const select = screen.getByRole("combobox");
-    const titles = Array.from(select.querySelectorAll("option")).map(
+    const selects = screen.getAllByRole("combobox");
+    // Le premier combobox est le sélecteur de morceaux, le second la disposition.
+    const songSelect = selects[0];
+    const titles = Array.from(songSelect.querySelectorAll("option")).map(
       (o) => o.textContent
     );
     for (const song of BUILTIN_SONGS) {
@@ -72,8 +74,16 @@ describe("Piano (rendu)", () => {
     expect(screen.getByLabelText("Touche C#4")).toBeInTheDocument();
   });
 
-  it("affiche les labels de touches par défaut (persistés)", () => {
+  it("affiche les labels de touches par défaut (AZERTY persisté)", () => {
     render(<Piano />);
+    expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
+  });
+
+  it("permet de basculer la disposition du clavier", () => {
+    render(<Piano />);
+    const select = screen.getByLabelText("Disposition du clavier");
+    expect(select).toHaveValue("azerty");
+    fireEvent.change(select, { target: { value: "qwerty" } });
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("A");
   });
 

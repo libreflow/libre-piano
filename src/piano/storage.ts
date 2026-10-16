@@ -1,6 +1,7 @@
 // Persistance locale (localStorage) des morceaux importés et des
 // préférences utilisateur, pour qu'ils survivent à la fermeture de l'app
 // (roadmap #56, #58).
+import type { KeyboardLayout } from "./notes";
 import type { Song } from "./songs";
 import { SPEED_DEFAULT_PERCENT, VOLUME_DEFAULT_PERCENT } from "./constants";
 
@@ -12,6 +13,7 @@ export interface PersistedState {
   speed: number;
   volume: number;
   showKeyLabels: boolean;
+  keyboardLayout: KeyboardLayout;
   theme: "dark" | "light";
 }
 
@@ -21,6 +23,7 @@ export const DEFAULT_STATE: PersistedState = {
   speed: SPEED_DEFAULT_PERCENT,
   volume: VOLUME_DEFAULT_PERCENT,
   showKeyLabels: true,
+  keyboardLayout: "azerty",
   theme: "dark",
 };
 

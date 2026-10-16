@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { start as toneStart } from "./tone-gate";
-import { KEYS, WHITE_KEY_COUNT, whiteKeyIndex, blackKeyAfterIndex } from "./notes";
+import {
+  getKeys,
+  WHITE_KEY_COUNT,
+  whiteKeyIndex,
+  blackKeyAfterIndex,
+  KeyboardLayout,
+} from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import {
   loadMidi,
@@ -49,6 +55,10 @@ export default function Piano() {
   const [speed, setSpeed] = useState(initialState.speed);
   const [volume, setVolume] = useState(initialState.volume);
   const [showKeyLabels, setShowKeyLabels] = useState(initialState.showKeyLabels);
+  const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
+    initialState.keyboardLayout
+  );
+  const KEYS = useMemo(() => getKeys(keyboardLayout), [keyboardLayout]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -153,6 +163,7 @@ export default function Piano() {
     );
 
   useKeyboardInput({
+    layout: keyboardLayout,
     isPlayingRef,
     noteOn,
     noteOff,
@@ -175,9 +186,10 @@ export default function Piano() {
       speed,
       volume,
       showKeyLabels,
+      keyboardLayout,
       theme: "dark",
     });
-  }, [importedSongs, selectedSongId, speed, volume, showKeyLabels]);
+  }, [importedSongs, selectedSongId, speed, volume, showKeyLabels, keyboardLayout]);
 
   const handleImportClick = () => {
     if (isPlaying || isImporting) return;
@@ -351,6 +363,19 @@ export default function Piano() {
           onChange={handleFileChange}
           style={{ display: "none" }}
         />
+
+        <label className="layout-select">
+          <span aria-hidden="true">⌨</span>
+          <select
+            value={keyboardLayout}
+            onChange={(e) => setKeyboardLayout(e.target.value as KeyboardLayout)}
+            title="Disposition du clavier"
+            aria-label="Disposition du clavier"
+          >
+            <option value="azerty">AZERTY</option>
+            <option value="qwerty">QWERTY</option>
+          </select>
+        </label>
 
         <button
           className="import-btn"

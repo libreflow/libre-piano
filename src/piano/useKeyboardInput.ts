@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { start as toneStart } from "./tone-gate";
-import { KEY_TO_NOTE } from "./notes";
+import { getKeyToNote, KeyboardLayout } from "./notes";
 
 interface KeyboardHandlers {
+  layout: KeyboardLayout;
   isPlayingRef: React.RefObject<boolean>;
   noteOn: (note: string) => void;
   noteOff: (note: string) => void;
@@ -13,6 +14,7 @@ interface KeyboardHandlers {
 // Clavier PC -> touches du piano (désactivé pendant la lecture auto)
 // + pédale de sustain sur la barre d'espace maintenue.
 export function useKeyboardInput({
+  layout,
   isPlayingRef,
   noteOn,
   noteOff,
@@ -21,6 +23,7 @@ export function useKeyboardInput({
 }: KeyboardHandlers) {
   const activeKeyboardKeys = useRef<Set<string>>(new Set());
   const sustainRef = useRef(false);
+  const keyToNote = useMemo(() => getKeyToNote(layout), [layout]);
 
   const releaseSustain = useCallback(() => {
     sustainRef.current = false;
@@ -40,7 +43,7 @@ export function useKeyboardInput({
       }
       if (e.repeat || isPlayingRef.current) return;
       const key = e.key.toLowerCase();
-      const note = KEY_TO_NOTE[key];
+      const note = keyToNote[key];
       if (!note || activeKeyboardKeys.current.has(key)) return;
       activeKeyboardKeys.current.add(key);
       await toneStart();
@@ -52,7 +55,7 @@ export function useKeyboardInput({
         return;
       }
       const key = e.key.toLowerCase();
-      const note = KEY_TO_NOTE[key];
+      const note = keyToNote[key];
       if (!note) return;
       activeKeyboardKeys.current.delete(key);
       if (!isPlayingRef.current) noteOff(note);
@@ -68,7 +71,7 @@ export function useKeyboardInput({
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [isPlayingRef, noteOn, noteOff, onSustainChange, releaseSustain]);
+  }, [isPlayingRef, keyToNote, noteOn, noteOff, onSustainChange, releaseSustain]);
 
   return { sustainRef };
 }

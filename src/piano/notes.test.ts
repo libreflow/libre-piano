@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  KEYS,
-  KEY_TO_NOTE,
+  getKeys,
+  getKeyToNote,
   MAX_MIDI,
   MIN_MIDI,
   WHITE_KEY_COUNT,
@@ -53,17 +53,41 @@ describe("clampMidiToKeyboard", () => {
 });
 
 describe("layout du clavier", () => {
-  it("a 15 touches blanches et 10 noires (C3–C5)", () => {
+  it("a 15 touches blanches et 10 noires (C3–C5) pour chaque disposition", () => {
     expect(WHITE_KEY_COUNT).toBe(15);
-    expect(KEYS.filter((k) => k.isBlack)).toHaveLength(10);
-    expect(KEYS).toHaveLength(25);
+    for (const layout of ["qwerty", "azerty"] as const) {
+      const keys = getKeys(layout);
+      expect(keys.filter((k) => !k.isBlack)).toHaveLength(15);
+      expect(keys.filter((k) => k.isBlack)).toHaveLength(10);
+    }
   });
 
-  it("mappe chaque touche PC à une note unique", () => {
-    const notes = Object.values(KEY_TO_NOTE);
-    expect(new Set(notes).size).toBe(notes.length);
-    expect(KEY_TO_NOTE["a"]).toBe("C3");
-    expect(KEY_TO_NOTE["t"]).toBe("C5");
+  it("mappe chaque touche PC à une note unique (qwerty et azerty)", () => {
+    for (const layout of ["qwerty", "azerty"] as const) {
+      const map = getKeyToNote(layout);
+      const notes = Object.values(map);
+      expect(new Set(notes).size).toBe(notes.length);
+      expect(Object.keys(map).length).toBe(25);
+    }
+  });
+
+  it("dispose le QWERTY sur la rangée home ASDF", () => {
+    const qwerty = getKeyToNote("qwerty");
+    expect(qwerty["a"]).toBe("C3");
+    expect(qwerty["t"]).toBe("C5");
+    expect(qwerty["z"]).toBe("C#3");
+    expect(qwerty["2"]).toBe("F#4");
+  });
+
+  it("dispose l'AZERTY sur la rangée home QSDF (sans Shift)", () => {
+    const azerty = getKeyToNote("azerty");
+    expect(azerty["q"]).toBe("C3");
+    expect(azerty["t"]).toBe("C5");
+    expect(azerty["w"]).toBe("C#3");
+    // touches noires aiguîs accessibles sans Shift sur AZERTY français
+    expect(azerty["é"]).toBe("F#4");
+    expect(azerty['"']).toBe("G#4");
+    expect(azerty["'"]).toBe("A#4");
   });
 
   it("calcule les index de position", () => {
