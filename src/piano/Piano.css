@@ -47,7 +47,12 @@
   padding-left: 0.75rem;
 }
 
+/* Sur écran étroit les groupes passent chacun sur leur propre ligne :
+   le séparateur latéral n'a plus de sens, on l'enlève. */
 @media (max-width: 880px) {
+  .playback-controls {
+    gap: 0.6rem;
+  }
   .control-group + .control-group {
     border-left: none;
     padding-left: 0;
@@ -79,10 +84,12 @@ button:focus-visible {
 
 .speed-label {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .speed-label input[type="range"] {
@@ -174,6 +181,10 @@ button:active:not(:disabled) {
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   padding: 0.3rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
   transition:
     background 0.15s,
     color 0.15s,
