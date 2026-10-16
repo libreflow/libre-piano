@@ -1,31 +1,58 @@
+/* Refonte UI : panneau de contrôles unifié, clavier premium, états visibles. */
+
 .piano-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  width: 100%;
 }
 
 .piano-loading {
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
+  padding: 0.4rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
 }
+
+/* ---------- Panneau de contrôles ---------- */
 
 .playback-controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .playback-controls select {
-  border-radius: 6px;
-  border: 1px solid #555;
-  background: #2a2a2a;
-  color: #eee;
-  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 0.45rem 0.7rem;
   font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.playback-controls select:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.playback-controls select:focus-visible,
+.loop-bound input:focus-visible,
+.loop-toggle input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .speed-label {
@@ -33,42 +60,77 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 
-.play-btn,
-.stop-btn {
+.speed-label input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.speed-label span {
+  min-width: 3.2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+button.play-btn,
+button.stop-btn,
+.import-btn {
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s,
+    box-shadow 0.15s;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .play-btn {
-  background: #3a8f4f;
+  background: var(--play);
   color: white;
+  box-shadow: 0 2px 10px rgba(52, 168, 83, 0.3);
+}
+
+.play-btn:hover:not(:disabled) {
+  background: #2b8a45;
 }
 
 .play-btn:disabled {
-  background: #555;
+  background: var(--bg-panel-hover);
+  color: var(--text-faint);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .stop-btn {
-  background: #a23c3c;
+  background: var(--stop);
   color: white;
+  box-shadow: 0 2px 10px rgba(217, 85, 85, 0.3);
+}
+
+.stop-btn:hover {
+  background: #c24444;
 }
 
 .import-btn {
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #2a2a2a;
-  color: #eee;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.import-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-panel-hover);
 }
 
 .import-btn:disabled {
@@ -76,38 +138,26 @@
   cursor: not-allowed;
 }
 
-.status-message {
-  max-width: 560px;
-  margin: -0.5rem auto 0.5rem;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  color: #ddd;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.piano.piano-readonly .key {
-  cursor: default;
-}
-
 .pedal-badge {
   font-size: 0.8rem;
-  color: #888;
-  border: 1px solid #444;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  padding: 0.3rem 0.7rem;
+  padding: 0.3rem 0.8rem;
   transition:
     background 0.15s,
-    color 0.15s;
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .pedal-badge.pedal-on {
-  background: #6a3fa0;
-  border-color: #8a5fc0;
+  background: var(--sustain);
+  border-color: #b79aff;
   color: white;
+  box-shadow: 0 0 14px rgba(154, 108, 255, 0.4);
 }
+
+/* ---------- Boucle A-B ---------- */
 
 .loop-controls {
   display: flex;
@@ -116,13 +166,23 @@
   flex-wrap: wrap;
   justify-content: center;
   font-size: 0.82rem;
-  color: #aaa;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.9rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
 }
 
 .loop-toggle {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.loop-toggle input {
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -135,20 +195,42 @@
 .loop-bound input[type="number"] {
   width: 64px;
   border-radius: 6px;
-  border: 1px solid #555;
-  background: #2a2a2a;
-  color: #eee;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  color: var(--text-primary);
   padding: 0.25rem 0.4rem;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.loop-total {
+  color: var(--text-faint);
+}
+
+/* ---------- Messages & sélecteur de pistes ---------- */
+
+.status-message {
+  max-width: 560px;
+  margin: -0.25rem auto 0.25rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  background: var(--accent-soft);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  border-radius: 10px;
+  text-align: center;
 }
 
 .track-picker {
-  max-width: 480px;
+  max-width: 520px;
+  width: 100%;
   margin: 0 auto 0.5rem;
-  padding: 0.9rem 1.1rem;
-  background: #262626;
-  border: 1px solid #444;
-  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
   text-align: left;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
 .track-picker h3 {
@@ -157,40 +239,48 @@
 }
 
 .track-picker-hint {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.7rem;
   font-size: 0.8rem;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 
 .track-list {
   list-style: none;
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.9rem;
   padding: 0;
   max-height: 220px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .track-list label {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.55rem;
   font-size: 0.85rem;
-  color: #ddd;
+  color: var(--text-primary);
   cursor: pointer;
-  padding: 0.25rem 0.35rem;
-  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background 0.12s;
+}
+
+.track-list label:hover {
+  background: var(--bg-panel-hover);
 }
 
 .track-list label.likely-melody {
-  background: rgba(58, 143, 79, 0.18);
-  border: 1px solid rgba(58, 143, 79, 0.4);
+  background: rgba(52, 168, 83, 0.12);
+  border-color: rgba(52, 168, 83, 0.4);
 }
 
 .track-list input[type="checkbox"] {
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
+  accent-color: var(--play);
+  cursor: pointer;
 }
 
 .track-info {
@@ -204,7 +294,7 @@
 
 .track-details {
   font-size: 0.75rem;
-  color: #999;
+  color: var(--text-faint);
 }
 
 .track-picker-actions {
@@ -213,19 +303,27 @@
   gap: 0.6rem;
 }
 
+/* ---------- Clavier ---------- */
+
 .piano {
   position: relative;
   display: block;
-  width: calc(var(--white-keys) * 60px);
-  height: 220px;
+  width: calc(var(--white-keys) * var(--key-w));
+  height: var(--key-h);
+  max-width: 100%;
   user-select: none;
 }
 
+.piano.piano-readonly .key {
+  cursor: default;
+}
+
 .key {
+  --key-w: 60px;
   position: absolute;
   top: 0;
-  border: 1px solid #1a1a1a;
-  border-radius: 0 0 6px 6px;
+  border: 1px solid #0d0e18;
+  border-radius: 0 0 7px 7px;
   cursor: pointer;
   display: flex;
   align-items: flex-end;
@@ -233,53 +331,114 @@
   padding-bottom: 10px;
   box-sizing: border-box;
   font-family: inherit;
+  transition: box-shadow 0.1s;
 }
 
 .key.white {
-  width: 60px;
-  height: 220px;
-  left: calc(var(--index) * 60px);
-  background: linear-gradient(to bottom, #fdfdfd, #e8e8e8);
-  color: #444;
+  width: var(--key-w);
+  height: var(--key-h);
+  left: calc(var(--index) * var(--key-w));
+  background: linear-gradient(to bottom, #fbfbfd, #e3e5ee);
+  color: #555a6b;
   z-index: 1;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+}
+
+.key.white:hover {
+  background: linear-gradient(to bottom, #ffffff, #dfe2ee);
 }
 
 .key.white.active {
-  background: linear-gradient(to bottom, #c9ddff, #9ec2ff);
+  background: linear-gradient(to bottom, #d6e2ff, #a7c4ff);
+  box-shadow:
+    inset 0 -3px 0 rgba(60, 100, 220, 0.4),
+    0 0 18px rgba(90, 130, 255, 0.5);
 }
 
 .key.white.auto-active {
-  background: linear-gradient(to bottom, #ffe3b0, #ffc266);
+  background: linear-gradient(to bottom, #ffe9bf, #ffca70);
+  box-shadow:
+    inset 0 -3px 0 rgba(200, 130, 20, 0.4),
+    0 0 18px rgba(255, 180, 60, 0.5);
 }
 
 .key.white.sustained {
-  background: linear-gradient(to bottom, #d8c9ff, #b79cff);
+  background: linear-gradient(to bottom, #e4daff, #c1a8ff);
+  box-shadow:
+    inset 0 -3px 0 rgba(130, 90, 220, 0.4),
+    0 0 18px rgba(160, 120, 255, 0.45);
 }
 
 .key.black {
-  width: 38px;
-  height: 140px;
-  /* centered on the boundary right after white key `--index` */
-  left: calc((var(--index) + 1) * 60px - 19px);
-  background: linear-gradient(to bottom, #333, #000);
-  color: #ccc;
+  width: calc(var(--key-w) * 0.62);
+  height: calc(var(--key-h) * 0.64);
+  left: calc((var(--index) + 1) * var(--key-w) - var(--key-w) * 0.31);
+  background: linear-gradient(to bottom, #3a3d4d, #13141f);
+  color: #9ba0b5;
   z-index: 2;
+  box-shadow:
+    inset 0 -3px 0 rgba(255, 255, 255, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.45);
+}
+
+.key.black:hover {
+  background: linear-gradient(to bottom, #454859, #1c1d2c);
 }
 
 .key.black.active {
   background: linear-gradient(to bottom, #3a5fcc, #1c2f6b);
+  box-shadow: 0 0 16px rgba(70, 110, 255, 0.6);
 }
 
 .key.black.auto-active {
   background: linear-gradient(to bottom, #cc8a2a, #7a4f0f);
+  box-shadow: 0 0 16px rgba(230, 160, 50, 0.55);
 }
 
 .key.black.sustained {
   background: linear-gradient(to bottom, #7a5fcc, #45316b);
+  box-shadow: 0 0 16px rgba(160, 120, 255, 0.55);
 }
 
 .key-label {
-  font-size: 0.7rem;
-  opacity: 0.7;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.65;
   pointer-events: none;
+}
+
+.key.black .key-label {
+  opacity: 0.55;
+}
+
+/* Responsive : le clavier rétrécit plutôt que de déborder. */
+@media (max-width: 1020px) {
+  .piano {
+    --key-w: 52px;
+    --key-h: 200px;
+  }
+}
+
+@media (max-width: 880px) {
+  .piano {
+    --key-w: 44px;
+    --key-h: 180px;
+  }
+  .key-label {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .piano {
+    --key-w: 36px;
+    --key-h: 160px;
+  }
+  .key {
+    padding-bottom: 6px;
+    border-radius: 0 0 5px 5px;
+  }
+  .key-label {
+    display: none;
+  }
 }
