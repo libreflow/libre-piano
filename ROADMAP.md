@@ -8,14 +8,14 @@ incrément livrable indépendamment.
 
 1. ✅ Ajouter ESLint (config React/TS flat config) — a déjà attrapé 2 vrais bugs React
 2. ✅ Ajouter Prettier pour un formatage cohérent
-3. Mettre en place Vitest pour les tests unitaires
-4. Tests pour `clampMidiToKeyboard` / `midiToNoteName` (cas limites, octaves extrêmes)
-5. Tests pour `parseDurSeconds` / `buildSong` (morceaux de démo)
-6. Tests pour `buildSongFromTracks` (chordRatio, likelyMelody, troncature)
-7. CI GitHub Actions (lint + test + build à chaque push)
+3. ✅ Mettre en place Vitest pour les tests unitaires
+4. ✅ Tests pour `clampMidiToKeyboard` / `midiToNoteName` (cas limites, octaves extrêmes)
+5. ✅ Tests pour `parseDurSeconds` / `buildSong` (morceaux de démo)
+6. ✅ Tests pour `buildSongFromTracks` (chordRatio, likelyMelody, troncature)
+7. ✅ CI GitHub Actions (lint + test + build à chaque push)
 8. ✅ Extraire les "magic numbers" en constantes nommées (`constants.ts`)
-9. Découper `Piano.tsx` (trop volumineux) en hooks dédiés (`usePlayback`, `useMidiImport`, `useKeyboardInput`)
-10. Documenter l'architecture dans un `ARCHITECTURE.md`
+9. ✅ Découper `Piano.tsx` (trop volumineux) en hooks dédiés (`usePlayback`, `useMidiImport`, `useKeyboardInput`)
+10. ✅ Documenter l'architecture dans un `ARCHITECTURE.md`
 
 ## Phase 2 — Clavier & interaction (11–20)
 
@@ -37,7 +37,7 @@ incrément livrable indépendamment.
 23. Réverbe réglable (`Tone.Reverb`)
 24. Égaliseur simple (graves/médiums/aigus)
 25. Barre de progression réelle du chargement des échantillons (actuellement binaire)
-26. Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
+26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
 27. Métronome audible pendant lecture/pratique
 28. Pédale sustain avec release réellement prolongé (pas juste visuel)
 29. Normalisation du volume entre instruments

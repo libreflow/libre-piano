@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Tone from "tone";
+import { Sampler, getDestination, getTransport } from "./tone-gate";
 import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "../piano/constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
 
 // Échantillons Salamander Grand Piano, servis localement depuis public/samples
-// (pas de dépendance réseau au lancement). Tone.Sampler repitch entre les
+// (pas de dépendance réseau au lancement). Sampler repitch entre les
 // notes enregistrées, pas besoin d'un échantillon par demi-ton.
 function createSampler(onLoaded: () => void, onError: () => void) {
   const urls: Record<string, string> = {
@@ -40,7 +40,7 @@ function createSampler(onLoaded: () => void, onError: () => void) {
     A7: "A7.mp3",
     C8: "C8.mp3",
   };
-  const sampler = new Tone.Sampler({
+  const sampler = new Sampler({
     urls,
     release: 1,
     baseUrl: "samples/",
@@ -51,7 +51,7 @@ function createSampler(onLoaded: () => void, onError: () => void) {
 }
 
 export function useAudioEngine(volume: number) {
-  const samplerRef = useRef<Tone.Sampler | null>(null);
+  const samplerRef = useRef<Sampler | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
 
   useEffect(() => {
@@ -64,16 +64,15 @@ export function useAudioEngine(volume: number) {
       disposed = true;
       samplerRef.current?.dispose();
       samplerRef.current = null;
-      Tone.getTransport().stop();
-      Tone.getTransport().cancel();
+      getTransport().stop();
+      getTransport().cancel();
     };
   }, []);
 
   // Volume maître : % linéaire -> dB pour Tone.js (0% = muet).
   useEffect(() => {
     const pct = Math.max(VOLUME_MIN_PERCENT, Math.min(VOLUME_MAX_PERCENT, volume));
-    Tone.getDestination().volume.value =
-      pct <= 0 ? -Infinity : 20 * Math.log10(pct / 100);
+    getDestination().volume.value = pct <= 0 ? -Infinity : 20 * Math.log10(pct / 100);
   }, [volume]);
 
   const noteOn = useCallback((note: string) => {

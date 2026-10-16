@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as Tone from "tone";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { start as toneStart } from "./tone-gate";
 import { KEYS, WHITE_KEY_COUNT, whiteKeyIndex, blackKeyAfterIndex } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import {
@@ -44,7 +44,7 @@ export default function Piano() {
         (s) => s.id === initialState.selectedSongId
       )
       ? initialState.selectedSongId
-      : BUILTIN_SONGS[0].id
+      : (BUILTIN_SONGS[0]?.id ?? "")
   );
   const [speed, setSpeed] = useState(initialState.speed);
   const [volume, setVolume] = useState(initialState.volume);
@@ -53,10 +53,19 @@ export default function Piano() {
   const [isImporting, setIsImporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Boucle A-B.
+  // Boucle A-B. Les bornes sont clampées : Number("") ou une saisie
+  // invalide dans les <input type="number"> donne NaN, qu'on ramène à 0.
   const [loopEnabled, setLoopEnabled] = useState(false);
-  const [loopStart, setLoopStart] = useState(0);
-  const [loopEnd, setLoopEnd] = useState(0);
+  const [loopStart, setLoopStartRaw] = useState(0);
+  const [loopEnd, setLoopEndRaw] = useState(0);
+  const setLoopStart = useCallback(
+    (v: number) => setLoopStartRaw(Number.isFinite(v) ? Math.max(0, v) : 0),
+    []
+  );
+  const setLoopEnd = useCallback(
+    (v: number) => setLoopEndRaw(Number.isFinite(v) ? Math.max(0, v) : 0),
+    []
+  );
 
   // Sélecteur de pistes en attente de confirmation.
   const [pendingImport, setPendingImport] = useState<{
@@ -252,11 +261,11 @@ export default function Piano() {
 
   const handleMouseDown = async (note: string) => {
     if (isPlayingRef.current) return;
-    await Tone.start();
+    await toneStart();
     noteOn(note);
   };
   const handleMouseUp = (note: string) => {
-    if (isPlayingRef.current) return;
+    if (!activeNotes.has(note)) return;
     noteOff(note);
   };
 
@@ -347,11 +356,16 @@ export default function Piano() {
           className="import-btn"
           onClick={() => setShowKeyLabels((v) => !v)}
           title="Afficher/masquer les lettres sur les touches"
+          aria-pressed={showKeyLabels}
         >
           {showKeyLabels ? "🔡 Masquer labels" : "🔡 Afficher labels"}
         </button>
 
-        <button className="import-btn" onClick={toggleFullscreen}>
+        <button
+          className="import-btn"
+          onClick={toggleFullscreen}
+          aria-pressed={isFullscreen}
+        >
           {isFullscreen ? "🗗 Quitter plein écran" : "⛶ Plein écran"}
         </button>
 
@@ -451,7 +465,11 @@ export default function Piano() {
 
       <div
         className={`piano ${isPlaying ? "piano-readonly" : ""}`}
-        style={{ ["--white-keys" as any]: WHITE_KEY_COUNT }}
+        style={{
+          ["--white-keys" as any]: WHITE_KEY_COUNT,
+          ["--key-w" as any]: "60px",
+          ["--key-h" as any]: "220px",
+        }}
       >
         {KEYS.filter((k) => !k.isBlack).map((k) => (
           <button
@@ -462,6 +480,7 @@ export default function Piano() {
             onMouseUp={() => handleMouseUp(k.note)}
             onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
             title={k.note}
+            aria-label={`Touche ${k.note}`}
           >
             {showKeyLabels && <span className="key-label">{k.label}</span>}
           </button>
@@ -475,6 +494,7 @@ export default function Piano() {
             onMouseUp={() => handleMouseUp(k.note)}
             onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
             title={k.note}
+            aria-label={`Touche ${k.note}`}
           >
             {showKeyLabels && <span className="key-label">{k.label}</span>}
           </button>
