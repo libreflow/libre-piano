@@ -138,7 +138,7 @@ export function buildSongFromTracks(
   }
   if (transposedCount > 0) {
     warnings.push(
-      `${transposedCount} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (C3–C5).`
+      `${transposedCount} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (A0–C8).`
     );
   }
   if (events.length === 0) {
@@ -147,7 +147,10 @@ export function buildSongFromTracks(
 
   return {
     song: {
-      id: `imported-${Date.now()}`,
+      // Anti-collision : deux imports dans la même milliseconde
+      // (ex. double-clic rapide) produiraient le même id et le second
+      // écraserait le premier dans le sélecteur.
+      id: `imported-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       title: midi.name?.trim() || title,
       events,
       source: "imported",

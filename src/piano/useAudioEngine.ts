@@ -1,69 +1,118 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sampler, getDestination, getTransport } from "./tone-gate";
-import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "../piano/constants";
+import {
+  Sampler,
+  ToneAudioBuffer,
+  getDestination,
+  getTransport,
+  tuneForLowLatency,
+} from "./tone-gate";
+import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "./constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
 
 // Échantillons Salamander Grand Piano, servis localement depuis public/samples
-// (pas de dépendance réseau au lancement). Sampler repitch entre les
+// (pas de dépendance réseau au lancement). Tone.Sampler repitch entre les
 // notes enregistrées, pas besoin d'un échantillon par demi-ton.
-function createSampler(onLoaded: () => void, onError: () => void) {
-  const urls: Record<string, string> = {
-    A0: "A0.mp3",
-    C1: "C1.mp3",
-    "D#1": "Ds1.mp3",
-    "F#1": "Fs1.mp3",
-    A1: "A1.mp3",
-    C2: "C2.mp3",
-    "D#2": "Ds2.mp3",
-    "F#2": "Fs2.mp3",
-    A2: "A2.mp3",
-    C3: "C3.mp3",
-    "D#3": "Ds3.mp3",
-    "F#3": "Fs3.mp3",
-    A3: "A3.mp3",
-    C4: "C4.mp3",
-    "D#4": "Ds4.mp3",
-    "F#4": "Fs4.mp3",
-    A4: "A4.mp3",
-    C5: "C5.mp3",
-    "D#5": "Ds5.mp3",
-    "F#5": "Fs5.mp3",
-    A5: "A5.mp3",
-    C6: "C6.mp3",
-    "D#6": "Ds6.mp3",
-    "F#6": "Fs6.mp3",
-    A6: "A6.mp3",
-    C7: "C7.mp3",
-    "D#7": "Ds7.mp3",
-    "F#7": "Fs7.mp3",
-    A7: "A7.mp3",
-    C8: "C8.mp3",
-  };
-  const sampler = new Sampler({
-    urls,
-    release: 1,
-    baseUrl: "samples/",
-    onload: onLoaded,
-    onerror: onError,
-  }).toDestination();
-  return sampler;
-}
+export const SAMPLE_URLS: Record<string, string> = {
+  A0: "A0.mp3",
+  C1: "C1.mp3",
+  "D#1": "Ds1.mp3",
+  "F#1": "Fs1.mp3",
+  A1: "A1.mp3",
+  C2: "C2.mp3",
+  "D#2": "Ds2.mp3",
+  "F#2": "Fs2.mp3",
+  A2: "A2.mp3",
+  C3: "C3.mp3",
+  "D#3": "Ds3.mp3",
+  "F#3": "Fs3.mp3",
+  A3: "A3.mp3",
+  C4: "C4.mp3",
+  "D#4": "Ds4.mp3",
+  "F#4": "Fs4.mp3",
+  A4: "A4.mp3",
+  C5: "C5.mp3",
+  "D#5": "Ds5.mp3",
+  "F#5": "Fs5.mp3",
+  A5: "A5.mp3",
+  C6: "C6.mp3",
+  "D#6": "Ds6.mp3",
+  "F#6": "Fs6.mp3",
+  A6: "A6.mp3",
+  C7: "C7.mp3",
+  "D#7": "Ds7.mp3",
+  "F#7": "Fs7.mp3",
+  A7: "A7.mp3",
+  C8: "C8.mp3",
+};
+
+/** Nombre d'échantillons réels (dérivé, plus de constante découplée). */
+export const SAMPLE_COUNT = Object.keys(SAMPLE_URLS).length;
 
 export function useAudioEngine(volume: number) {
   const samplerRef = useRef<Sampler | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
+  // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
+  const [loadedCount, setLoadedCount] = useState(0);
 
   useEffect(() => {
     let disposed = false;
-    samplerRef.current = createSampler(
-      () => !disposed && setStatus("ready"),
-      () => !disposed && setStatus("error")
-    );
+    tuneForLowLatency();
+
+    // Préchargement explicite des buffers : chaque ToneAudioBuffer résout sa
+    // propre promesse, ce qui donne une progression fiable (plus de
+    // monkey-patch de window.fetch) et permet de passer les buffers
+    // directement au Sampler.
+    const entries = Object.entries(SAMPLE_URLS);
+    let loaded = 0;
+    let failed = 0;
+
+    const buffers = new Map<string, ToneAudioBuffer>();
+    const loadOne = (note: string, file: string) =>
+      new Promise<void>((resolve) => {
+        const buffer = new ToneAudioBuffer(
+          `samples/${file}`,
+          () => {
+            if (disposed) return resolve();
+            loaded += 1;
+            setLoadedCount(loaded);
+            resolve();
+          },
+          () => {
+            if (disposed) return resolve();
+            failed += 1;
+            setLoadedCount(loaded + failed);
+            resolve();
+          }
+        );
+        buffers.set(note, buffer);
+      });
+
+    const allSettled = Promise.all(entries.map(([n, f]) => loadOne(n, f)));
+
+    allSettled.then(() => {
+      if (disposed) return;
+      if (failed > 0) {
+        setStatus("error");
+        return;
+      }
+      const samples: Record<string, ToneAudioBuffer | string> = {};
+      for (const [note, buffer] of buffers) {
+        samples[note] = buffer;
+      }
+      samplerRef.current = new Sampler({
+        urls: samples,
+        release: 1,
+        onload: () => setStatus("ready"),
+        onerror: () => setStatus("error"),
+      }).toDestination();
+    });
+
     return () => {
       disposed = true;
       samplerRef.current?.dispose();
       samplerRef.current = null;
+      buffers.forEach((b) => b.dispose());
       getTransport().stop();
       getTransport().cancel();
     };
@@ -90,5 +139,5 @@ export function useAudioEngine(volume: number) {
     []
   );
 
-  return { samplerRef, status, noteOn, noteOff, triggerAttackRelease };
+  return { samplerRef, status, loadedCount, noteOn, noteOff, triggerAttackRelease };
 }

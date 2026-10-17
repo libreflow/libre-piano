@@ -18,8 +18,28 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
   return { MockSampler, MockPart };
 });
 
+const { MockToneAudioBuffer } = vi.hoisted(() => {
+  class MockToneAudioBuffer {
+    loaded = Promise.resolve();
+    constructor(
+      _url?: string,
+      onload?: (b: never) => void,
+      onerror?: (e: never) => void
+    ) {
+      setTimeout(() => onload?.(this as never), 0);
+      void onerror;
+    }
+    dispose() {}
+  }
+  return { MockToneAudioBuffer };
+});
+
 vi.mock("./tone-gate", () => ({
+  ToneAudioBuffer: MockToneAudioBuffer,
   start: vi.fn().mockResolvedValue(undefined),
+  getContext: () => ({ state: "running", lookAhead: 0.1 }),
+  tuneForLowLatency: vi.fn(),
+  ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
   Sampler: MockSampler,
   getTransport: () => ({
     stop: vi.fn(),
@@ -44,21 +64,23 @@ describe("Piano (rendu)", () => {
     localStorage.clear();
   });
 
-  it("affiche l'écran de chargement puis le clavier complet (25 touches)", async () => {
+  it("affiche l'écran de chargement puis le clavier complet (88 touches)", async () => {
     render(<Piano />);
-    expect(await screen.findByText("Chargement des sons du piano…")).toBeInTheDocument();
+    expect(await screen.findByText(/Chargement des sons du piano/)).toBeInTheDocument();
     // Le sampler mocké ne résout jamais onload : le clavier reste rendu
     // derrière l'écran de chargement (les boutons existent dans le DOM).
     const keys = screen
       .getAllByRole("button")
       .filter((b) => b.className.includes("key "));
-    expect(keys).toHaveLength(25);
+    expect(keys).toHaveLength(88);
   });
 
-  it("affiche les morceaux intégrés dans le sélecteur", () => {
+  it("affiche les morceaux intégrés dans le sélecteur (une seule option par chanson)", () => {
     render(<Piano />);
-    const select = screen.getByRole("combobox");
-    const titles = Array.from(select.querySelectorAll("option")).map(
+    const selects = screen.getAllByRole("combobox");
+    // Le premier combobox est le sélecteur de morceaux, le second la disposition.
+    const songSelect = selects[0];
+    const titles = Array.from(songSelect.querySelectorAll("option")).map(
       (o) => o.textContent
     );
     for (const song of BUILTIN_SONGS) {
@@ -72,17 +94,45 @@ describe("Piano (rendu)", () => {
     expect(screen.getByLabelText("Touche C#4")).toBeInTheDocument();
   });
 
-  it("affiche les labels de touches par défaut (persistés)", () => {
+  it("affiche les labels de touches par défaut (AZERTY persisté)", () => {
     render(<Piano />);
+    expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
+  });
+
+  it("permet de basculer la disposition du clavier (segmented control)", () => {
+    render(<Piano />);
+    // AZERTY par défaut : C3 = Q
+    expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
+    const qwertyBtn = screen.getByRole("radio", { name: /QWERTY/i });
+    fireEvent.click(qwertyBtn);
+    // Après bascule : C3 = A (rangée ASDF)
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("A");
   });
 
-  it("permet de basculer l'affichage des labels (aria-pressed)", () => {
+  it("bascule les étiquettes entre lettres, solfège et aucune (segmented)", () => {
     render(<Piano />);
-    const btn = screen.getByTitle("Afficher/masquer les lettres sur les touches");
-    expect(btn).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(btn);
-    expect(btn).toHaveAttribute("aria-pressed", "false");
+    const c4 = screen.getByLabelText("Touche C4");
+    // Mode par défaut : lettres -> pas de solfège
+    expect(c4).toHaveTextContent("K");
+    expect(c4).not.toHaveTextContent("Do");
+
+    // Mode solfège
+    const solfegeBtn = screen.getByRole("radio", { name: /Do Ré/i });
+    fireEvent.click(solfegeBtn);
+    expect(c4).toHaveTextContent("Do");
+    expect(c4).not.toHaveTextContent("K");
+
+    // Mode aucune étiquette
+    const noneBtn = screen.getByRole("radio", { name: /Rien/i });
+    fireEvent.click(noneBtn);
+    expect(c4).not.toHaveTextContent("Do");
+  });
+
+  it("affiche les noms de solfège avec dièses corrects", () => {
+    render(<Piano />);
+    const cs3 = screen.getByLabelText("Touche C#3");
+    fireEvent.click(screen.getByRole("radio", { name: /Do Ré/i }));
+    expect(cs3).toHaveTextContent("Do#");
   });
 
   it("joue une note au mousedown sur une touche", () => {

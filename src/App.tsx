@@ -9,9 +9,8 @@ function App() {
         <h1>Libre Piano</h1>
       </header>
       <p className="hint">
-        Joue avec la souris ou au clavier : touches <strong>A S D F G H J K L ;</strong>{" "}
-        pour les blanches, <strong>Z X C V B N M 2 3 4</strong> pour les noires. Maintiens{" "}
-        <strong>Espace</strong> pour la pédale de sustain.
+        Joue avec la souris ou au clavier — maintiens <strong>Espace</strong> pour la
+        pédale de sustain, <strong>Entrée</strong> pour la lecture.
       </p>
       <Piano />
     </main>

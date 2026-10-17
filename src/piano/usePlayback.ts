@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Part, start as toneStart, getDraw, getTransport } from "./tone-gate";
+import { Part, ensureAudioStarted, getDraw, getTransport } from "./tone-gate";
 import type { Song, SongEvent } from "./songs";
 import { songDuration } from "./songs";
 import { NOTE_HIGHLIGHT_RELEASE_FRACTION, PLAYBACK_END_BUFFER_SEC } from "./constants";
@@ -43,7 +43,7 @@ export function usePlayback(
 
   const playSong = useCallback(async () => {
     if (!samplerReady || isPlayingRef.current) return;
-    await toneStart();
+    await ensureAudioStarted();
     stopPlayback();
 
     const song = allSongs.find((s) => s.id === selectedSongId) ?? allSongs[0];
@@ -53,12 +53,26 @@ export function usePlayback(
 
     // Si la boucle A-B est active, on ne garde que les événements de la
     // section choisie, retimés pour démarrer à 0.
-    const sectionStart = loop.loopEnabled
-      ? Math.max(0, Math.min(loop.loopStart, fullDuration))
-      : 0;
-    const sectionEnd = loop.loopEnabled
-      ? Math.max(sectionStart + 0.1, Math.min(loop.loopEnd, fullDuration))
-      : fullDuration;
+    // Bornes défensives : saisies invalides (NaN) ou bornes croisées ne
+    // doivent jamais produire une boucle vide jouée en boucle rapide.
+    const clampedStart = Math.max(
+      0,
+      Math.min(Number.isFinite(loop.loopStart) ? loop.loopStart : 0, fullDuration)
+    );
+    const clampedEnd = Math.max(
+      0,
+      Math.min(Number.isFinite(loop.loopEnd) ? loop.loopEnd : 0, fullDuration)
+    );
+    // Bornes croisées : on les échange franchement plutôt que de jouer
+    // une section vide/de 0.1 s en boucle rapide.
+    let sectionStart = loop.loopEnabled ? clampedStart : 0;
+    let sectionEnd = loop.loopEnabled ? clampedEnd : fullDuration;
+    if (loop.loopEnabled && sectionStart > sectionEnd) {
+      [sectionStart, sectionEnd] = [sectionEnd, sectionStart];
+    }
+    if (loop.loopEnabled && sectionEnd - sectionStart < 0.1) {
+      sectionEnd = sectionStart + 0.1;
+    }
 
     const windowedEvents = song.events
       .filter((e) => e.time >= sectionStart && e.time < sectionEnd)

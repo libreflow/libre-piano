@@ -51,13 +51,25 @@ describe("summarizeTracks", () => {
 });
 
 describe("buildSongFromTracks", () => {
-  it("construit un morceau trié avec avertissements de transposition", () => {
+  it("construit un morceau trié sans transposition (plage 88 touches)", () => {
     const midi = new Midi(buildTestMidi());
     const { song, warnings } = buildSongFromTracks(midi, [0, 1], "Test");
     expect(song.source).toBe("imported");
     expect(song.events.length).toBe(20);
     const times = song.events.map((e) => e.time);
     expect([...times].sort((a, b) => a - b)).toEqual(times);
+    // Mélodie (72-74) et accords (48-55) tiennent dans A0-C8 : aucune
+    // note n'est décalée, l'avertissement de transposition est absent.
+    expect(warnings.some((w) => w.includes("décalée"))).toBe(false);
+  });
+
+  it("transpose encore les notes hors de la plage A0-C8", () => {
+    const midi = new Midi();
+    const track = midi.addTrack();
+    track.addNote({ midi: 126, time: 0, duration: 0.5 }); // F#9 : au-dessus de C8
+    const buffer = midi.toArray().slice().buffer;
+    const { song, warnings } = buildSongFromTracks(new Midi(buffer), [0], "X");
+    expect(song.events[0].note).toBe("F#7"); // redescendu de 2 octaves (F#8 dépasserait C8)
     expect(warnings.some((w) => w.includes("décalée"))).toBe(true);
   });
 

@@ -5,7 +5,7 @@ automatique, import de fichiers MIDI, et mode apprentissage.
 
 ## Fonctionnalités
 
-- **Clavier** : 2 octaves (C3–C5), jouable à la souris ou au clavier PC
+- **Clavier** : 88 touches (A0–C8) avec défilement, jouable à la souris ou au clavier PC
   (`A S D F G H J L` + `Z X C V B N M 2 3 4` pour les touches noires)
 - **Son** : `Tone.Sampler` avec échantillons réels de piano (Salamander Grand Piano, échantillons servis localement)
 - **Lecture automatique** : morceaux de démo intégrés + import de fichiers
