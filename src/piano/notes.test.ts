@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getKeyboardLayout,
   getKeyToNote,
+  getWhitePositionOfNote,
   getWindowKeyMap,
   getWhiteIndexOfNote,
   noteToSolfege,
@@ -136,8 +137,28 @@ describe("décalage d'octave de la fenêtre PC", () => {
     expect(labels.get("C5")).toBe("A");
   });
 
-  it("trouve l'index de touche blanche d'une note", () => {
-    expect(getWhiteIndexOfNote("C4")).toBeGreaterThan(0);
-    expect(getWhiteIndexOfNote("X")).toBe(-1);
+  it("trouve la position d'une note pour l'auto-scroll", () => {
+    expect(getWhitePositionOfNote("C4")).toBeGreaterThan(0);
+    expect(getWhitePositionOfNote("X")).toBe(-1);
+  });
+});
+
+describe("position exacte des notes (auto-scroll)", () => {
+  it("positionne une blanche sur son index", () => {
+    const { keys } = getKeyboardLayout();
+    const c4 = keys.find((k) => k.note === "C4")!;
+    expect(getWhitePositionOfNote("C4")).toBe(c4.whiteIndex);
+  });
+
+  it("positionne une noire entre sa blanche et la suivante", () => {
+    const { keys } = getKeyboardLayout();
+    const cs4 = keys.find((k) => k.note === "C#4")!;
+    const pos = getWhitePositionOfNote("C#4");
+    expect(pos).toBeGreaterThan(cs4.whiteIndex);
+    expect(pos).toBeLessThan(cs4.whiteIndex + 1);
+  });
+
+  it("retourne -1 pour une note inexistante", () => {
+    expect(getWhitePositionOfNote("X")).toBe(-1);
   });
 });

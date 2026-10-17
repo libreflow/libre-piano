@@ -25,7 +25,11 @@ export function useKeyboardInput({
   releaseSustained,
   onTogglePlayback,
 }: KeyboardHandlers) {
-  const activeKeyboardKeys = useRef<Set<string>>(new Set());
+  // Map touche PC -> note RÉSOLUE au keydown : au keyup on relâche la
+  // note enregistrée, pas celle de la fenêtre courante. Sinon, décaler
+  // l'octave pendant une touche maintenue relâcherait la mauvaise note
+  // et laisserait l'ancienne sonner à l'infini.
+  const activeKeyboardNotes = useRef<Map<string, string>>(new Map());
   const sustainRef = useRef(false);
   const keyToNote = useMemo(
     () => getKeyToNote(layout, octaveShift),
@@ -66,24 +70,28 @@ export function useKeyboardInput({
       if (e.repeat || isPlayingRef.current) return;
       const key = e.key.toLowerCase();
       const note = keyToNote[key];
-      if (!note || activeKeyboardKeys.current.has(key)) return;
-      activeKeyboardKeys.current.add(key);
+      if (!note || activeKeyboardNotes.current.has(key)) return;
+      activeKeyboardNotes.current.set(key, note);
       if (getContext().state !== "running") void ensureAudioStarted();
       noteOn(note);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
-        releaseSustain();
+        // Bug 4 : ne rien relâcher si la pédale n'était pas enfoncée,
+        // sinon on coupe des notes sustain d'une session précédente.
+        if (sustainRef.current) releaseSustain();
         return;
       }
       const key = e.key.toLowerCase();
-      const note = keyToNote[key];
-      if (!note) return;
-      activeKeyboardKeys.current.delete(key);
+      // Relâcher la note enregistrée au keydown (indépendante du
+      // décalage d'octave effectué depuis).
+      const playedNote = activeKeyboardNotes.current.get(key);
+      activeKeyboardNotes.current.delete(key);
+      if (!playedNote) return;
       // Toujours relâcher : si la lecture a démarré pendant que la
       // touche était maintenue, ignorer le keyup laisserait la note
       // sonner à l'infini après l'arrêt de la lecture.
-      noteOff(note);
+      noteOff(playedNote);
     };
     // Si la fenêtre perd le focus pédale enfoncée, on la relâche pour ne
     // pas laisser des notes sonner indéfiniment.

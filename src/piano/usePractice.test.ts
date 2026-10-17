@@ -73,3 +73,43 @@ describe("usePractice", () => {
     expect(result.current.state.active).toBe(false);
   });
 });
+
+describe("régression : changement de morceau pendant une session", () => {
+  it("réinitialise la session quand le morceau change (bug zombie)", async () => {
+    const other: Song = {
+      id: "other",
+      title: "Other",
+      source: "builtin",
+      events: [{ time: 0, note: "A4", duration: 0.5 }],
+    };
+    const { result, rerender } = renderHook(
+      ({ song }: { song: Song }) => usePractice(song, vi.fn()),
+      { initialProps: { song } }
+    );
+    act(() => result.current.start());
+    expect(result.current.state.active).toBe(true);
+
+    // le morceau est supprimé / changé
+    await act(async () => {
+      rerender({ song: other });
+    });
+    expect(result.current.state.active).toBe(false);
+    expect(result.current.state.expectedNote).toBeNull();
+
+    // la session redémarre proprement sur le nouveau morceau
+    act(() => result.current.start());
+    expect(result.current.state.expectedNote).toBe("A4");
+  });
+
+  it("survit à un morceau supprimé (undefined) sans crash", async () => {
+    const { result, rerender } = renderHook(
+      ({ song }: { song: Song | undefined }) => usePractice(song, vi.fn()),
+      { initialProps: { song } }
+    );
+    act(() => result.current.start());
+    await act(async () => {
+      rerender({ song: undefined });
+    });
+    expect(result.current.state.active).toBe(false);
+  });
+});

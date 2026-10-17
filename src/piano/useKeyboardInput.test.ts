@@ -231,3 +231,56 @@ describe("raccourci Entrée vs éléments interactifs", () => {
     expect(noteOff).toHaveBeenCalledWith("C3");
   });
 });
+
+describe("régression : décalage d'octave pendant une touche maintenue", () => {
+  it("relâche la note du keydown même si la fenêtre a bougé (note orpheline)", async () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const isPlayingRef = { current: false };
+    const { result } = renderHook(
+      ({ octaveShift }: { octaveShift: number }) =>
+        useKeyboardInput({
+          layout: "qwerty",
+          octaveShift,
+          isPlayingRef,
+          noteOn,
+          noteOff,
+          onSustainChange: vi.fn(),
+          releaseSustained: vi.fn(),
+        }),
+      { initialProps: { octaveShift: 0 } }
+    );
+    void result;
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(noteOn).toHaveBeenCalledWith("C3");
+
+    // l'utilisateur décale l'octave pendant que la touche est maintenue :
+    // le keyup doit relâcher C3 (la note du keydown), pas C4.
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "a", code: "KeyA" }));
+    });
+    expect(noteOff).toHaveBeenCalledWith("C3");
+    expect(noteOff).not.toHaveBeenCalledWith("C4");
+  });
+
+  it("keyup Espace sans pédale enfoncée ne relâche rien", () => {
+    const releaseSustained = vi.fn();
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "qwerty",
+        isPlayingRef: { current: false },
+        noteOn: vi.fn(),
+        noteOff: vi.fn(),
+        onSustainChange: vi.fn(),
+        releaseSustained,
+      })
+    );
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space" }));
+    });
+    expect(releaseSustained).not.toHaveBeenCalled();
+  });
+});

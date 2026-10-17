@@ -4,7 +4,7 @@ import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
   getKeyboardLayout,
   getWindowKeyMap,
-  getWhiteIndexOfNote,
+  getWhitePositionOfNote,
   noteToSolfege,
   KeyboardLayout,
   LabelMode,
@@ -198,7 +198,7 @@ export default function Piano() {
     releaseSustained,
     onTogglePlayback: () => {
       if (isPlayingRef.current) stopPlaybackAndClear();
-      else playSongGuarded();
+      else if (!practiceRef.current) playSongGuarded();
     },
   });
 
@@ -207,7 +207,7 @@ export default function Piano() {
   useEffect(() => {
     const el = pianoScrollRef.current;
     if (!el) return;
-    const idx = getWhiteIndexOfNote("C4");
+    const idx = getWhitePositionOfNote("C4");
     const keyW = parseFloat(
       getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
     );
@@ -222,7 +222,7 @@ export default function Piano() {
     if (!noteToFollow) return;
     const el = pianoScrollRef.current;
     if (!el) return;
-    const idx = getWhiteIndexOfNote(noteToFollow);
+    const idx = getWhitePositionOfNote(noteToFollow);
     if (idx < 0) return;
     const keyW = parseFloat(
       getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
@@ -281,6 +281,14 @@ export default function Piano() {
   useEffect(() => {
     pendingImportRef.current = Boolean(pendingImport);
   }, [pendingImport]);
+
+  // Lecture et apprentissage sont exclusifs : le raccourci Entrée ne doit
+  // pas lancer la lecture pendant une session (réf lue au moment de
+  // l'appui, le handler n'est pas re-créé à chaque render).
+  const practiceRef = useRef(false);
+  useEffect(() => {
+    practiceRef.current = practice.state.active;
+  }, [practice.state.active]);
   const playSongGuarded = useCallback(() => {
     if (pendingImportRef.current) return;
     void playSong();
@@ -409,7 +417,9 @@ export default function Piano() {
             <button
               className="play-btn"
               onClick={playSongGuarded}
-              disabled={status !== "ready" || Boolean(pendingImport)}
+              disabled={
+                status !== "ready" || Boolean(pendingImport) || practice.state.active
+              }
             >
               <PlayIcon /> Lecture
             </button>
@@ -446,7 +456,14 @@ export default function Piano() {
 
           <button
             className="import-btn"
-            onClick={() => (practice.state.active ? practice.stop() : practice.start())}
+            onClick={() => {
+              if (practice.state.active) {
+                practice.stop();
+              } else {
+                if (isPlayingRef.current) stopPlaybackAndClear();
+                practice.start();
+              }
+            }}
             disabled={status !== "ready" || isPlaying || Boolean(pendingImport)}
             aria-pressed={practice.state.active}
             title="Mode apprentissage : joue la note attendue pour avancer"
