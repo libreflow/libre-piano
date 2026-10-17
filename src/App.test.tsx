@@ -19,7 +19,25 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
 
 // WebAudio n'existe pas en jsdom : on mocke la couche audio pour valider
 // le rendu complet de l'App (header, contrôles, clavier) sans crash.
+
+const { MockToneAudioBuffer } = vi.hoisted(() => {
+  class MockToneAudioBuffer {
+    loaded = Promise.resolve();
+    constructor(
+      _url?: string,
+      onload?: (b: never) => void,
+      onerror?: (e: never) => void
+    ) {
+      setTimeout(() => onload?.(this as never), 0);
+      void onerror;
+    }
+    dispose() {}
+  }
+  return { MockToneAudioBuffer };
+});
+
 vi.mock("./piano/tone-gate", () => ({
+  ToneAudioBuffer: MockToneAudioBuffer,
   start: vi.fn().mockResolvedValue(undefined),
   getContext: () => ({ state: "running", lookAhead: 0.1 }),
   tuneForLowLatency: vi.fn(),

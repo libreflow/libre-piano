@@ -18,7 +18,24 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
   return { MockSampler, MockPart };
 });
 
+const { MockToneAudioBuffer } = vi.hoisted(() => {
+  class MockToneAudioBuffer {
+    loaded = Promise.resolve();
+    constructor(
+      _url?: string,
+      onload?: (b: never) => void,
+      onerror?: (e: never) => void
+    ) {
+      setTimeout(() => onload?.(this as never), 0);
+      void onerror;
+    }
+    dispose() {}
+  }
+  return { MockToneAudioBuffer };
+});
+
 vi.mock("./tone-gate", () => ({
+  ToneAudioBuffer: MockToneAudioBuffer,
   start: vi.fn().mockResolvedValue(undefined),
   getContext: () => ({ state: "running", lookAhead: 0.1 }),
   tuneForLowLatency: vi.fn(),
