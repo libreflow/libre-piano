@@ -25,7 +25,7 @@ npm run tauri dev
 
 ```bash
 npm run lint      # ESLint (0 erreur attendu)
-npm test          # Vitest (31 tests)
+npm test          # Vitest (88 tests)
 npm run build     # tsc + vite build
 npx prettier --check .   # formatage
 ```
@@ -45,8 +45,14 @@ npx prettier --check .   # formatage
 
 ## Signaler un bug
 
-Ouvre une issue avec : étapes de reproduction, comportement attendu vs observé,
-et système d'exploitation. Les logs du dev (`npm run tauri dev`) sont utiles.
+Ouvre une issue avec le modèle « Rapport de bug » : étapes de reproduction,
+comportement attendu vs observé, et système d'exploitation. Les logs du dev
+(`npm run tauri dev`) sont utiles.
+
+## Sécurité
+
+Ne signale pas de vulnérabilité dans une issue publique : voir
+[`SECURITY.md`](./SECURITY.md).
 
 ## Roadmap
 
