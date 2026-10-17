@@ -49,7 +49,10 @@ export function useKeyboardInput({
       }
       if (e.code === "Enter" && onTogglePlayback) {
         const target = e.target as HTMLElement;
-        if (!target.closest("button, select, input, a")) {
+        // Ignorer si le focus est dans un élément interactif — y compris
+        // les labels du sélecteur de pistes (sinon Entrée lancerait la
+        // lecture derrière le dialogue au lieu de valider l'import).
+        if (!target.closest("button, select, input, a, label")) {
           e.preventDefault();
           onTogglePlayback();
         }
@@ -72,7 +75,10 @@ export function useKeyboardInput({
       const note = keyToNote[key];
       if (!note) return;
       activeKeyboardKeys.current.delete(key);
-      if (!isPlayingRef.current) noteOff(note);
+      // Toujours relâcher : si la lecture a démarré pendant que la
+      // touche était maintenue, ignorer le keyup laisserait la note
+      // sonner à l'infini après l'arrêt de la lecture.
+      noteOff(note);
     };
     // Si la fenêtre perd le focus pédale enfoncée, on la relâche pour ne
     // pas laisser des notes sonner indéfiniment.

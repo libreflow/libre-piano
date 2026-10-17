@@ -12,7 +12,7 @@ import {
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
-import { loadPersistedState, savePersistedState } from "./storage";
+import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import { useKeyboardInput } from "./useKeyboardInput";
@@ -178,7 +178,7 @@ export default function Piano() {
     releaseSustained,
     onTogglePlayback: () => {
       if (isPlayingRef.current) stopPlaybackAndClear();
-      else void playSong();
+      else playSongGuarded();
     },
   });
 
@@ -204,25 +204,40 @@ export default function Piano() {
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessage);
 
+  // La lecture ne démarre pas tant que le dialogue de sélection de
+  // pistes est ouvert (sinon elle jouerait derrière le dialogue).
+  const pendingImportRef = useRef(false);
+  useEffect(() => {
+    pendingImportRef.current = Boolean(pendingImport);
+  }, [pendingImport]);
+  const playSongGuarded = useCallback(() => {
+    if (pendingImportRef.current) return;
+    void playSong();
+  }, [playSong]);
+
   // Suppression d'un morceau importé (libère aussi le localStorage).
-  const deleteImportedSong = useCallback((id: string) => {
-    setImportedSongs((prev) => {
-      const song = prev.find((s) => s.id === id);
-      if (!song) return prev;
+  const deleteImportedSong = useCallback(
+    (id: string) => {
+      // Le confirm est AVANT les setters : en StrictMode les updaters sont
+      // appelés deux fois, un side-effect dedans afficherait le confirm
+      // en double (et updater non pur).
+      const song = importedSongs.find((s) => s.id === id);
+      if (!song) return;
       if (!window.confirm(`Supprimer "${song.title}" ? Cette action est définitive.`)) {
-        return prev;
+        return;
       }
-      return prev.filter((s) => s.id !== id);
-    });
-    setSelectedSongId((current) =>
-      current === id ? (BUILTIN_SONGS[0]?.id ?? "") : current
-    );
-  }, []);
+      setImportedSongs((prev) => prev.filter((s) => s.id !== id));
+      setSelectedSongId((current) =>
+        current === id ? (BUILTIN_SONGS[0]?.id ?? "") : current
+      );
+    },
+    [importedSongs]
+  );
 
   // Persistance : réécrit l'état complet à chaque changement pertinent.
   useEffect(() => {
     const saved = savePersistedState({
-      version: 2,
+      version: STATE_VERSION,
       importedSongs,
       selectedSongId,
       speed,
@@ -260,6 +275,8 @@ export default function Piano() {
     noteOn(note);
   };
   const handleMouseUp = (note: string) => {
+    // Toujours relâcher une note active : si la lecture a démarré pendant
+    // le clic maintenu, la note sonnerait à l'infini après l'arrêt.
     if (!activeNotes.has(note)) return;
     noteOff(note);
   };
@@ -308,7 +325,7 @@ export default function Piano() {
             <button
               className="import-btn delete-song"
               onClick={() => deleteImportedSong(selectedSong.id)}
-              disabled={isPlaying}
+              disabled={isPlaying || isImporting}
               title="Supprimer ce morceau importé"
               aria-label="Supprimer ce morceau importé"
             >
@@ -317,7 +334,11 @@ export default function Piano() {
           )}
 
           {!isPlaying ? (
-            <button className="play-btn" onClick={playSong} disabled={status !== "ready"}>
+            <button
+              className="play-btn"
+              onClick={playSongGuarded}
+              disabled={status !== "ready" || Boolean(pendingImport)}
+            >
               <PlayIcon /> Lecture
             </button>
           ) : (

@@ -6,7 +6,7 @@ import type { Song } from "./songs";
 import { SPEED_DEFAULT_PERCENT, VOLUME_DEFAULT_PERCENT } from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
-const STATE_VERSION = 2;
+export const STATE_VERSION = 2;
 
 export interface PersistedState {
   version: number;

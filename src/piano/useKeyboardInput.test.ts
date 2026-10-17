@@ -164,3 +164,70 @@ describe("useKeyboardInput", () => {
     expect(releaseSustained).toHaveBeenCalled();
   });
 });
+
+describe("raccourci Entrée vs éléments interactifs", () => {
+  it("ne lance pas la lecture si le focus est sur un label (dialogue pistes)", () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const onSustainChange = vi.fn();
+    const releaseSustained = vi.fn();
+    const onTogglePlayback = vi.fn();
+    const isPlayingRef = { current: false };
+    // Simuler le DOM du sélecteur de pistes : label > input
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    label.appendChild(input);
+    document.body.appendChild(label);
+    input.focus();
+
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "qwerty",
+        isPlayingRef,
+        noteOn,
+        noteOff,
+        onSustainChange,
+        releaseSustained,
+        onTogglePlayback,
+      })
+    );
+    act(() => {
+      const e = new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        bubbles: true,
+      });
+      Object.defineProperty(e, "target", { value: input });
+      window.dispatchEvent(e);
+    });
+    expect(onTogglePlayback).not.toHaveBeenCalled();
+    label.remove();
+  });
+
+  it("relâche la note au keyup même pendant la lecture (bug note bloquée)", async () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const isPlayingRef = { current: false };
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "qwerty",
+        isPlayingRef,
+        noteOn,
+        noteOff,
+        onSustainChange: vi.fn(),
+        releaseSustained: vi.fn(),
+      })
+    );
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    // La lecture démarre PENDANT que la touche est maintenue
+    isPlayingRef.current = true;
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "a", code: "KeyA" }));
+    });
+    // La note doit être relâchée malgré la lecture active
+    expect(noteOff).toHaveBeenCalledWith("C3");
+  });
+});
