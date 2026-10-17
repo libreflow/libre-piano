@@ -4,7 +4,6 @@ import {
   getKeyToNote,
   getWhitePositionOfNote,
   getWindowKeyMap,
-  getWhiteIndexOfNote,
   noteToSolfege,
   MAX_MIDI,
   MIN_MIDI,
