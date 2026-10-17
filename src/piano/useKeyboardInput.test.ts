@@ -3,8 +3,18 @@ import { renderHook, act } from "@testing-library/react";
 import { useKeyboardInput } from "./useKeyboardInput";
 
 vi.mock("./notes", () => ({
-  getKeyToNote: (layout: string) =>
-    layout === "azerty" ? { q: "C3", s: "D3", w: "C#3" } : { a: "C3", s: "D3", z: "C#3" },
+  // Simule le décalage d'octave : +1 décale les notes d'une octave.
+  getKeyToNote: (layout: string, octaveShift = 0) => {
+    const shift = (note: string) => {
+      const m = note.match(/^([A-G]#?)(\d+)$/);
+      return m ? `${m[1]}${parseInt(m[2], 10) + octaveShift}` : note;
+    };
+    const base =
+      layout === "azerty"
+        ? { q: "C3", s: "D3", w: "C#3" }
+        : { a: "C3", s: "D3", z: "C#3" };
+    return Object.fromEntries(Object.entries(base).map(([k, n]) => [k, shift(n)]));
+  },
 }));
 vi.mock("./tone-gate", () => ({
   ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
@@ -321,5 +331,46 @@ describe("régression : blur fenêtre pendant des touches maintenues", () => {
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(noteOn).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("régression : décalage d'octave et notes jouées synchrones", () => {
+  it("un keydown après le décalage joue la note de la NOUVELLE fenêtre", async () => {
+    const noteOn = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ octaveShift }: { octaveShift: number }) =>
+        useKeyboardInput({
+          layout: "qwerty",
+          octaveShift,
+          isPlayingRef: { current: false },
+          noteOn,
+          noteOff: vi.fn(),
+          onSustainChange: vi.fn(),
+          releaseSustained: vi.fn(),
+        }),
+      { initialProps: { octaveShift: 0 } }
+    );
+    void result;
+    // fenêtre C3 : A = C3
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(noteOn).toHaveBeenNthCalledWith(1, "C3");
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "a", code: "KeyA" }));
+    });
+
+    // décalage +1 (fenêtre C4) puis keydown immédiat :
+    // doit jouer C4, pas l'ancien C3
+    await act(async () => {
+      rerender({ octaveShift: 1 });
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(noteOn).toHaveBeenNthCalledWith(2, "C4");
   });
 });
