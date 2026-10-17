@@ -204,8 +204,13 @@ export function noteToSolfege(note: string): string {
   return match ? (SOLFEGE_BY_LETTER[match[1]] ?? note) : note;
 }
 
-/** Index de la touche blanche portant une note (pour l'auto-scroll). */
-export function getWhiteIndexOfNote(note: string): number {
+/** Position horizontale d'une note en unités de touche blanche, exacte
+ * pour les noires (elles sont décalées d'environ 0.69 touche après la
+ * blanche qui les précède, cf. .key.black left dans le CSS).
+ * Retourne -1 si la note n'existe pas. */
+export function getWhitePositionOfNote(note: string): number {
   const { keys } = getKeyboardLayout();
-  return keys.find((k) => k.note === note)?.whiteIndex ?? -1;
+  const key = keys.find((k) => k.note === note);
+  if (!key) return -1;
+  return key.isBlack ? key.whiteIndex + 0.69 : key.whiteIndex;
 }

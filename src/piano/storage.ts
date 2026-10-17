@@ -32,6 +32,46 @@ export const DEFAULT_STATE: PersistedState = {
   theme: "dark",
 };
 
+/** Validation d'un état chargé : sans ça, un localStorage corrompu
+ * (speed: "abc", labelMode inconnu...) produit des NaN silencieux qui
+ * cassent la lecture auto. Chaque champ est ramené à un type sûr. */
+function sanitize(raw: Partial<PersistedState>): PersistedState {
+  const num = (v: unknown, fallback: number, min: number, max: number) => {
+    const n = typeof v === "number" ? v : Number(v);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+  };
+  const labelMode =
+    raw.labelMode === "lettres" ||
+    raw.labelMode === "solfege" ||
+    raw.labelMode === "both" ||
+    raw.labelMode === "none"
+      ? raw.labelMode
+      : DEFAULT_STATE.labelMode;
+  const keyboardLayout =
+    raw.keyboardLayout === "azerty" || raw.keyboardLayout === "qwerty"
+      ? raw.keyboardLayout
+      : DEFAULT_STATE.keyboardLayout;
+  return {
+    ...DEFAULT_STATE,
+    ...raw,
+    speed: num(raw.speed, DEFAULT_STATE.speed, 50, 150),
+    volume: num(raw.volume, DEFAULT_STATE.volume, 0, 100),
+    showKeyLabels: typeof raw.showKeyLabels === "boolean" ? raw.showKeyLabels : true,
+    labelMode,
+    keyboardLayout,
+    importedSongs: Array.isArray(raw.importedSongs)
+      ? raw.importedSongs.filter(
+          (song) =>
+            song &&
+            typeof song.id === "string" &&
+            typeof song.title === "string" &&
+            Array.isArray(song.events)
+        )
+      : [],
+  };
+}
+
 /** Migre un état d'une version antérieure vers la courante.
  * Chaque schéma cassé ajoute sa marche ici ; les états trop récents
  * (version inconnue > courante) repartent des défauts pour ne pas
@@ -57,7 +97,7 @@ function migrate(parsed: Record<string, unknown>): PersistedState {
   if ((state as { version: number }).version !== STATE_VERSION) {
     return { ...DEFAULT_STATE };
   }
-  return { ...DEFAULT_STATE, ...(state as Partial<PersistedState>) };
+  return sanitize(state as Partial<PersistedState>);
 }
 
 export function loadPersistedState(): PersistedState {

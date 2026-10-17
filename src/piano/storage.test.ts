@@ -70,3 +70,48 @@ describe("storage", () => {
     expect(loadPersistedState()).toEqual(DEFAULT_STATE);
   });
 });
+
+describe("sanitization des valeurs corrompues (régression NaN)", () => {
+  it("répare un speed corrompu (string) en valeur par défaut", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({ version: 2, speed: "abc", volume: 130 })
+    );
+    const state = loadPersistedState();
+    expect(state.speed).toBe(100); // fallback
+    expect(state.volume).toBe(100); // clampé à 100
+  });
+
+  it("répare un labelMode inconnu", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({ version: 2, labelMode: "nonsense" })
+    );
+    expect(loadPersistedState().labelMode).toBe("lettres");
+  });
+
+  it("répare un keyboardLayout inconnu", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({ version: 2, keyboardLayout: "dvorak" })
+    );
+    expect(loadPersistedState().keyboardLayout).toBe("azerty");
+  });
+
+  it("élimine les morceaux importés malformés", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({
+        version: 2,
+        importedSongs: [
+          { id: "ok", title: "OK", events: [], source: "imported" },
+          { id: 42, title: "sans events" },
+          "pas un morceau",
+        ],
+      })
+    );
+    const state = loadPersistedState();
+    expect(state.importedSongs).toHaveLength(1);
+    expect(state.importedSongs[0].id).toBe("ok");
+  });
+});

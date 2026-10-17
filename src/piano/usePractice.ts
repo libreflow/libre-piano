@@ -34,6 +34,15 @@ export function usePractice(
   // ref des événements pour éviter les relances d'effet
   const eventsRef = useRef<SongEvent[]>([]);
 
+  // Reset de la session au changement (ou à la suppression) du morceau :
+  // sinon une session active survit avec des événements obsolètes.
+  // Pattern "adjusting state during render" (cf. React docs) : reset de
+  // la session quand le morceau change, sans effect ni setState dedans.
+  const [lastSong, setLastSong] = useState(song);
+  if (song !== lastSong) {
+    setLastSong(song);
+    setState(IDLE);
+  }
   useEffect(() => {
     eventsRef.current = song?.events ?? [];
   }, [song]);
