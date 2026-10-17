@@ -1,5 +1,21 @@
 # Changelog
 
+## Non publié
+
+### Corrections de bugs
+
+- Lecture tactile : les touches répondent aux Pointer Events (tablettes/écrans tactiles)
+- Sustain : une note rejouée sans pédale ne reste plus affichée « sustain » après relâchement
+- `npm run test:midi` : script retiré (le fichier `scripts/` n'existait pas dans le dépôt)
+- Morceaux intégrés : une notation rythmique invalide ne produit plus un NaN qui décalait le morceau
+
+### Qualité
+
+- Import dynamique de `@tonejs/midi` : bundle initial 533 → 505 kB (chunk MIDI chargé à l'import)
+- Messages de statut auto-effacés après 8 s
+- Suite de tests : 88 tests, exécution accélérée (pool vmThreads)
+- Fichiers communautaires GitHub : templates d'issues/PR, SECURITY.md, Dependabot
+
 ## 0.2.1 — 2026-10-17
 
 ### Corrections de bugs
