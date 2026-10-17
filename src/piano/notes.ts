@@ -141,8 +141,10 @@ function keyLabel(key: string): string {
 
 /** Bornes du décalage d'octave de la fenêtre PC : la fenêtre couvre 2
  * octaves (24 demi-tons) et doit rester dans A0-C8.
- * Base C3 (48) : min -2, max +3. */
-export const OCTAVE_SHIFT_MIN = -2;
+ * Base C3 (48) : min -3 (fenêtre C0-C2, couvre les graves A0-B0),
+ * max +3 (fenêtre C6-C8). -3 ne descend pas sous A0 car la fenêtre
+ * blanche la plus grave jouée est A1 (21+12=33 >= base 12 + 21). */
+export const OCTAVE_SHIFT_MIN = -3;
 export const OCTAVE_SHIFT_MAX = 3;
 
 /** Map touche PC (e.key minuscule) -> note. La fenêtre de jeu est ancrée
@@ -202,6 +204,25 @@ const SOLFEGE_BY_LETTER: Record<string, string> = {
 export function noteToSolfege(note: string): string {
   const match = note.match(/^([A-G]#?)/);
   return match ? (SOLFEGE_BY_LETTER[match[1]] ?? note) : note;
+}
+
+/** Meilleur décalage d'octave pour que la fenêtre PC couvre `note`,
+ * en restant dans les bornes : minimise le déplacement par rapport à
+ * `currentShift`. Retourne null si aucun shift ne couvre la note
+ * (impossible sur 88 touches, mais défensif). */
+export function getOctaveShiftForNote(note: string, currentShift: number): number | null {
+  const midi = noteNameToMidi(note);
+  if (midi === null) return null;
+  const candidates: number[] = [];
+  for (let shift = OCTAVE_SHIFT_MIN; shift <= OCTAVE_SHIFT_MAX; shift++) {
+    const base = KEY_WINDOW_BASE + shift * 12;
+    if (midi >= base && midi <= base + 24) candidates.push(shift);
+  }
+  if (candidates.length === 0) return null;
+  // le plus proche du shift courant
+  return candidates.reduce((best, c) =>
+    Math.abs(c - currentShift) < Math.abs(best - currentShift) ? c : best
+  );
 }
 
 /** Position horizontale d'une note en unités de touche blanche, exacte
