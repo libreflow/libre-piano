@@ -139,13 +139,22 @@ function keyLabel(key: string): string {
   return pretty[key] ?? key.toUpperCase();
 }
 
-/** Map touche PC (e.key minuscule) -> note, pour une disposition. La fenêtre
- * de jeu est ancrée sur KEY_WINDOW_BASE (C3) : les touches PC couvrent 2
- * octaves, le reste du clavier se joue à la souris ou en décalant. */
-export function getKeyToNote(layout: KeyboardLayout): Record<string, string> {
+/** Bornes du décalage d'octave de la fenêtre PC : la fenêtre couvre 2
+ * octaves (24 demi-tons) et doit rester dans A0-C8.
+ * Base C3 (48) : min -2, max +3. */
+export const OCTAVE_SHIFT_MIN = -2;
+export const OCTAVE_SHIFT_MAX = 3;
+
+/** Map touche PC (e.key minuscule) -> note. La fenêtre de jeu est ancrée
+ * sur KEY_WINDOW_BASE + octaveShift*12 : déplaçable par octaves. */
+export function getKeyToNote(
+  layout: KeyboardLayout,
+  octaveShift = 0
+): Record<string, string> {
   const map: Record<string, string> = {};
   const add = (offset: number, key: string) => {
-    map[key] = midiToNoteName(KEY_WINDOW_BASE + offset);
+    const base = KEY_WINDOW_BASE + octaveShift * 12;
+    map[key] = midiToNoteName(base + offset);
   };
   for (const w of WINDOW_WHITE_KEYS)
     add(w.offset, layout === "azerty" ? w.azerty : w.qwerty);
@@ -155,11 +164,15 @@ export function getKeyToNote(layout: KeyboardLayout): Record<string, string> {
 }
 
 /** Toutes les touches de la fenêtre PC avec leur touche clavier
- * (pour afficher les étiquettes sur les touches correspondantes). */
-export function getWindowKeyMap(layout: KeyboardLayout): Map<string, string> {
+ * (pour afficher les étiquettes), pour un décalage d'octave donné. */
+export function getWindowKeyMap(
+  layout: KeyboardLayout,
+  octaveShift = 0
+): Map<string, string> {
   const result = new Map<string, string>(); // note -> label
   const add = (offset: number, key: string) => {
-    result.set(midiToNoteName(KEY_WINDOW_BASE + offset), keyLabel(key));
+    const base = KEY_WINDOW_BASE + octaveShift * 12;
+    result.set(midiToNoteName(base + offset), keyLabel(key));
   };
   for (const w of WINDOW_WHITE_KEYS)
     add(w.offset, layout === "azerty" ? w.azerty : w.qwerty);
@@ -189,4 +202,10 @@ const SOLFEGE_BY_LETTER: Record<string, string> = {
 export function noteToSolfege(note: string): string {
   const match = note.match(/^([A-G]#?)/);
   return match ? (SOLFEGE_BY_LETTER[match[1]] ?? note) : note;
+}
+
+/** Index de la touche blanche portant une note (pour l'auto-scroll). */
+export function getWhiteIndexOfNote(note: string): number {
+  const { keys } = getKeyboardLayout();
+  return keys.find((k) => k.note === note)?.whiteIndex ?? -1;
 }

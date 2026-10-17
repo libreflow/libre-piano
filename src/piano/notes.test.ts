@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   getKeyboardLayout,
   getKeyToNote,
+  getWindowKeyMap,
+  getWhiteIndexOfNote,
   noteToSolfege,
   MAX_MIDI,
   MIN_MIDI,
@@ -114,5 +116,28 @@ describe("noteToSolfege", () => {
     expect(noteToSolfege("D#4")).toBe("Ré#");
     expect(noteToSolfege("F#4")).toBe("Fa#");
     expect(noteToSolfege("A#4")).toBe("La#");
+  });
+});
+
+describe("décalage d'octave de la fenêtre PC", () => {
+  it("déplace la fenêtre d'une octave vers le haut", () => {
+    const map = getKeyToNote("qwerty", 1);
+    expect(map["a"]).toBe("C4");
+    expect(map["t"]).toBe("C6");
+  });
+
+  it("déplace la fenêtre d'une octave vers le bas", () => {
+    const map = getKeyToNote("azerty", -1);
+    expect(map["q"]).toBe("C2");
+  });
+
+  it("les étiquettes suivent le décalage", () => {
+    const labels = getWindowKeyMap("qwerty", 2);
+    expect(labels.get("C5")).toBe("A");
+  });
+
+  it("trouve l'index de touche blanche d'une note", () => {
+    expect(getWhiteIndexOfNote("C4")).toBeGreaterThan(0);
+    expect(getWhiteIndexOfNote("X")).toBe(-1);
   });
 });

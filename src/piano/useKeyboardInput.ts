@@ -4,6 +4,7 @@ import { getKeyToNote, KeyboardLayout } from "./notes";
 
 interface KeyboardHandlers {
   layout: KeyboardLayout;
+  octaveShift?: number;
   isPlayingRef: React.RefObject<boolean>;
   noteOn: (note: string) => void;
   noteOff: (note: string) => void;
@@ -16,6 +17,7 @@ interface KeyboardHandlers {
 // + pédale de sustain sur la barre d'espace maintenue.
 export function useKeyboardInput({
   layout,
+  octaveShift = 0,
   isPlayingRef,
   noteOn,
   noteOff,
@@ -25,7 +27,10 @@ export function useKeyboardInput({
 }: KeyboardHandlers) {
   const activeKeyboardKeys = useRef<Set<string>>(new Set());
   const sustainRef = useRef(false);
-  const keyToNote = useMemo(() => getKeyToNote(layout), [layout]);
+  const keyToNote = useMemo(
+    () => getKeyToNote(layout, octaveShift),
+    [layout, octaveShift]
+  );
 
   const releaseSustain = useCallback(() => {
     sustainRef.current = false;

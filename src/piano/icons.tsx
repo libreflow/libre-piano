@@ -147,3 +147,19 @@ export function PracticeIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M14.5 6 8.5 12l6 6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9.5 6l6 6-6 6" />
+    </svg>
+  );
+}

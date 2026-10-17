@@ -4,9 +4,12 @@ import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
   getKeyboardLayout,
   getWindowKeyMap,
+  getWhiteIndexOfNote,
   noteToSolfege,
   KeyboardLayout,
   LabelMode,
+  OCTAVE_SHIFT_MIN,
+  OCTAVE_SHIFT_MAX,
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
@@ -37,11 +40,14 @@ import {
   StarIcon,
   TrashIcon,
   PracticeIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "./icons";
 import "./Piano.css";
 
 export default function Piano() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pianoScrollRef = useRef<HTMLDivElement | null>(null);
   // Notes allumées par une action directe (souris / clavier PC).
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
   // Notes allumées par la lecture automatique (couleur distincte).
@@ -69,7 +75,11 @@ export default function Piano() {
     initialState.keyboardLayout
   );
   const { keys: ALL_KEYS, whiteKeyCount } = getKeyboardLayout();
-  const windowKeys = useMemo(() => getWindowKeyMap(keyboardLayout), [keyboardLayout]);
+  const [octaveShift, setOctaveShift] = useState(0);
+  const windowKeys = useMemo(
+    () => getWindowKeyMap(keyboardLayout, octaveShift),
+    [keyboardLayout, octaveShift]
+  );
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -191,6 +201,57 @@ export default function Piano() {
       else playSongGuarded();
     },
   });
+
+  // Centrer le clavier sur la zone médiane (C4) au montage : le piano
+  // 88 touches est plus large que la fenêtre.
+  useEffect(() => {
+    const el = pianoScrollRef.current;
+    if (!el) return;
+    const idx = getWhiteIndexOfNote("C4");
+    const keyW = parseFloat(
+      getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
+    );
+    el.scrollLeft = Math.max(0, idx * keyW - el.clientWidth / 2);
+  }, []);
+
+  // Auto-scroll : suivre la note attendue (apprentissage) ou la note en
+  // cours (lecture auto) si elle sort de la zone visible.
+  const noteToFollow =
+    practice.state.active && !practice.state.done ? practice.state.expectedNote : null;
+  useEffect(() => {
+    if (!noteToFollow) return;
+    const el = pianoScrollRef.current;
+    if (!el) return;
+    const idx = getWhiteIndexOfNote(noteToFollow);
+    if (idx < 0) return;
+    const keyW = parseFloat(
+      getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
+    );
+    const x = idx * keyW;
+    const view = el.clientWidth;
+    // scroller seulement si la touche n'est pas (totalement) visible
+    if (x < el.scrollLeft + keyW) {
+      el.scrollTo({ left: Math.max(0, x - view / 3), behavior: "smooth" });
+    } else if (x + keyW > el.scrollLeft + view - keyW) {
+      el.scrollTo({
+        left: x - view * (2 / 3),
+        behavior: "smooth",
+      });
+    }
+  }, [noteToFollow]);
+
+  // Molette : la molette verticale fait défiler le clavier horizontalement.
+  useEffect(() => {
+    const el = pianoScrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Arrêt de la lecture + nettoyage des touches en surbrillance
   // (hors effect : cf. règle set-state-in-effect).
@@ -425,6 +486,32 @@ export default function Piano() {
         </div>
 
         <div className="control-group" aria-label="Disposition du clavier">
+          <div
+            className="segmented"
+            role="group"
+            aria-label="Octave de la fenêtre clavier PC"
+          >
+            <button
+              onClick={() => setOctaveShift((v) => Math.max(OCTAVE_SHIFT_MIN, v - 1))}
+              disabled={octaveShift <= OCTAVE_SHIFT_MIN}
+              title="Fenêtre PC : octave précédente"
+              aria-label="Fenêtre clavier : octave précédente"
+            >
+              <ChevronLeftIcon />
+            </button>
+            <span className="octave-label" aria-live="polite">
+              C{3 + octaveShift}
+            </span>
+            <button
+              onClick={() => setOctaveShift((v) => Math.min(OCTAVE_SHIFT_MAX, v + 1))}
+              disabled={octaveShift >= OCTAVE_SHIFT_MAX}
+              title="Fenêtre PC : octave suivante"
+              aria-label="Fenêtre clavier : octave suivante"
+            >
+              <ChevronRightIcon />
+            </button>
+          </div>
+
           <div className="segmented" role="radiogroup" aria-label="AZERTY ou QWERTY">
             {(["azerty", "qwerty"] as const).map((layout) => (
               <button
@@ -601,7 +688,7 @@ export default function Piano() {
         </div>
       )}
 
-      <div className="piano-scroll">
+      <div className="piano-scroll" ref={pianoScrollRef}>
         <div
           className={`piano ${isPlaying ? "piano-readonly" : ""}`}
           style={{ ["--white-keys" as any]: whiteKeyCount }}
@@ -609,7 +696,9 @@ export default function Piano() {
           {ALL_KEYS.filter((k) => !k.isBlack).map((k) => (
             <button
               key={k.note}
-              className={`key white ${keyStateClass(k.note)}`}
+              className={`key white ${keyStateClass(k.note)}${
+                k.note.startsWith("C") ? " octave-marker" : ""
+              }`}
               style={{ ["--index" as any]: k.whiteIndex }}
               onMouseDown={() => handleMouseDown(k.note)}
               onMouseUp={() => handleMouseUp(k.note)}
