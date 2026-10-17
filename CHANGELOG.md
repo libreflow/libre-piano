@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1 — 2026-10-17
+
+### Corrections de bugs
+- Session apprentissage : réinitialisation propre au changement/suppression du morceau (plus de session zombie)
+- Décalage d'octave pendant une touche maintenue : la bonne note est relâchée (plus de note orpheline)
+- Stockage local corrompu : chaque champ est validé au chargement (plus d'échecs silencieux de la lecture)
+- Barre d'espace : n'interrompt plus les notes sustain d'une session précédente
+- Auto-scroll : position exacte sur les touches noires
+- Lecture et apprentissage sont désormais exclusifs
+
+### Qualité
+- 78 tests (67), chaque correction couverte par un test de régression
+
 ## 0.2.0 — 2026-10-16
 
 ### Clavier
