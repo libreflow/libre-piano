@@ -284,3 +284,42 @@ describe("régression : décalage d'octave pendant une touche maintenue", () => 
     expect(releaseSustained).not.toHaveBeenCalled();
   });
 });
+
+describe("régression : blur fenêtre pendant des touches maintenues", () => {
+  it("relâche toutes les notes actives au blur (bug note bloquée)", async () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "qwerty",
+        isPlayingRef: { current: false },
+        noteOn,
+        noteOff,
+        onSustainChange: vi.fn(),
+        releaseSustained: vi.fn(),
+      })
+    );
+    // deux touches maintenues
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", code: "KeyS" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(noteOn).toHaveBeenCalledWith("C3");
+    expect(noteOn).toHaveBeenCalledWith("D3");
+
+    // Alt-Tab : blur de la fenêtre, keyup jamais reçus
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    expect(noteOff).toHaveBeenCalledWith("C3");
+    expect(noteOff).toHaveBeenCalledWith("D3");
+
+    // les touches redeviennent jouables au retour
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(noteOn).toHaveBeenCalledTimes(3);
+  });
+});

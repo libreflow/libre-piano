@@ -424,7 +424,7 @@ export default function Piano() {
             <button
               className="import-btn delete-song"
               onClick={() => deleteImportedSong(selectedSong.id)}
-              disabled={isPlaying || isImporting}
+              disabled={isPlaying || isImporting || practice.state.active}
               title="Supprimer ce morceau importé"
               aria-label="Supprimer ce morceau importé"
             >
@@ -529,7 +529,9 @@ export default function Piano() {
           >
             <button
               onClick={() => setOctaveShift((v) => Math.max(OCTAVE_SHIFT_MIN, v - 1))}
-              disabled={octaveShift <= OCTAVE_SHIFT_MIN}
+              disabled={
+                octaveShift <= OCTAVE_SHIFT_MIN || practice.state.active
+              }
               title="Fenêtre PC : octave précédente"
               aria-label="Fenêtre clavier : octave précédente"
             >
@@ -540,7 +542,9 @@ export default function Piano() {
             </span>
             <button
               onClick={() => setOctaveShift((v) => Math.min(OCTAVE_SHIFT_MAX, v + 1))}
-              disabled={octaveShift >= OCTAVE_SHIFT_MAX}
+              disabled={
+                octaveShift >= OCTAVE_SHIFT_MAX || practice.state.active
+              }
               title="Fenêtre PC : octave suivante"
               aria-label="Fenêtre clavier : octave suivante"
             >
