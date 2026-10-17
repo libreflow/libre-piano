@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getOctaveShiftForNote,
   getKeyboardLayout,
   getKeyToNote,
   getWhitePositionOfNote,
@@ -159,5 +160,33 @@ describe("position exacte des notes (auto-scroll)", () => {
 
   it("retourne -1 pour une note inexistante", () => {
     expect(getWhitePositionOfNote("X")).toBe(-1);
+  });
+});
+
+describe("décalage d'octave automatique pour une note", () => {
+  it("garde le shift courant si la note est déjà couverte", () => {
+    expect(getOctaveShiftForNote("C4", 0)).toBe(0);
+    expect(getOctaveShiftForNote("G4", 0)).toBe(0);
+  });
+
+  it("décale vers le haut pour une note aiguë", () => {
+    // C7 hors de la fenêtre C3-C5 : le shift minimal qui la couvre est +2 (C5->C7)
+    expect(getOctaveShiftForNote("C7", 0)).toBe(2);
+  });
+
+  it("décale vers le bas pour une note grave", () => {
+    expect(getOctaveShiftForNote("C2", 0)).toBe(-1);
+    expect(getOctaveShiftForNote("A1", 0)).toBe(-2);
+  });
+
+  it("retourne null pour une note inconnue", () => {
+    expect(getOctaveShiftForNote("X", 0)).toBeNull();
+  });
+
+  it("couvre toutes les notes du piano 88 touches", () => {
+    const { keys } = getKeyboardLayout();
+    for (const k of keys) {
+      expect(getOctaveShiftForNote(k.note, 0)).not.toBeNull();
+    }
   });
 });

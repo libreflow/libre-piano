@@ -5,6 +5,7 @@ import {
   getKeyboardLayout,
   getWindowKeyMap,
   getWhitePositionOfNote,
+  getOctaveShiftForNote,
   noteToSolfege,
   KeyboardLayout,
   LabelMode,
@@ -80,6 +81,12 @@ export default function Piano() {
     () => getWindowKeyMap(keyboardLayout, octaveShift),
     [keyboardLayout, octaveShift]
   );
+  // Inverse de windowKeys : note -> touche PC (pour le panneau apprentissage).
+  const noteToKey = useMemo(() => {
+    const map = new Map<string, string>();
+    windowKeys.forEach((label, note) => map.set(note, label));
+    return map;
+  }, [windowKeys]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -281,6 +288,18 @@ export default function Piano() {
   useEffect(() => {
     pendingImportRef.current = Boolean(pendingImport);
   }, [pendingImport]);
+
+  // Mode apprentissage : si la note attendue est hors de la fenêtre
+  // clavier PC, décaler automatiquement la fenêtre pour la couvrir —
+  // l'utilisateur peut toujours jouer au clavier.
+  // Pattern "adjusting state during render" (cf. docs React) : pas
+  // d'effect, le reset se fait au render suivant la nouvelle note.
+  if (practice.state.active && practice.state.expectedNote) {
+    const shift = getOctaveShiftForNote(practice.state.expectedNote, octaveShift);
+    if (shift !== null && shift !== octaveShift) {
+      setOctaveShift(shift);
+    }
+  }
 
   // Lecture et apprentissage sont exclusifs : le raccourci Entrée ne doit
   // pas lancer la lecture pendant une session (réf lue au moment de
@@ -648,9 +667,19 @@ export default function Piano() {
             </>
           ) : (
             <>
-              Note {practice.state.step + 1}/{eventsCount} — attends la touche{" "}
-              <strong>{practice.state.expectedNote}</strong> · {practice.state.mistakes}{" "}
-              faute(s)
+              Note {practice.state.step + 1}/{eventsCount} —{" "}
+              {(() => {
+                const note = practice.state.expectedNote;
+                const key = note ? noteToKey.get(note) : undefined;
+                return key ? (
+                  <>
+                    appuie sur <kbd className="practice-key">{key}</kbd> ({note})
+                  </>
+                ) : (
+                  <>joue {note} à la souris</>
+                );
+              })()}{" "}
+              · {practice.state.mistakes} faute(s)
             </>
           )}
         </div>
