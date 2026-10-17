@@ -1,12 +1,7 @@
 import { useCallback, useState } from "react";
 import type { Midi } from "@tonejs/midi";
 import type { Song } from "./songs";
-import {
-  loadMidi,
-  summarizeTracks,
-  buildSongFromTracks,
-  TrackSummary,
-} from "./midi-import";
+import { summarizeTracks, buildSongFromTracks, TrackSummary, loadMidi } from "./midi-import";
 
 // Gestion de l'import MIDI : parsing, sélection des pistes, confirmation.
 // Encapsule le dialogue "quelles pistes importer ?" et l'ajout au répertoire.
@@ -34,7 +29,9 @@ export function useMidiImport(
       try {
         const buffer = await file.arrayBuffer();
         const title = file.name.replace(/\.(mid|midi)$/i, "");
-        const midi = loadMidi(buffer);
+        // Import dynamique : @tonejs/midi est volumineux et ne sert qu'ici,
+        // il reste hors du bundle initial (chargé au premier import).
+        const midi = await loadMidi(buffer);
         const tracks = summarizeTracks(midi).filter((t) => t.noteCount > 0);
         if (tracks.length === 0) {
           throw new Error("Ce fichier ne contient aucune note exploitable.");

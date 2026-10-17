@@ -26,6 +26,7 @@ import {
   VOLUME_MIN_PERCENT,
   VOLUME_MAX_PERCENT,
   DISPLAY_CHORD_RATIO_THRESHOLD,
+  STATUS_MESSAGE_TIMEOUT_MS,
 } from "./constants";
 import {
   PlayIcon,
@@ -90,6 +91,19 @@ export default function Piano() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Efface automatiquement le message de statut après quelques secondes,
+  // sauf s'il est remplacé entre-temps.
+  const statusMessageRef = useRef<string | null>(null);
+  const setStatusMessageAuto = useCallback((msg: string) => {
+    statusMessageRef.current = msg;
+    setStatusMessage(msg);
+    window.setTimeout(() => {
+      if (statusMessageRef.current === msg) {
+        statusMessageRef.current = null;
+        setStatusMessage(null);
+      }
+    }, STATUS_MESSAGE_TIMEOUT_MS);
+  }, []);
   // N'avertir qu'une fois par "session de dépassement" du quota.
   const quotaWarnedRef = useRef(false);
 
@@ -150,9 +164,8 @@ export default function Piano() {
 
   // Mode apprentissage : la note attendue est surlignée, la session
   // avance quand l'utilisateur joue la bonne note.
-  const practice = usePractice(selectedSong, (n) => {
-    void n;
-  });
+  const practice = usePractice(selectedSong);
+  const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
 
   const noteOn = useCallback(
@@ -160,10 +173,18 @@ export default function Piano() {
       if (status !== "ready" || !samplerRef.current) return;
       rawNoteOn(note);
       markNoteOn(note);
-      practice.handlePlayedNote(note);
+      handlePlayedNote(note);
     },
-    [status, samplerRef, rawNoteOn, markNoteOn, practice]
+    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote]
   );
+  const clearSustainedNote = useCallback((note: string) => {
+    setSustainedNotes((prev) => {
+      if (!prev.has(note)) return prev;
+      const next = new Set(prev);
+      next.delete(note);
+      return next;
+    });
+  }, []);
   const noteOff = useCallback(
     (note: string) => {
       if (!samplerRef.current) return;
@@ -174,8 +195,11 @@ export default function Piano() {
       }
       rawNoteOff(note);
       markNoteOff(note);
+      // Retirer aussi un éventuel reste de sustain : sinon la touche
+      // resterait affichée « sustained » (muette) après re-jeu sans pédale.
+      clearSustainedNote(note);
     },
-    [samplerRef, rawNoteOff, markNoteOff, sustainOnRef]
+    [samplerRef, rawNoteOff, markNoteOff, sustainOnRef, clearSustainedNote]
   );
   const releaseSustained = useCallback(() => {
     setSustainedNotes((prev) => {
@@ -213,11 +237,10 @@ export default function Piano() {
   // 88 touches est plus large que la fenêtre.
   useEffect(() => {
     const el = pianoScrollRef.current;
-    if (!el) return;
+    const piano = el?.querySelector(".piano");
+    if (!el || !piano) return;
     const idx = getWhitePositionOfNote("C4");
-    const keyW = parseFloat(
-      getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
-    );
+    const keyW = parseFloat(getComputedStyle(piano).getPropertyValue("--key-w"));
     el.scrollLeft = Math.max(0, idx * keyW - el.clientWidth / 2);
   }, []);
 
@@ -228,11 +251,12 @@ export default function Piano() {
   useEffect(() => {
     if (!noteToFollow) return;
     const el = pianoScrollRef.current;
-    if (!el) return;
+    const piano = el?.querySelector(".piano");
+    if (!el || !piano) return;
     const idx = getWhitePositionOfNote(noteToFollow);
     if (idx < 0) return;
     const keyW = parseFloat(
-      getComputedStyle(el.querySelector(".piano")!).getPropertyValue("--key-w")
+      getComputedStyle(piano).getPropertyValue("--key-w")
     );
     const x = idx * keyW;
     const view = el.clientWidth;
@@ -280,7 +304,7 @@ export default function Piano() {
     toggleTrack,
     confirmImport,
     cancelImport,
-  } = useMidiImport(addImportedSong, setStatusMessage);
+  } = useMidiImport(addImportedSong, setStatusMessageAuto);
 
   // La lecture ne démarre pas tant que le dialogue de sélection de
   // pistes est ouvert (sinon elle jouerait derrière le dialogue).
@@ -348,13 +372,13 @@ export default function Piano() {
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
       quotaWarnedRef.current = true;
-      setStatusMessage(
+      setStatusMessageAuto(
         "Stockage local plein : les derniers réglages ne sont pas sauvegardés. Supprime des morceaux importés pour libérer de l'espace."
       );
     } else if (saved) {
       quotaWarnedRef.current = false;
     }
-  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout]);
+  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout, setStatusMessageAuto]);
 
   const toggleFullscreen = async () => {
     try {
@@ -367,12 +391,12 @@ export default function Piano() {
     }
   };
 
-  const handleMouseDown = (note: string) => {
+  const handlePointerDown = (note: string) => {
     if (isPlayingRef.current) return;
     if (getContext().state !== "running") void ensureAudioStarted();
     noteOn(note);
   };
-  const handleMouseUp = (note: string) => {
+  const handlePointerUp = (note: string) => {
     // Toujours relâcher une note active : si la lecture a démarré pendant
     // le clic maintenu, la note sonnerait à l'infini après l'arrêt.
     if (!activeNotes.has(note)) return;
@@ -750,9 +774,13 @@ export default function Piano() {
                 k.note.startsWith("C") ? " octave-marker" : ""
               }`}
               style={{ ["--index" as any]: k.whiteIndex }}
-              onMouseDown={() => handleMouseDown(k.note)}
-              onMouseUp={() => handleMouseUp(k.note)}
-              onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                handlePointerDown(k.note);
+              }}
+              onPointerUp={() => handlePointerUp(k.note)}
+              onPointerCancel={() => handlePointerUp(k.note)}
+              onPointerLeave={() => activeNotes.has(k.note) && handlePointerUp(k.note)}
               title={`${noteToSolfege(k.note)} (${k.note})`}
               aria-label={`Touche ${k.note}`}
             >
@@ -773,9 +801,13 @@ export default function Piano() {
               key={k.note}
               className={`key black ${keyStateClass(k.note)}`}
               style={{ ["--index" as any]: k.whiteIndex }}
-              onMouseDown={() => handleMouseDown(k.note)}
-              onMouseUp={() => handleMouseUp(k.note)}
-              onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                handlePointerDown(k.note);
+              }}
+              onPointerUp={() => handlePointerUp(k.note)}
+              onPointerCancel={() => handlePointerUp(k.note)}
+              onPointerLeave={() => activeNotes.has(k.note) && handlePointerUp(k.note)}
               title={`${noteToSolfege(k.note)} (${k.note})`}
               aria-label={`Touche ${k.note}`}
             >

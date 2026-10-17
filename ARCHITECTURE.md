@@ -33,7 +33,9 @@ tout le métier vit dans le frontend).
 
 `tone-gate.ts` est le seul point d'entrée de Tone.js : des imports ciblés
 (`instrument/Sampler`, `event/Part`, `core/Global`) plutôt que `import * as Tone`,
-pour limiter la taille du bundle (~470 kB au lieu de 518 kB).
+pour limiter la taille du bundle (~470 kB au lieu de 518 kB). De même,
+`@tonejs/midi` est importé dynamiquement dans `midi-import.ts` (chunk
+séparé chargé au premier import MIDI).
 
 - `useAudioEngine` crée le `Sampler` (échantillons Salamander servis depuis
   `public/samples`, donc hors-ligne) et expose `noteOn`/`noteOff`/

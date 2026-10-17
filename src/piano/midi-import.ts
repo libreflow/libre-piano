@@ -1,4 +1,4 @@
-import { Midi } from "@tonejs/midi";
+import type { Midi } from "@tonejs/midi";
 import { clampMidiToKeyboard, midiToNoteName } from "./notes";
 import type { Song, SongEvent } from "./songs";
 import {
@@ -37,7 +37,10 @@ export interface TrackSummary {
 
 /** Lit un fichier .mid/.midi (ArrayBuffer) sans encore rien convertir :
  * on garde l'objet Midi pour laisser l'utilisateur choisir les pistes. */
-export function loadMidi(buffer: ArrayBuffer): Midi {
+export async function loadMidi(buffer: ArrayBuffer): Promise<Midi> {
+  // Import dynamique : @tonejs/midi est volumineux et ne sert qu'ici,
+  // il reste hors du bundle initial (chargé au premier import).
+  const { Midi } = await import("@tonejs/midi");
   return new Midi(buffer);
 }
 

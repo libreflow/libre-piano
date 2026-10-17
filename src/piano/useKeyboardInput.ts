@@ -51,6 +51,9 @@ export function useKeyboardInput({
     releaseSustained();
   }, [onSustainChange, releaseSustained]);
 
+  // Les handlers ci-dessous lisent keyToNoteRef au moment de l'appui :
+  // les listeners ne dépendent PAS de keyToNote (pas de re-attach quand
+  // la fenêtre d'octave bouge).
   useEffect(() => {
     // Débloque l'AudioContext le plus tôt possible (gesture utilisateur
     // requis par les navigateurs : le mount survient après une interaction
@@ -124,7 +127,6 @@ export function useKeyboardInput({
     };
   }, [
     isPlayingRef,
-    keyToNote,
     noteOn,
     noteOff,
     onSustainChange,

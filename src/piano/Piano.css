@@ -397,6 +397,8 @@ button:active:not(:disabled) {
   box-sizing: border-box;
   font-family: inherit;
   transition: box-shadow 0.1s;
+  /* Empêche le scroll/zoom natif de voler les événements sur tactile. */
+  touch-action: none;
 }
 
 .key.white {
