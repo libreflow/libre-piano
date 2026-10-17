@@ -112,3 +112,63 @@ describe("régression : changement de morceau pendant une session", () => {
     expect(result.current.state.active).toBe(false);
   });
 });
+
+describe("roadmap #33 : score de fin de session", () => {
+  it("score 100 sans faute", () => {
+    const { result } = renderHook(() => usePractice(song));
+    act(() => result.current.start());
+    act(() => result.current.handlePlayedNote("C4"));
+    act(() => result.current.handlePlayedNote("E4"));
+    act(() => result.current.handlePlayedNote("G4"));
+    expect(result.current.state.done).toBe(true);
+    expect(result.current.state.score).toBe(100);
+  });
+
+  it("score reflète les fautes (3 notes / 1 faute = 75)", () => {
+    const { result } = renderHook(() => usePractice(song));
+    act(() => result.current.start());
+    act(() => result.current.handlePlayedNote("C4"));
+    act(() => result.current.handlePlayedNote("E4"));
+    act(() => result.current.handlePlayedNote("A4")); // faute
+    act(() => result.current.handlePlayedNote("G4"));
+    expect(result.current.state.done).toBe(true);
+    expect(result.current.state.score).toBe(75);
+  });
+
+  it("le score reste null hors session", () => {
+    const { result } = renderHook(() => usePractice(song));
+    expect(result.current.state.score).toBeNull();
+  });
+});
+
+describe("roadmap #42 : anticipation de la touche suivante", () => {
+  it("expose la note suivante en cours de session", () => {
+    const { result } = renderHook(() => usePractice(song));
+    act(() => result.current.start());
+    expect(result.current.state.expectedNote).toBe("C4");
+    expect(result.current.state.nextNote).toBe("E4");
+    act(() => result.current.handlePlayedNote("C4"));
+    expect(result.current.state.expectedNote).toBe("E4");
+    expect(result.current.state.nextNote).toBe("G4");
+  });
+
+  it("nextNote est null sur la dernière note et en fin de session", () => {
+    const two: Song = {
+      id: "two",
+      title: "T",
+      source: "builtin",
+      events: [
+        { time: 0, note: "C4", duration: 0.5 },
+        { time: 1, note: "E4", duration: 0.5 },
+      ],
+    };
+    const { result } = renderHook(() => usePractice(two));
+    act(() => result.current.start());
+    expect(result.current.state.nextNote).toBe("E4");
+    act(() => result.current.handlePlayedNote("C4"));
+    expect(result.current.state.nextNote).toBeNull();
+    act(() => result.current.handlePlayedNote("E4"));
+    expect(result.current.state.done).toBe(true);
+    expect(result.current.state.nextNote).toBeNull();
+  });
+});

@@ -11,18 +11,24 @@ export interface PracticeState {
   step: number;
   /** Note attendue (null entre deux notes / session finie). */
   expectedNote: string | null;
+  /** Note suivante (anticipation, null en fin de morceau). */
+  nextNote: string | null;
   /** Nombre de fautes (mauvaises notes jouées). */
   mistakes: number;
   /** Session terminée. */
   done: boolean;
+  /** Score de justesse 0–100 (null si aucune note jouée). */
+  score: number | null;
 }
 
 const IDLE: PracticeState = {
   active: false,
   step: 0,
   expectedNote: null,
+  nextNote: null,
   mistakes: 0,
   done: false,
+  score: null,
 };
 
 export function usePractice(song: Song | undefined) {
@@ -50,31 +56,50 @@ export function usePractice(song: Song | undefined) {
       active: true,
       step: 0,
       expectedNote: events[0].note,
+      nextNote: events.length > 1 ? events[1].note : null,
       mistakes: 0,
       done: false,
+      score: null,
     });
   }, []);
 
   const stop = useCallback(() => setState(IDLE), []);
 
   /** À brancher sur chaque note jouée : avance la session si correcte. */
-  const handlePlayedNote = useCallback(
-    (note: string) => {
-      setState((prev) => {
-        if (!prev.active || prev.done || !prev.expectedNote) return prev;
-        if (note === prev.expectedNote) {
-          const events = eventsRef.current;
-          const next = prev.step + 1;
-          if (next >= events.length) {
-            return { ...prev, expectedNote: null, done: true };
-          }
-          return { ...prev, step: next, expectedNote: events[next].note };
+  const handlePlayedNote = useCallback((note: string) => {
+    setState((prev) => {
+      if (!prev.active || prev.done || !prev.expectedNote) return prev;
+      if (note === prev.expectedNote) {
+        const events = eventsRef.current;
+        const next = prev.step + 1;
+        if (next >= events.length) {
+          return {
+            ...prev,
+            expectedNote: null,
+            nextNote: null,
+            done: true,
+            // Score final : justesse = notes du morceau / total joué
+            // (les fautes commises en route comptent dans le total).
+            score: Math.round((events.length / (events.length + prev.mistakes)) * 100),
+          };
         }
-        return { ...prev, mistakes: prev.mistakes + 1 };
-      });
-    },
-    []
-  );
+        return {
+          ...prev,
+          step: next,
+          expectedNote: events[next].note,
+          nextNote: next + 1 < events.length ? events[next + 1].note : null,
+        };
+      }
+      // Faute : recalcul du score cumulé (bonnes / total jouées).
+      const good = prev.step;
+      const total = prev.step + prev.mistakes + 1;
+      return {
+        ...prev,
+        mistakes: prev.mistakes + 1,
+        score: Math.round((good / total) * 100),
+      };
+    });
+  }, []);
 
   return { state, start, stop, handlePlayedNote };
 }

@@ -1,7 +1,12 @@
 import { useCallback, useState } from "react";
 import type { Midi } from "@tonejs/midi";
 import type { Song } from "./songs";
-import { summarizeTracks, buildSongFromTracks, TrackSummary, loadMidi } from "./midi-import";
+import {
+  summarizeTracks,
+  buildSongFromTracks,
+  TrackSummary,
+  loadMidi,
+} from "./midi-import";
 
 // Gestion de l'import MIDI : parsing, sélection des pistes, confirmation.
 // Encapsule le dialogue "quelles pistes importer ?" et l'ajout au répertoire.
