@@ -292,14 +292,14 @@ export default function Piano() {
   // Mode apprentissage : si la note attendue est hors de la fenêtre
   // clavier PC, décaler automatiquement la fenêtre pour la couvrir —
   // l'utilisateur peut toujours jouer au clavier.
-  useEffect(() => {
-    const expected = practice.state.expectedNote;
-    if (!practice.state.active || !expected) return;
-    const shift = getOctaveShiftForNote(expected, octaveShift);
+  // Pattern "adjusting state during render" (cf. docs React) : pas
+  // d'effect, le reset se fait au render suivant la nouvelle note.
+  if (practice.state.active && practice.state.expectedNote) {
+    const shift = getOctaveShiftForNote(practice.state.expectedNote, octaveShift);
     if (shift !== null && shift !== octaveShift) {
       setOctaveShift(shift);
     }
-  }, [practice.state.expectedNote, practice.state.active, octaveShift]);
+  }
 
   // Lecture et apprentissage sont exclusifs : le raccourci Entrée ne doit
   // pas lancer la lecture pendant une session (réf lue au moment de
