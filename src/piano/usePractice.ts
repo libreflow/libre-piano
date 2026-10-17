@@ -25,11 +25,7 @@ const IDLE: PracticeState = {
   done: false,
 };
 
-export function usePractice(
-  song: Song | undefined,
-  /** Notes jouées par l'utilisateur (clavier/souris), pour avancer. */
-  onNotePlayed: (note: string) => void
-) {
+export function usePractice(song: Song | undefined) {
   const [state, setState] = useState<PracticeState>(IDLE);
   // ref des événements pour éviter les relances d'effet
   const eventsRef = useRef<SongEvent[]>([]);
@@ -76,9 +72,8 @@ export function usePractice(
         }
         return { ...prev, mistakes: prev.mistakes + 1 };
       });
-      onNotePlayed(note);
     },
-    [onNotePlayed]
+    []
   );
 
   return { state, start, stop, handlePlayedNote };

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { usePractice } from "./usePractice";
 import type { Song } from "./songs";
@@ -16,13 +16,13 @@ const song: Song = {
 
 describe("usePractice", () => {
   it("reste inactif avant start", () => {
-    const { result } = renderHook(() => usePractice(song, vi.fn()));
+    const { result } = renderHook(() => usePractice(song));
     expect(result.current.state.active).toBe(false);
     expect(result.current.state.expectedNote).toBeNull();
   });
 
   it("attend la première note au démarrage", () => {
-    const { result } = renderHook(() => usePractice(song, vi.fn()));
+    const { result } = renderHook(() => usePractice(song));
     act(() => result.current.start());
     expect(result.current.state.active).toBe(true);
     expect(result.current.state.expectedNote).toBe("C4");
@@ -30,7 +30,7 @@ describe("usePractice", () => {
   });
 
   it("avance sur la bonne note, compte les fautes sinon", () => {
-    const { result } = renderHook(() => usePractice(song, vi.fn()));
+    const { result } = renderHook(() => usePractice(song));
     act(() => result.current.start());
 
     act(() => result.current.handlePlayedNote("E4")); // mauvaise
@@ -48,16 +48,15 @@ describe("usePractice", () => {
   });
 
   it("ne réagit pas aux notes hors session", () => {
-    const onPlayed = vi.fn();
-    const { result } = renderHook(() => usePractice(song, onPlayed));
+    const { result } = renderHook(() => usePractice(song));
     // pas de start : les notes jouées ne changent rien
     act(() => result.current.handlePlayedNote("C4"));
     expect(result.current.state.active).toBe(false);
-    expect(onPlayed).toHaveBeenCalledWith("C4");
+    expect(result.current.state.step).toBe(0);
   });
 
   it("stop réinitialise la session", () => {
-    const { result } = renderHook(() => usePractice(song, vi.fn()));
+    const { result } = renderHook(() => usePractice(song));
     act(() => result.current.start());
     act(() => result.current.handlePlayedNote("C4"));
     act(() => result.current.stop());
@@ -68,7 +67,7 @@ describe("usePractice", () => {
 
   it("refuse de démarrer sur un morceau sans événements", () => {
     const empty: Song = { id: "e", title: "E", source: "builtin", events: [] };
-    const { result } = renderHook(() => usePractice(empty, vi.fn()));
+    const { result } = renderHook(() => usePractice(empty));
     act(() => result.current.start());
     expect(result.current.state.active).toBe(false);
   });
@@ -83,7 +82,7 @@ describe("régression : changement de morceau pendant une session", () => {
       events: [{ time: 0, note: "A4", duration: 0.5 }],
     };
     const { result, rerender } = renderHook(
-      ({ song }: { song: Song }) => usePractice(song, vi.fn()),
+      ({ song }: { song: Song }) => usePractice(song),
       { initialProps: { song } }
     );
     act(() => result.current.start());
@@ -103,7 +102,7 @@ describe("régression : changement de morceau pendant une session", () => {
 
   it("survit à un morceau supprimé (undefined) sans crash", async () => {
     const { result, rerender } = renderHook(
-      ({ song }: { song: Song | undefined }) => usePractice(song, vi.fn()),
+      ({ song }: { song: Song | undefined }) => usePractice(song),
       { initialProps: { song } }
     );
     act(() => result.current.start());

@@ -34,8 +34,12 @@ const REFERENCE_QUARTER_SEC = 60 / REFERENCE_BPM;
 function parseDurSeconds(dur: string): number {
   const dotted = dur.endsWith(".");
   const base = dotted ? dur.slice(0, -1) : dur;
-  const n = parseInt(base, 10); // "4n" -> 4, "8n" -> 8, "1n" -> 1
-  const quarters = 4 / n; // noire = 1 quart, blanche = 2, croche = 0.5...
+  const m = base.match(/^(\d+)n$/);
+  // Notation invalide (ex "4t") : durée nulle plutôt qu'un NaN silencieux
+  // qui décalerait tout le morceau (la note invalide est ignorée par
+  // buildSong, le reste du morceau reste jouable).
+  if (!m) return 0;
+  const quarters = 4 / parseInt(m[1], 10); // noire = 1 quart, blanche = 2, croche = 0.5...
   const seconds = quarters * REFERENCE_QUARTER_SEC;
   return dotted ? seconds * 1.5 : seconds;
 }
@@ -45,7 +49,7 @@ function buildSong(id: string, title: string, notes: SongNote[]): Song {
   const events: SongEvent[] = [];
   for (const n of notes) {
     const duration = parseDurSeconds(n.dur);
-    if (n.note) {
+    if (n.note && duration > 0) {
       events.push({ time: cursor, note: n.note, duration });
     }
     cursor += duration;

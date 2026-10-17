@@ -135,10 +135,10 @@ describe("Piano (rendu)", () => {
     expect(cs3).toHaveTextContent("Do#");
   });
 
-  it("joue une note au mousedown sur une touche", () => {
+  it("joue une note au pointerdown sur une touche", () => {
     render(<Piano />);
     const key = screen.getByLabelText("Touche C4");
-    fireEvent.mouseDown(key);
+    fireEvent.pointerDown(key, { pointerId: 1 });
     // Le sampler mocké est en "loading" : pas de son, mais pas de crash.
     expect(key).toBeInTheDocument();
   });

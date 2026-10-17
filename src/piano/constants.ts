@@ -46,3 +46,7 @@ export const SPEED_DEFAULT_PERCENT = 100;
 export const VOLUME_MIN_PERCENT = 0;
 export const VOLUME_MAX_PERCENT = 100;
 export const VOLUME_DEFAULT_PERCENT = 80;
+
+/** Durée d'affichage d'un message de statut (import, quota...) avant
+ * effacement automatique, en millisecondes. */
+export const STATUS_MESSAGE_TIMEOUT_MS = 8000;
