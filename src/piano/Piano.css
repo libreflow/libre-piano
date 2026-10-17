@@ -356,6 +356,17 @@ button:active:not(:disabled) {
 
 /* ---------- Clavier ---------- */
 
+.piano-scroll {
+  /* Clavier 88 touches : plus large que la fenêtre -> défilement. */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
 .piano {
   --key-w: 60px;
   --key-h: 220px;
@@ -363,7 +374,7 @@ button:active:not(:disabled) {
   display: block;
   width: calc(var(--white-keys) * var(--key-w));
   height: var(--key-h);
-  max-width: 100%;
+  margin: 0 auto;
   user-select: none;
 }
 
@@ -492,7 +503,7 @@ button:active:not(:disabled) {
 /* Responsive : le clavier rétrécit plutôt que de déborder. */
 @media (max-width: 1020px) {
   .piano {
-    --key-w: 52px;
+    --key-w: 48px;
     --key-h: 200px;
   }
 }
@@ -615,4 +626,43 @@ button:active:not(:disabled) {
 .piano-loading progress {
   width: 120px;
   accent-color: var(--accent);
+}
+
+/* ---------- Mode apprentissage ---------- */
+
+.practice-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background: var(--accent-soft);
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.practice-panel .import-btn {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+/* Touche attendue : halo vert pulsant, prioritaire sur les autres états. */
+.key.expected {
+  box-shadow:
+    inset 0 0 0 2px var(--play),
+    0 0 22px rgba(52, 168, 83, 0.55);
+}
+
+.key.white.expected {
+  background: linear-gradient(to bottom, #e2f5e8, #b8e6c6);
+}
+
+.key.black.expected {
+  background: linear-gradient(to bottom, #1d5c30, #0d3a1c);
+  box-shadow:
+    inset 0 0 0 2px var(--play),
+    0 0 22px rgba(52, 168, 83, 0.55);
 }

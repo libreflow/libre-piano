@@ -137,3 +137,13 @@ export function TrashIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function PracticeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4 3 8.5l9 4.5 9-4.5L12 4Z" />
+      <path d="M6.5 10.8V14c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-3.2" />
+      <path d="M21 8.5v5" />
+    </svg>
+  );
+}

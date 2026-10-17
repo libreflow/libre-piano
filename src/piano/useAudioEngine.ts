@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sampler, getDestination, getTransport, tuneForLowLatency } from "./tone-gate";
+import {
+  Sampler,
+  ToneAudioBuffer,
+  getDestination,
+  getTransport,
+  tuneForLowLatency,
+} from "./tone-gate";
 import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "./constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
@@ -7,7 +13,7 @@ export type SamplerStatus = "loading" | "ready" | "error";
 // Échantillons Salamander Grand Piano, servis localement depuis public/samples
 // (pas de dépendance réseau au lancement). Tone.Sampler repitch entre les
 // notes enregistrées, pas besoin d'un échantillon par demi-ton.
-const SAMPLE_URLS: Record<string, string> = {
+export const SAMPLE_URLS: Record<string, string> = {
   A0: "A0.mp3",
   C1: "C1.mp3",
   "D#1": "Ds1.mp3",
@@ -40,57 +46,73 @@ const SAMPLE_URLS: Record<string, string> = {
   C8: "C8.mp3",
 };
 
-/** Nombre d'échantillons réels (dérivé, plus de constante découpée). */
+/** Nombre d'échantillons réels (dérivé, plus de constante découplée). */
 export const SAMPLE_COUNT = Object.keys(SAMPLE_URLS).length;
-
-function createSampler(onLoaded: () => void, onError: () => void): Sampler {
-  return new Sampler({
-    urls: SAMPLE_URLS,
-    release: 1,
-    baseUrl: "samples/",
-    onload: onLoaded,
-    onerror: onError,
-  }).toDestination();
-}
 
 export function useAudioEngine(volume: number) {
   const samplerRef = useRef<Sampler | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
-  // Progression : compte des mp3 effectivement téléchargés, pour afficher
-  // n/30 pendant le chargement plutôt qu'un indicateur indéterminé.
+  // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
   const [loadedCount, setLoadedCount] = useState(0);
 
   useEffect(() => {
     let disposed = false;
-    let loaded = 0;
     tuneForLowLatency();
-    // Tone télécharge les samples via fetch : on compte les réponses
-    // .mp3 pour suivre la progression (limite aux samples du piano).
-    const originalFetch = window.fetch;
-    window.fetch = ((input, init) => {
-      const promise = originalFetch(input, init);
-      const url =
-        typeof input === "string" ? input : String((input as URL).toString?.() ?? "");
-      if (url.includes("samples/")) {
-        promise.then(
+
+    // Préchargement explicite des buffers : chaque ToneAudioBuffer résout sa
+    // propre promesse, ce qui donne une progression fiable (plus de
+    // monkey-patch de window.fetch) et permet de passer les buffers
+    // directement au Sampler.
+    const entries = Object.entries(SAMPLE_URLS);
+    let loaded = 0;
+    let failed = 0;
+
+    const buffers = new Map<string, ToneAudioBuffer>();
+    const loadOne = (note: string, file: string) =>
+      new Promise<void>((resolve) => {
+        const buffer = new ToneAudioBuffer(
+          `samples/${file}`,
           () => {
+            if (disposed) return resolve();
             loaded += 1;
-            if (!disposed) setLoadedCount(loaded);
+            setLoadedCount(loaded);
+            resolve();
           },
-          () => {}
+          () => {
+            if (disposed) return resolve();
+            failed += 1;
+            setLoadedCount(loaded + failed);
+            resolve();
+          }
         );
+        buffers.set(note, buffer);
+      });
+
+    const allSettled = Promise.all(entries.map(([n, f]) => loadOne(n, f)));
+
+    allSettled.then(() => {
+      if (disposed) return;
+      if (failed > 0) {
+        setStatus("error");
+        return;
       }
-      return promise;
-    }) as typeof window.fetch;
-    samplerRef.current = createSampler(
-      () => !disposed && setStatus("ready"),
-      () => !disposed && setStatus("error")
-    );
+      const samples: Record<string, ToneAudioBuffer | string> = {};
+      for (const [note, buffer] of buffers) {
+        samples[note] = buffer;
+      }
+      samplerRef.current = new Sampler({
+        urls: samples,
+        release: 1,
+        onload: () => setStatus("ready"),
+        onerror: () => setStatus("error"),
+      }).toDestination();
+    });
+
     return () => {
-      window.fetch = originalFetch;
       disposed = true;
       samplerRef.current?.dispose();
       samplerRef.current = null;
+      buffers.forEach((b) => b.dispose());
       getTransport().stop();
       getTransport().cancel();
     };

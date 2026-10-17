@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  getKeys,
+  getKeyboardLayout,
   getKeyToNote,
   noteToSolfege,
   MAX_MIDI,
   MIN_MIDI,
-  WHITE_KEY_COUNT,
-  blackKeyAfterIndex,
   clampMidiToKeyboard,
   midiToNoteName,
-  whiteKeyIndex,
 } from "./notes";
 
 describe("midiToNoteName", () => {
@@ -36,14 +33,14 @@ describe("clampMidiToKeyboard", () => {
     }
   });
 
-  it("transpose par octaves entières", () => {
-    expect(clampMidiToKeyboard(36)).toBe(48);
-    expect(clampMidiToKeyboard(84)).toBe(72);
-    expect(clampMidiToKeyboard(0)).toBe(48);
-    expect(clampMidiToKeyboard(127)).toBe(67);
+  it("transpose par octaves entières hors A0–C8", () => {
+    expect(clampMidiToKeyboard(36)).toBe(36); // C2 : dans la plage 88
+    expect(clampMidiToKeyboard(84)).toBe(84); // C6 : dans la plage 88
+    expect(clampMidiToKeyboard(0)).toBe(24); // sous A0 -> +12
+    expect(clampMidiToKeyboard(127)).toBe(103); // G9 -> descend à G7 (≤ C8)
   });
 
-  it("produit toujours une note jouable sur le clavier", () => {
+  it("produit toujours une note jouable sur le clavier 88 touches", () => {
     for (let m = 0; m <= 127; m++) {
       const c = clampMidiToKeyboard(m);
       expect(c).toBeGreaterThanOrEqual(MIN_MIDI);
@@ -54,16 +51,16 @@ describe("clampMidiToKeyboard", () => {
 });
 
 describe("layout du clavier", () => {
-  it("a 15 touches blanches et 10 noires (C3–C5) pour chaque disposition", () => {
-    expect(WHITE_KEY_COUNT).toBe(15);
-    for (const layout of ["qwerty", "azerty"] as const) {
-      const keys = getKeys(layout);
-      expect(keys.filter((k) => !k.isBlack)).toHaveLength(15);
-      expect(keys.filter((k) => k.isBlack)).toHaveLength(10);
-    }
+  it("génère les 88 touches du piano (52 blanches, 36 noires)", () => {
+    const { keys, whiteKeyCount } = getKeyboardLayout();
+    expect(keys).toHaveLength(88);
+    expect(whiteKeyCount).toBe(52);
+    expect(keys.filter((k) => !k.isBlack)).toHaveLength(52);
+    expect(keys[0].note).toBe("A0");
+    expect(keys[keys.length - 1].note).toBe("C8");
   });
 
-  it("mappe chaque touche PC à une note unique (qwerty et azerty)", () => {
+  it("mappe chaque touche PC à une note unique (qwerty et azerty, 25 touches)", () => {
     for (const layout of ["qwerty", "azerty"] as const) {
       const map = getKeyToNote(layout);
       const notes = Object.values(map);
@@ -91,13 +88,13 @@ describe("layout du clavier", () => {
     expect(azerty["'"]).toBe("A#4");
   });
 
-  it("calcule les index de position", () => {
-    expect(whiteKeyIndex("C3")).toBe(0);
-    expect(whiteKeyIndex("C4")).toBe(7);
-    expect(whiteKeyIndex("C5")).toBe(14);
-    expect(whiteKeyIndex("X")).toBe(-1);
-    expect(blackKeyAfterIndex("C#3")).toBe(0);
-    expect(blackKeyAfterIndex("A#4")).toBe(12);
+  it("calcule les index de position des touches (géométrie 88)", () => {
+    const { keys } = getKeyboardLayout();
+    const c4 = keys.find((k) => k.note === "C4")!;
+    expect(c4.whiteIndex).toBeLessThan(52);
+    // la fenêtre PC couvre bien C3 -> C5 dans les deux dispositions
+    expect(getKeyToNote("azerty")["q"]).toBe("C3");
+    expect(getKeyToNote("qwerty")["t"]).toBe("C5");
   });
 });
 

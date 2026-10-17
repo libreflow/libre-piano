@@ -2,10 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
-  getKeys,
-  WHITE_KEY_COUNT,
-  whiteKeyIndex,
-  blackKeyAfterIndex,
+  getKeyboardLayout,
+  getWindowKeyMap,
   noteToSolfege,
   KeyboardLayout,
   LabelMode,
@@ -15,6 +13,7 @@ import { useMidiImport } from "./useMidiImport";
 import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
+import { usePractice } from "./usePractice";
 import { useKeyboardInput } from "./useKeyboardInput";
 import {
   SPEED_MIN_PERCENT,
@@ -37,6 +36,7 @@ import {
   VolumeIcon,
   StarIcon,
   TrashIcon,
+  PracticeIcon,
 } from "./icons";
 import "./Piano.css";
 
@@ -68,7 +68,8 @@ export default function Piano() {
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
     initialState.keyboardLayout
   );
-  const KEYS = useMemo(() => getKeys(keyboardLayout), [keyboardLayout]);
+  const { keys: ALL_KEYS, whiteKeyCount } = getKeyboardLayout();
+  const windowKeys = useMemo(() => getWindowKeyMap(keyboardLayout), [keyboardLayout]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -124,13 +125,27 @@ export default function Piano() {
   useEffect(() => {
     sustainOnRef.current = sustainOn;
   }, [sustainOn]);
+  const allSongs = useMemo(() => [...BUILTIN_SONGS, ...importedSongs], [importedSongs]);
+  const selectedSong = useMemo(
+    () => allSongs.find((s) => s.id === selectedSongId),
+    [allSongs, selectedSongId]
+  );
+
+  // Mode apprentissage : la note attendue est surlignée, la session
+  // avance quand l'utilisateur joue la bonne note.
+  const practice = usePractice(selectedSong, (n) => {
+    void n;
+  });
+  const eventsCount = selectedSong?.events.length ?? 0;
+
   const noteOn = useCallback(
     (note: string) => {
       if (status !== "ready" || !samplerRef.current) return;
       rawNoteOn(note);
       markNoteOn(note);
+      practice.handlePlayedNote(note);
     },
-    [status, samplerRef, rawNoteOn, markNoteOn]
+    [status, samplerRef, rawNoteOn, markNoteOn, practice]
   );
   const noteOff = useCallback(
     (note: string) => {
@@ -152,11 +167,6 @@ export default function Piano() {
     });
   }, [samplerRef]);
 
-  const allSongs = useMemo(() => [...BUILTIN_SONGS, ...importedSongs], [importedSongs]);
-  const selectedSong = useMemo(
-    () => allSongs.find((s) => s.id === selectedSongId),
-    [allSongs, selectedSongId]
-  );
   const { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback } =
     usePlayback(
       status === "ready",
@@ -282,6 +292,7 @@ export default function Piano() {
   };
 
   const keyStateClass = (note: string): string => {
+    if (practice.state.expectedNote === note) return "expected";
     if (activeNotes.has(note)) return "active";
     if (autoActiveNotes.has(note)) return "auto-active";
     if (sustainedNotes.has(note)) return "sustained";
@@ -371,6 +382,17 @@ export default function Piano() {
             }}
             style={{ display: "none" }}
           />
+
+          <button
+            className="import-btn"
+            onClick={() => (practice.state.active ? practice.stop() : practice.start())}
+            disabled={status !== "ready" || isPlaying || Boolean(pendingImport)}
+            aria-pressed={practice.state.active}
+            title="Mode apprentissage : joue la note attendue pour avancer"
+          >
+            <PracticeIcon />
+            {practice.state.active ? "Quitter apprentissage" : "Apprentissage"}
+          </button>
         </div>
 
         <div className="control-group" aria-label="Réglages">
@@ -507,6 +529,29 @@ export default function Piano() {
 
       {statusMessage && <div className="status-message">{statusMessage}</div>}
 
+      {practice.state.active && (
+        <div className="practice-panel" role="status">
+          {practice.state.done ? (
+            <>
+              <strong>Session terminée !</strong> {eventsCount} notes,{" "}
+              {practice.state.mistakes} faute(s).
+              <button className="import-btn" onClick={practice.start}>
+                Recommencer
+              </button>
+              <button className="import-btn" onClick={practice.stop}>
+                Fermer
+              </button>
+            </>
+          ) : (
+            <>
+              Note {practice.state.step + 1}/{eventsCount} — attends la touche{" "}
+              <strong>{practice.state.expectedNote}</strong> · {practice.state.mistakes}{" "}
+              faute(s)
+            </>
+          )}
+        </div>
+      )}
+
       {pendingImport && (
         <div className="track-picker">
           <h3>Pistes de "{pendingImport.title}"</h3>
@@ -556,54 +601,58 @@ export default function Piano() {
         </div>
       )}
 
-      <div
-        className={`piano ${isPlaying ? "piano-readonly" : ""}`}
-        style={{ ["--white-keys" as any]: WHITE_KEY_COUNT }}
-      >
-        {KEYS.filter((k) => !k.isBlack).map((k) => (
-          <button
-            key={k.note}
-            className={`key white ${keyStateClass(k.note)}`}
-            style={{ ["--index" as any]: whiteKeyIndex(k.note) }}
-            onMouseDown={() => handleMouseDown(k.note)}
-            onMouseUp={() => handleMouseUp(k.note)}
-            onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
-            title={`${noteToSolfege(k.note)} (${k.note})`}
-            aria-label={`Touche ${k.note}`}
-          >
-            {labelMode !== "none" && (
-              <span className="key-label">
-                {(labelMode === "lettres" || labelMode === "both") && k.label}
-                {labelMode === "solfege" && noteToSolfege(k.note)}
-                {labelMode === "both" && (
-                  <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
-                )}
-              </span>
-            )}
-          </button>
-        ))}
-        {KEYS.filter((k) => k.isBlack).map((k) => (
-          <button
-            key={k.note}
-            className={`key black ${keyStateClass(k.note)}`}
-            style={{ ["--index" as any]: blackKeyAfterIndex(k.note) }}
-            onMouseDown={() => handleMouseDown(k.note)}
-            onMouseUp={() => handleMouseUp(k.note)}
-            onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
-            title={`${noteToSolfege(k.note)} (${k.note})`}
-            aria-label={`Touche ${k.note}`}
-          >
-            {labelMode !== "none" && (
-              <span className="key-label">
-                {(labelMode === "lettres" || labelMode === "both") && k.label}
-                {labelMode === "solfege" && noteToSolfege(k.note)}
-                {labelMode === "both" && (
-                  <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
-                )}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="piano-scroll">
+        <div
+          className={`piano ${isPlaying ? "piano-readonly" : ""}`}
+          style={{ ["--white-keys" as any]: whiteKeyCount }}
+        >
+          {ALL_KEYS.filter((k) => !k.isBlack).map((k) => (
+            <button
+              key={k.note}
+              className={`key white ${keyStateClass(k.note)}`}
+              style={{ ["--index" as any]: k.whiteIndex }}
+              onMouseDown={() => handleMouseDown(k.note)}
+              onMouseUp={() => handleMouseUp(k.note)}
+              onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
+              title={`${noteToSolfege(k.note)} (${k.note})`}
+              aria-label={`Touche ${k.note}`}
+            >
+              {labelMode !== "none" && (
+                <span className="key-label">
+                  {(labelMode === "lettres" || labelMode === "both") &&
+                    windowKeys.get(k.note)}
+                  {labelMode === "solfege" && noteToSolfege(k.note)}
+                  {labelMode === "both" && (
+                    <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
+                  )}
+                </span>
+              )}
+            </button>
+          ))}
+          {ALL_KEYS.filter((k) => k.isBlack).map((k) => (
+            <button
+              key={k.note}
+              className={`key black ${keyStateClass(k.note)}`}
+              style={{ ["--index" as any]: k.whiteIndex }}
+              onMouseDown={() => handleMouseDown(k.note)}
+              onMouseUp={() => handleMouseUp(k.note)}
+              onMouseLeave={() => activeNotes.has(k.note) && handleMouseUp(k.note)}
+              title={`${noteToSolfege(k.note)} (${k.note})`}
+              aria-label={`Touche ${k.note}`}
+            >
+              {labelMode !== "none" && (
+                <span className="key-label">
+                  {(labelMode === "lettres" || labelMode === "both") &&
+                    windowKeys.get(k.note)}
+                  {labelMode === "solfege" && noteToSolfege(k.note)}
+                  {labelMode === "both" && (
+                    <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
+                  )}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

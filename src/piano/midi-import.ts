@@ -138,7 +138,7 @@ export function buildSongFromTracks(
   }
   if (transposedCount > 0) {
     warnings.push(
-      `${transposedCount} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (C3–C5).`
+      `${transposedCount} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (A0–C8).`
     );
   }
   if (events.length === 0) {

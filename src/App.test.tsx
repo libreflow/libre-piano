@@ -44,11 +44,11 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 
 describe("App (rendu complet)", () => {
-  it("affiche le header, les contrôles et les 25 touches", () => {
+  it("affiche le header, les contrôles et les 88 touches", () => {
     const { container } = render(<App />);
     expect(container.querySelector(".app-header")).toBeInTheDocument();
     expect(container.querySelector(".playback-controls")).toBeInTheDocument();
-    expect(container.querySelectorAll(".key").length).toBe(25);
+    expect(container.querySelectorAll(".key").length).toBe(88);
   });
 
   it("affiche le logo dans le header", () => {

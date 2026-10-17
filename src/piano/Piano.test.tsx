@@ -47,7 +47,7 @@ describe("Piano (rendu)", () => {
     localStorage.clear();
   });
 
-  it("affiche l'écran de chargement puis le clavier complet (25 touches)", async () => {
+  it("affiche l'écran de chargement puis le clavier complet (88 touches)", async () => {
     render(<Piano />);
     expect(await screen.findByText(/Chargement des sons du piano/)).toBeInTheDocument();
     // Le sampler mocké ne résout jamais onload : le clavier reste rendu
@@ -55,7 +55,7 @@ describe("Piano (rendu)", () => {
     const keys = screen
       .getAllByRole("button")
       .filter((b) => b.className.includes("key "));
-    expect(keys).toHaveLength(25);
+    expect(keys).toHaveLength(88);
   });
 
   it("affiche les morceaux intégrés dans le sélecteur (une seule option par chanson)", () => {

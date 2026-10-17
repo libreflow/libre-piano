@@ -5,7 +5,15 @@
 // l'environnement de bundling.
 import { getContext, start } from "tone";
 
-export { Sampler, Part, getContext, getTransport, getDestination, getDraw } from "tone";
+export {
+  Sampler,
+  Part,
+  ToneAudioBuffer,
+  getContext,
+  getTransport,
+  getDestination,
+  getDraw,
+} from "tone";
 
 /** Baisse le look-ahead du planificateur audio pour réduire la latence
  * input -> son. Le défaut de Tone.js (0.1 s = 100 ms) rend chaque note
