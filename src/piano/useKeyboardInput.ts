@@ -35,6 +35,15 @@ export function useKeyboardInput({
     () => getKeyToNote(layout, octaveShift),
     [layout, octaveShift]
   );
+  // Ref miroir de keyToNote : les listeners du hook ne sont JAMAIS
+  // recréés quand la fenêtre d'octave bouge — ils lisent cette ref au
+  // moment du keypress. Sinon, il existe une fenêtre temporelle (entre
+  // le commit des nouvelles étiquettes et le re-attach des listeners)
+  // où presser une touche jouait la note de l'ANCIENNE fenêtre.
+  const keyToNoteRef = useRef(keyToNote);
+  useEffect(() => {
+    keyToNoteRef.current = keyToNote;
+  }, [keyToNote]);
 
   const releaseSustain = useCallback(() => {
     sustainRef.current = false;
@@ -69,7 +78,7 @@ export function useKeyboardInput({
       }
       if (e.repeat || isPlayingRef.current) return;
       const key = e.key.toLowerCase();
-      const note = keyToNote[key];
+      const note = keyToNoteRef.current[key];
       if (!note || activeKeyboardNotes.current.has(key)) return;
       activeKeyboardNotes.current.set(key, note);
       if (getContext().state !== "running") void ensureAudioStarted();
