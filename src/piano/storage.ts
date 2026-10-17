@@ -61,13 +61,31 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     labelMode,
     keyboardLayout,
     importedSongs: Array.isArray(raw.importedSongs)
-      ? raw.importedSongs.filter(
-          (song) =>
-            song &&
-            typeof song.id === "string" &&
-            typeof song.title === "string" &&
-            Array.isArray(song.events)
-        )
+      ? raw.importedSongs
+          .filter(
+            (song) =>
+              song &&
+              typeof song.id === "string" &&
+              typeof song.title === "string" &&
+              Array.isArray(song.events)
+          )
+          .map((song) => ({
+            ...song,
+            // Chaque événement doit avoir des temps finis >= 0 et une
+            // note valide : un event corrompu produirait des NaN dans
+            // le Part de lecture.
+            events: song.events.filter(
+              (ev: unknown): ev is { time: number; note: string; duration: number } =>
+                typeof ev === "object" &&
+                ev !== null &&
+                Number.isFinite((ev as { time?: unknown }).time) &&
+                (ev as { time: number }).time >= 0 &&
+                Number.isFinite((ev as { duration?: unknown }).duration) &&
+                (ev as { duration: number }).duration > 0 &&
+                typeof (ev as { note?: unknown }).note === "string"
+            ),
+          }))
+          .filter((song) => song.events.length > 0)
       : [],
   };
 }

@@ -104,7 +104,12 @@ describe("sanitization des valeurs corrompues (régression NaN)", () => {
       JSON.stringify({
         version: 2,
         importedSongs: [
-          { id: "ok", title: "OK", events: [], source: "imported" },
+          {
+            id: "ok",
+            title: "OK",
+            source: "imported",
+            events: [{ time: 0, note: "C4", duration: 0.5 }],
+          },
           { id: 42, title: "sans events" },
           "pas un morceau",
         ],
@@ -113,5 +118,47 @@ describe("sanitization des valeurs corrompues (régression NaN)", () => {
     const state = loadPersistedState();
     expect(state.importedSongs).toHaveLength(1);
     expect(state.importedSongs[0].id).toBe("ok");
+  });
+});
+
+describe("régression : événements corrompus dans les morceaux persistés", () => {
+  it("filtre les événements aux temps/durées non finis (NaN dans le Part)", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({
+        version: 2,
+        importedSongs: [
+          {
+            id: "s1",
+            title: "Corrompu",
+            source: "imported",
+            events: [
+              { time: 0, note: "C4", duration: 0.5 }, // valide
+              { time: "abc", note: "D4", duration: 0.5 }, // time corrompu
+              { time: 1, note: "E4", duration: NaN }, // duration NaN
+              { time: -2, note: "F4", duration: 0.5 }, // time négatif
+              { time: 2, duration: 0.5 }, // note manquante
+            ],
+          },
+        ],
+      })
+    );
+    const state = loadPersistedState();
+    expect(state.importedSongs).toHaveLength(1);
+    expect(state.importedSongs[0].events).toHaveLength(1);
+    expect(state.importedSongs[0].events[0].note).toBe("C4");
+  });
+
+  it("élimine un morceau dont tous les événements sont corrompus", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({
+        version: 2,
+        importedSongs: [
+          { id: "s1", title: "Vide", source: "imported", events: [{ time: "x" }] },
+        ],
+      })
+    );
+    expect(loadPersistedState().importedSongs).toHaveLength(0);
   });
 });

@@ -93,9 +93,18 @@ export function useKeyboardInput({
       // sonner à l'infini après l'arrêt de la lecture.
       noteOff(playedNote);
     };
-    // Si la fenêtre perd le focus pédale enfoncée, on la relâche pour ne
-    // pas laisser des notes sonner indéfiniment.
-    const handleBlur = () => releaseSustain();
+    // Si la fenêtre perd le focus (Alt-Tab, clic hors app), les keyup ne
+    // arriveront jamais : relâcher la pédale ET toutes les notes actives,
+    // sinon elles sonnent indéfiniment et les touches deviennent muettes
+    // (activeKeyboardNotes garde les caractères sans keyup).
+    const handleBlur = () => {
+      const held = [...activeKeyboardNotes.current.values()];
+      activeKeyboardNotes.current.clear();
+      for (const note of held) {
+        noteOff(note);
+      }
+      releaseSustain();
+    };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", handleBlur);
