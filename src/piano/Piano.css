@@ -272,6 +272,13 @@ button:active:not(:disabled) {
   text-align: center;
 }
 
+/* Indicateur de santé audio (roadmap #76) : discret, sous les contrôles. */
+.audio-health {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+
 /* ---------- Messages & sélecteur de pistes ---------- */
 
 .status-message {
@@ -654,6 +661,16 @@ button:active:not(:disabled) {
 }
 
 /* ---------- Barre de progression du sampler ---------- */
+
+.piano-loading button {
+  margin: 0 0.5rem;
+}
+.piano-error-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
 
 .piano-loading {
   display: flex;

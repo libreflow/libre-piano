@@ -1,18 +1,18 @@
 import { useCallback, useState } from "react";
-import type { Midi } from "@tonejs/midi";
 import type { Song } from "./songs";
 import {
   summarizeTracks,
   buildSongFromTracks,
   TrackSummary,
-  loadMidi,
+  MidiLike,
 } from "./midi-import";
+import { parseMidiAsync } from "./parse-midi-async";
 
 // Gestion de l'import MIDI : parsing, sélection des pistes, confirmation.
 // Encapsule le dialogue "quelles pistes importer ?" et l'ajout au répertoire.
 
 export interface PendingImport {
-  midi: Midi;
+  midi: MidiLike;
   title: string;
   tracks: TrackSummary[];
 }
@@ -36,7 +36,9 @@ export function useMidiImport(
         const title = file.name.replace(/\.(mid|midi)$/i, "");
         // Import dynamique : @tonejs/midi est volumineux et ne sert qu'ici,
         // il reste hors du bundle initial (chargé au premier import).
-        const midi = await loadMidi(buffer);
+        // Parsing en Web Worker (roadmap #75) : gros fichiers hors du
+        // thread principal, l'UI reste fluide pendant l'import.
+        const midi = await parseMidiAsync(buffer);
         const tracks = summarizeTracks(midi).filter((t) => t.noteCount > 0);
         if (tracks.length === 0) {
           throw new Error("Ce fichier ne contient aucune note exploitable.");

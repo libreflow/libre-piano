@@ -99,15 +99,15 @@ incrément livrable indépendamment.
 
 ## Phase 8 — Qualité, performance, robustesse (73–82)
 
-73. Gestion d'erreur réseau si le CDN de samples est injoignable (message clair + retry)
-74. Tests de performance sur gros fichiers MIDI (>5000 notes)
-75. Web Worker pour le parsing MIDI lourd (hors thread principal)
-76. Monitoring des glitches/underruns audio
-77. Dispose Tone.js systématique vérifié par tests (fuites mémoire)
+73. ✅ Gestion d'erreur de chargement des samples (message clair + bouton Réessayer, rechargement propre avec dispose)
+74. ✅ Tests de performance sur gros fichiers MIDI (6000 et 8000 notes, garde-fous de temps)
+75. ✅ Web Worker pour le parsing MIDI lourd (données sérialisées, repli synchrone)
+76. ✅ Monitoring audio (indicateur latence/état, comptage des nœuds vivants)
+77. ✅ Dispose Tone.js systématique, vérifié par tests (compteur de nœuds)
 78. Tests end-to-end automatisés (Playwright/WebDriver pour Tauri)
 79. Gestion multi-fenêtre (plusieurs morceaux ouverts en parallèle)
-80. Optimisation du bundle (code splitting, lazy loading)
-81. Audit d'accessibilité clavier (navigation Tab, lecteurs d'écran)
+80. ✅ Optimisation du bundle (code splitting MIDI, lazy loading @tonejs/midi)
+81. ✅ Audit d'accessibilité clavier (touches hors Tab-order, aria du clavier, focus sur les contrôles)
 82. Internationalisation (FR/EN)
 
 ## Phase 9 — Packaging & distribution (83–90)
