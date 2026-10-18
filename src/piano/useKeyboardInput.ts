@@ -5,6 +5,10 @@ import { getKeyToNote, KeyboardLayout } from "./notes";
 interface KeyboardHandlers {
   layout: KeyboardLayout;
   shortcuts?: ShortcutConfig;
+  /** B12 (audit) : capture de remap active — le hook ignore tout keydown
+   * pour ne pas jouer de note parasite pendant l'écoute de la nouvelle
+   * touche. */
+  ignoreNotes?: boolean;
   octaveShift?: number;
   isPlayingRef: React.RefObject<boolean>;
   noteOn: (note: string) => void;
@@ -32,6 +36,7 @@ export function useKeyboardInput({
   layout,
   octaveShift = 0,
   shortcuts = DEFAULT_SHORTCUTS,
+  ignoreNotes = false,
   isPlayingRef,
   noteOn,
   noteOff,
@@ -55,6 +60,10 @@ export function useKeyboardInput({
   // le commit des nouvelles étiquettes et le re-attach des listeners)
   // où presser une touche jouait la note de l'ANCIENNE fenêtre.
   const keyToNoteRef = useRef(keyToNote);
+  const ignoreNotesRef = useRef(ignoreNotes);
+  useEffect(() => {
+    ignoreNotesRef.current = ignoreNotes;
+  }, [ignoreNotes]);
   useEffect(() => {
     keyToNoteRef.current = keyToNote;
   }, [keyToNote]);
@@ -74,6 +83,9 @@ export function useKeyboardInput({
     // dans Tauri ; sinon le premier keydown s'en charge via ensureStarted).
     void ensureAudioStarted();
     const handleKeyDown = (e: KeyboardEvent) => {
+      // B12 (audit) : pendant la capture d'un remap, aucun keydown ne
+      // doit déclencher note, pédale ou lecture.
+      if (ignoreNotesRef.current) return;
       if (e.code === shortcuts.sustain) {
         e.preventDefault();
         if (!sustainRef.current && !isPlayingRef.current) {
@@ -128,8 +140,15 @@ export function useKeyboardInput({
       const held = [...activeKeyboardNotes.current.values()];
       activeKeyboardNotes.current.clear();
       for (const note of held) {
+        // B4 (audit) : la pédale reste maintenue tant que la touche
+        // physique l'est — noteOff route vers sustainedNotes si
+        // nécessaire. On ne relâche PAS la pédale ici : la touche
+        // physique sustain n'a pas produit de keyup, elle l'est
+        // peut-être toujours.
         noteOff(note);
       }
+      // La pédale elle-même : si le keyup n'arrivera jamais (focus
+      // perdu), la couper pour éviter un sustain inférieur orphelin.
       releaseSustain();
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -142,6 +161,7 @@ export function useKeyboardInput({
     };
   }, [
     isPlayingRef,
+    ignoreNotes,
     shortcuts,
     noteOn,
     noteOff,

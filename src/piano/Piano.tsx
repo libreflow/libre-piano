@@ -46,6 +46,7 @@ import { detectLanguage, type Language } from "./i18n";
 import {
   loadStats,
   saveStats,
+  removeStats,
   recordSession,
   sessionFrom,
   summarize,
@@ -308,7 +309,14 @@ function PianoInner() {
 
   // Mode apprentissage : la note attendue est surlignée, la session
   // avance quand l'utilisateur joue la bonne note.
-  const practice = usePractice(selectedSong);
+  // B1 (audit) : l'apprentissage travaille sur le morceau TRANSPOSÉ —
+  // comme la lecture — sinon la touche attendue ne correspond pas à ce
+  // qui est joué quand une transposition est active.
+  const selectedPlayable = useMemo(
+    () => (selectedSong ? transposedSong(selectedSong, transpose) : undefined),
+    [selectedSong, transpose]
+  );
+  const practice = usePractice(selectedPlayable);
   // Statistiques de progression (roadmap #38) : persistées dans une clé
   // localStorage dédiée, hors état principal.
   const [stats, setStats] = useState(loadStats);
@@ -364,7 +372,9 @@ function PianoInner() {
       rawNoteOn(note);
       markNoteOn(note);
       playedNoteHandler(note);
-      captureNoteOn(note);
+      // B3 (audit) : le clavier PC capture une vélocité par défaut
+      // explicite (pas de position de frappe) — cohérent avec la souris.
+      captureNoteOn(note, 0.8);
     },
     [status, samplerRef, rawNoteOn, markNoteOn, playedNoteHandler, captureNoteOn]
   );
@@ -492,6 +502,8 @@ function PianoInner() {
     layout: keyboardLayout,
     octaveShift,
     shortcuts,
+    // B12 : la capture de remap neutralise le clavier de jeu.
+    ignoreNotes: remapping !== null,
     isPlayingRef,
     noteOn,
     noteOff,
@@ -647,6 +659,12 @@ function PianoInner() {
         return;
       }
       setImportedSongs((prev) => prev.filter((s) => s.id !== id));
+      // B10 (audit) : nettoyer les stats du morceau supprimé.
+      setStats((prev) => {
+        const next = removeStats(prev, id);
+        saveStats(next);
+        return next;
+      });
       setSelectedSongId((current) =>
         current === id ? (BUILTIN_SONGS[0]?.id ?? "") : current
       );
@@ -754,6 +772,15 @@ function PianoInner() {
     [setStatusMessageAuto]
   );
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  // B9 (audit) : l'état suit aussi les sorties natives (F11, Échap) —
+  // sinon le bouton s'inverse par rapport à la réalité.
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
   const toggleFullscreen = async () => {
     try {
       const win = getCurrentWindow();
@@ -860,7 +887,7 @@ function PianoInner() {
           <select
             value={selectedSongId}
             onChange={(e) => setSelectedSongId(e.target.value)}
-            disabled={isPlaying}
+            disabled={isPlaying || isRecording}
           >
             {[...allSongs]
               .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
@@ -1545,7 +1572,10 @@ function PianoInner() {
           aria-label="Forme d'onde du signal audio"
         />
       )}
-      {(currentLyric || isPlaying) && (
+      {/* B6 (audit) : les paroles ne s'affichent que pendant la lecture
+          automatique — pendant l'echo ou l'apprentissage, le temps de
+          lecture est périmé et la ligne serait fausse. */}
+      {isPlaying && (currentLyric || isPlaying) && (
         <div className="playback-overlay" aria-live="off">
           {selectedSong?.lyrics && selectedSong.lyrics.length > 0 ? (
             <div className="lyrics-line" key={currentLyric?.text}>

@@ -7,6 +7,7 @@ import {
   formatSessionDate,
   sessionFrom,
   buildSessionReport,
+  removeStats,
 } from "./practice-stats";
 import type { Song } from "./songs";
 
@@ -128,5 +129,17 @@ describe("roadmap #40 : rapport de session", () => {
     const parsed = JSON.parse(report);
     expect(parsed.summary.sessionCount).toBe(0);
     expect(parsed.sessions).toEqual([]);
+  });
+});
+
+describe("audit B10 : suppression des stats d'un morceau supprimé", () => {
+  it("removeStats retire l'entrée et laisse le reste intact", () => {
+    let stats = recordSession({}, "a", session(80));
+    stats = recordSession(stats, "b", session(90));
+    const cleaned = removeStats(stats, "a");
+    expect(cleaned.a).toBeUndefined();
+    expect(cleaned.b).toHaveLength(1);
+    // idempotent
+    expect(removeStats(cleaned, "a")).toBe(cleaned);
   });
 });
