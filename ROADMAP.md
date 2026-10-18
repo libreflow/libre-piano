@@ -19,9 +19,9 @@ incrément livrable indépendamment.
 
 ## Phase 2 — Clavier & interaction (11–20)
 
-11. Étendre le clavier à 3–4 octaves (ou 88 touches) avec défilement horizontal
-12. Bouton pour décaler l'octave de base du mapping clavier PC
-13. Support tactile (touch events) pour tablette
+11. ✅ Étendre le clavier à 3–4 octaves (ou 88 touches) avec défilement horizontal
+12. ✅ Bouton pour décaler l'octave de base du mapping clavier PC
+13. ✅ Support tactile (Pointer Events) pour tablette
 14. ✅ Mode plein écran du piano
 15. Support de la vélocité (variation de volume au clic/maintien)
 16. ✅ Pédale de sustain (barre d'espace maintenue = pédale forte)
@@ -36,7 +36,7 @@ incrément livrable indépendamment.
 22. ✅ Contrôle de volume maître
 23. Réverbe réglable (`Tone.Reverb`)
 24. Égaliseur simple (graves/médiums/aigus)
-25. Barre de progression réelle du chargement des échantillons (actuellement binaire)
+25. ✅ Barre de progression réelle du chargement des échantillons (actuellement binaire)
 26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
 27. Métronome audible pendant lecture/pratique
 28. Pédale sustain avec release réellement prolongé (pas juste visuel)
@@ -47,7 +47,7 @@ incrément livrable indépendamment.
 
 31. Mode "notes qui défilent" façon Synthesia avant d'atteindre le clavier
 32. Mode "attendre la bonne touche" (la lecture se met en pause sans la bonne note)
-33. Score/précision affiché après une session de pratique
+33. ✅ Score/précision affiché après une session de pratique
 34. ✅ Boucle A-B sur une section choisie du morceau
 35. Ralentissement automatique des passages denses détectés
 36. Affichage d'une partition simplifiée en parallèle du clavier
@@ -56,7 +56,7 @@ incrément livrable indépendamment.
 39. Leçons progressives (du plus simple au plus complexe)
 40. Export d'un rapport de session (notes ratées, tempo réel vs cible)
 41. Marqueurs de mesures / repères visuels pendant la lecture
-42. Highlight de la touche suivante à jouer (anticipation, pas juste la note en cours)
+42. ✅ Highlight de la touche suivante à jouer (anticipation, pas juste la note en cours)
 43. Mode "call & response" (l'app joue une phrase, l'utilisateur la rejoue)
 44. Suggestion de doigté (données approximatives, en option)
 45. Replay instantané d'une performance enregistrée par l'utilisateur
@@ -65,7 +65,7 @@ incrément livrable indépendamment.
 
 46. Enregistrement de ce que joue l'utilisateur en live + export `.mid`
 47. Export audio (WAV/MP3) d'un morceau joué en lecture automatique
-48. Glisser-déposer un fichier MIDI directement sur la fenêtre
+48. ✅ Glisser-déposer un fichier MIDI directement sur la fenêtre
 49. Support des fichiers MusicXML en plus du MIDI
 50. Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
 51. Mélange de pistes avec volume individuel par piste (pas juste tout/rien)

@@ -2,6 +2,14 @@
 
 ## Non publié
 
+### Fonctionnalités (roadmap #33, #42, #48)
+
+- Mode apprentissage : score de justesse (0–100) affiché en fin de session
+- Mode apprentissage : la touche suivante est surlignée en anticipation (liseré discret)
+- Import MIDI par glisser-déposer sur la fenêtre, avec overlay visuel
+
+> > > > > > > f166dc9 (Roadmap : score de session, anticipation, glisser-déposer MIDI)
+
 ### Corrections de bugs
 
 - Lecture tactile : les touches répondent aux Pointer Events (tablettes/écrans tactiles)
@@ -13,7 +21,7 @@
 
 - Import dynamique de `@tonejs/midi` : bundle initial 533 → 505 kB (chunk MIDI chargé à l'import)
 - Messages de statut auto-effacés après 8 s
-- Suite de tests : 88 tests, exécution accélérée (pool vmThreads)
+- Suite de tests : 93 tests, exécution accélérée (pool vmThreads)
 - Fichiers communautaires GitHub : templates d'issues/PR, SECURITY.md, Dependabot
 
 ## 0.2.1 — 2026-10-17

@@ -135,6 +135,15 @@ describe("Piano (rendu)", () => {
     expect(cs3).toHaveTextContent("Do#");
   });
 
+  it("affiche l'overlay de glisser-déposer sur dragover (roadmap #48)", () => {
+    render(<Piano />);
+    const wrap = document.querySelector(".piano-wrap") as HTMLElement;
+    fireEvent.dragOver(wrap, { dataTransfer: { types: ["Files"] } });
+    expect(screen.getByText(/Dépose ton fichier/)).toBeInTheDocument();
+    fireEvent.drop(wrap, { dataTransfer: { files: [] } });
+    expect(screen.queryByText(/Dépose ton fichier/)).not.toBeInTheDocument();
+  });
+
   it("joue une note au pointerdown sur une touche", () => {
     render(<Piano />);
     const key = screen.getByLabelText("Touche C4");

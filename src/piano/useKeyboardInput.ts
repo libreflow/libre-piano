@@ -125,14 +125,7 @@ export function useKeyboardInput({
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [
-    isPlayingRef,
-    noteOn,
-    noteOff,
-    onSustainChange,
-    onTogglePlayback,
-    releaseSustain,
-  ]);
+  }, [isPlayingRef, noteOn, noteOff, onSustainChange, onTogglePlayback, releaseSustain]);
 
   return { sustainRef };
 }

@@ -255,9 +255,7 @@ export default function Piano() {
     if (!el || !piano) return;
     const idx = getWhitePositionOfNote(noteToFollow);
     if (idx < 0) return;
-    const keyW = parseFloat(
-      getComputedStyle(piano).getPropertyValue("--key-w")
-    );
+    const keyW = parseFloat(getComputedStyle(piano).getPropertyValue("--key-w"));
     const x = idx * keyW;
     const view = el.clientWidth;
     // scroller seulement si la touche n'est pas (totalement) visible
@@ -378,7 +376,15 @@ export default function Piano() {
     } else if (saved) {
       quotaWarnedRef.current = false;
     }
-  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout, setStatusMessageAuto]);
+  }, [
+    importedSongs,
+    selectedSongId,
+    speed,
+    volume,
+    labelMode,
+    keyboardLayout,
+    setStatusMessageAuto,
+  ]);
 
   const toggleFullscreen = async () => {
     try {
@@ -408,11 +414,40 @@ export default function Piano() {
     if (activeNotes.has(note)) return "active";
     if (autoActiveNotes.has(note)) return "auto-active";
     if (sustainedNotes.has(note)) return "sustained";
+    // Anticipation : la touche suivante, discrète tant qu'elle n'est pas
+    // attendue (pas de halo, juste un liseré).
+    if (practice.state.nextNote === note) return "next";
     return "";
   };
 
+  // Glisser-déposer un fichier .mid/.midi n'importe où sur la fenêtre.
+  const [isDragOver, setIsDragOver] = useState(false);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes("Files")) setIsDragOver(true);
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragOver(false);
+  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (isPlayingRef.current || isImporting) return;
+      const file = e.dataTransfer.files?.[0];
+      if (file) void importFile(file);
+    },
+    [importFile, isImporting, isPlayingRef]
+  );
+
   return (
-    <div className="piano-wrap">
+    <div
+      className="piano-wrap"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {status === "loading" && (
         <div className="piano-loading" role="status" aria-live="polite">
           Chargement des sons du piano… {loadedCount}/{SAMPLE_COUNT}
@@ -553,9 +588,7 @@ export default function Piano() {
           >
             <button
               onClick={() => setOctaveShift((v) => Math.max(OCTAVE_SHIFT_MIN, v - 1))}
-              disabled={
-                octaveShift <= OCTAVE_SHIFT_MIN || practice.state.active
-              }
+              disabled={octaveShift <= OCTAVE_SHIFT_MIN || practice.state.active}
               title="Fenêtre PC : octave précédente"
               aria-label="Fenêtre clavier : octave précédente"
             >
@@ -566,9 +599,7 @@ export default function Piano() {
             </span>
             <button
               onClick={() => setOctaveShift((v) => Math.min(OCTAVE_SHIFT_MAX, v + 1))}
-              disabled={
-                octaveShift >= OCTAVE_SHIFT_MAX || practice.state.active
-              }
+              disabled={octaveShift >= OCTAVE_SHIFT_MAX || practice.state.active}
               title="Fenêtre PC : octave suivante"
               aria-label="Fenêtre clavier : octave suivante"
             >
@@ -678,6 +709,11 @@ export default function Piano() {
         <span className="loop-total">/ {selectedSongDuration.toFixed(1)}s au total</span>
       </div>
 
+      {isDragOver && (
+        <div className="drop-overlay" role="status">
+          Dépose ton fichier .mid / .midi pour l'importer
+        </div>
+      )}
       {statusMessage && <div className="status-message">{statusMessage}</div>}
 
       {practice.state.active && (
@@ -685,7 +721,7 @@ export default function Piano() {
           {practice.state.done ? (
             <>
               <strong>Session terminée !</strong> {eventsCount} notes,{" "}
-              {practice.state.mistakes} faute(s).
+              {practice.state.mistakes} faute(s), score {practice.state.score ?? 100}/100.
               <button className="import-btn" onClick={practice.start}>
                 Recommencer
               </button>
