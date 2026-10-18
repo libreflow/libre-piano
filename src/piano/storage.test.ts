@@ -25,7 +25,13 @@ describe("storage", () => {
       selectedSongId: "au-clair-de-la-lune",
     };
     expect(savePersistedState(state)).toBe(true);
-    expect(loadPersistedState()).toEqual(state);
+    const loaded = loadPersistedState();
+    // language est déduit (non stocké dans l'objet de test) : comparer
+    // sans lui, puis vérifier sa présence.
+    const { language: _lang, ...rest } = loaded;
+    void _lang;
+    expect(rest).toEqual(state);
+    expect(loaded.language).toBeDefined();
   });
 
   it("retourne false quand le quota est dépassé", () => {

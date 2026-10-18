@@ -34,6 +34,8 @@ export interface PersistedState {
   visualizer?: boolean;
   /** Raccourcis personnalisés (roadmap #65), codes physiques. */
   shortcuts?: { sustain: string; togglePlayback: string };
+  /** Langue de l'interface (roadmap #82). */
+  language?: "fr" | "en";
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -103,6 +105,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     transpose,
     eq,
     visualizer: raw.visualizer === true ? true : undefined,
+    language: raw.language === "en" ? "en" : "fr",
     shortcuts: {
       sustain:
         typeof (raw.shortcuts as { sustain?: unknown } | undefined)?.sustain ===
