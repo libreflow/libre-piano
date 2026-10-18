@@ -54,10 +54,10 @@ incrément livrable indépendamment.
 37. ✅ Détection main gauche/droite (tag par piste dans le sélecteur d'import)
 38. ✅ Statistiques de progression par morceau (meilleur score, sessions, moyenne, dernière date)
 39. Leçons progressives (du plus simple au plus complexe)
-40. Export d'un rapport de session (notes ratées, tempo réel vs cible)
-41. Marqueurs de mesures / repères visuels pendant la lecture
+40. ✅ Export d'un rapport de progression (JSON : sessions, agrégats, téléchargé depuis le panneau apprentissage)
+41. ✅ Marqueurs de mesures pendant la lecture (piste de points, temps fort accentué, mesure active surlignée)
 42. ✅ Highlight de la touche suivante à jouer (anticipation, pas juste la note en cours)
-43. Mode "call & response" (l'app joue une phrase, l'utilisateur la rejoue)
+43. ✅ Mode echo/call & response (l'app joue une phrase de 6 notes, l'utilisateur la rejoue, phrase par phrase)
 44. Suggestion de doigté (données approximatives, en option)
 45. ✅ Replay du dernier enregistrement (bouton dédié)
 
@@ -131,5 +131,5 @@ incrément livrable indépendamment.
 96. Mode composition : enregistrer et rejouer ses propres morceaux
 97. Export vidéo (capture piano + audio) d'une performance
 98. Intégration avec un service de partitions en ligne (recherche depuis l'app)
-99. Affichage de paroles synchronisées si présentes dans le MIDI (lyrics meta events)
+99. ✅ Paroles synchronisées (meta events lyrics extraits par le worker, ligne courante affichée pendant la lecture)
 100.  Assistant IA : suggestions d'exercices adaptées au niveau détecté

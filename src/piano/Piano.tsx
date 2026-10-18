@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ensureAudioStarted, getContext } from "./tone-gate";
+import { ensureAudioStarted, getContext, getTransport } from "./tone-gate";
 import {
   getKeyboardLayout,
   getWindowKeyMap,
@@ -31,6 +31,7 @@ import {
 } from "./useMetronome";
 import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
+import { useCallResponse } from "./useCallResponse";
 import {
   loadStats,
   saveStats,
@@ -38,6 +39,8 @@ import {
   sessionFrom,
   summarize,
   formatSessionDate,
+  buildSessionReport,
+  downloadSessionReport,
 } from "./practice-stats";
 import { useKeyboardInput } from "./useKeyboardInput";
 import {
@@ -52,6 +55,7 @@ import {
   EQ_MAX_DB,
   DISPLAY_CHORD_RATIO_THRESHOLD,
   STATUS_MESSAGE_TIMEOUT_MS,
+  REFERENCE_BPM,
 } from "./constants";
 import {
   PlayIcon,
@@ -249,6 +253,17 @@ export default function Piano() {
   ]);
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
+  // Call & response (roadmap #43) : l'app joue une phrase, l'utilisateur
+  // la rejoue. Branché sur les notes jouées et la lecture de démo.
+  const callResponse = useCallResponse(selectedSong, triggerAttackRelease);
+  const callResponseOnPlayed = callResponse.handlePlayedNote;
+  const playedNoteHandler = useCallback(
+    (note: string) => {
+      handlePlayedNote(note);
+      callResponseOnPlayed(note);
+    },
+    [handlePlayedNote, callResponseOnPlayed]
+  );
 
   // Enregistrement live (roadmap #46) : capture les notes jouées.
   // Destructuré : le Compiler veut des valeurs stables en deps, pas
@@ -266,10 +281,10 @@ export default function Piano() {
       if (status !== "ready" || !samplerRef.current) return;
       rawNoteOn(note);
       markNoteOn(note);
-      handlePlayedNote(note);
+      playedNoteHandler(note);
       captureNoteOn(note);
     },
-    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote, captureNoteOn]
+    [status, samplerRef, rawNoteOn, markNoteOn, playedNoteHandler, captureNoteOn]
   );
   const clearSustainedNote = useCallback((note: string) => {
     setSustainedNotes((prev) => {
@@ -330,6 +345,26 @@ export default function Piano() {
       markAutoNoteOn,
       markAutoNoteOff
     );
+
+  // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
+  // pendant la lecture, pour les marqueurs de mesures et les paroles.
+  const [playbackSeconds, setPlaybackSeconds] = useState(0);
+  useEffect(() => {
+    if (!isPlaying) return;
+    let raf = 0;
+    const tick = () => {
+      setPlaybackSeconds(getTransport().seconds);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isPlaying]);
+
+  // Paroles synchronisées (roadmap #99) : ligne courante du morceau
+  // sélectionné, selon le temps de lecture.
+  const currentLyric = selectedSong?.lyrics
+    ?.filter((l) => l.time <= playbackSeconds)
+    .pop();
 
   // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
   const trackPreview = useTrackPreview(triggerAttackRelease);
@@ -845,6 +880,24 @@ export default function Piano() {
             <PracticeIcon />
             {practice.state.active ? "Quitter apprentissage" : "Apprentissage"}
           </button>
+          <button
+            className="import-btn"
+            onClick={() => {
+              if (callResponse.state.active) {
+                callResponse.stop();
+              } else {
+                if (isPlayingRef.current) stopPlaybackAndClear();
+                if (practice.state.active) practice.stop();
+                callResponse.start();
+                callResponse.playPhrase(0);
+              }
+            }}
+            disabled={status !== "ready" || isPlaying || Boolean(pendingImport)}
+            aria-pressed={callResponse.state.active}
+            title="Mode echo : l'app joue une phrase, rejoue-la (roadmap #43)"
+          >
+            ♪ Echo
+          </button>
         </div>
 
         <div className="control-group" aria-label="Réglages">
@@ -1168,6 +1221,20 @@ export default function Piano() {
               <button className="import-btn" onClick={practice.start}>
                 Recommencer
               </button>
+              <button
+                className="import-btn"
+                onClick={() => {
+                  if (!selectedSong) return;
+                  // Rapport de session (roadmap #40) : export JSON.
+                  downloadSessionReport(
+                    selectedSong.title,
+                    buildSessionReport(selectedSong.title, stats, selectedSong.id)
+                  );
+                }}
+                title="Exporter le rapport de progression en JSON"
+              >
+                Rapport
+              </button>
               <button className="import-btn" onClick={practice.stop}>
                 Fermer
               </button>
@@ -1192,6 +1259,40 @@ export default function Piano() {
         </div>
       )}
 
+      {callResponse.state.active && (
+        <div className="practice-panel" role="status">
+          {callResponse.state.done ? (
+            <>
+              <strong>Morceau rejoué en entier !</strong> {callResponse.state.phraseCount}{" "}
+              phrase(s), {callResponse.state.mistakes} faute(s).
+              <button
+                className="import-btn"
+                onClick={() => {
+                  callResponse.start();
+                  callResponse.playPhrase(0);
+                }}
+              >
+                Recommencer
+              </button>
+              <button className="import-btn" onClick={callResponse.stop}>
+                Fermer
+              </button>
+            </>
+          ) : callResponse.state.phase === "call" ? (
+            <>
+              <strong>Écoute…</strong> Phrase {callResponse.state.phraseIndex + 1}/
+              {callResponse.state.phraseCount}
+            </>
+          ) : (
+            <>
+              <strong>À toi !</strong> Phrase {callResponse.state.phraseIndex + 1}/
+              {callResponse.state.phraseCount} — note{" "}
+              {callResponse.state.responseStep + 1}/{callResponse.state.expected.length} ·{" "}
+              {callResponse.state.mistakes} faute(s)
+            </>
+          )}
+        </div>
+      )}
       {pendingImport && (
         <div className="track-picker">
           <h3>Pistes de "{pendingImport.title}"</h3>
@@ -1270,6 +1371,33 @@ export default function Piano() {
         </div>
       )}
 
+      {(currentLyric || isPlaying) && (
+        <div className="playback-overlay" aria-live="off">
+          {selectedSong?.lyrics && selectedSong.lyrics.length > 0 ? (
+            <div className="lyrics-line" key={currentLyric?.text}>
+              {currentLyric?.text ?? "…"}
+            </div>
+          ) : null}
+          {isPlaying && (
+            <div className="measure-track" aria-hidden="true">
+              {Array.from({ length: 32 }, (_, i) => {
+                const measureSec = (i * 4 * 60) / REFERENCE_BPM;
+                const active =
+                  playbackSeconds >= measureSec &&
+                  playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
+                return (
+                  <span
+                    key={i}
+                    className={`measure-dot${active ? " active" : ""}${
+                      i % 4 === 0 ? " strong" : ""
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       <div
         className="piano-scroll"
         ref={pianoScrollRef}

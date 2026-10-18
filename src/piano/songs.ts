@@ -14,6 +14,12 @@ export interface SongEvent {
   velocity?: number;
 }
 
+export interface LyricLine {
+  /** Temps absolu (secondes) où la ligne s'affiche. */
+  time: number;
+  text: string;
+}
+
 export interface Song {
   id: string;
   title: string;
@@ -21,6 +27,9 @@ export interface Song {
   source: "builtin" | "imported";
   /** Favori (roadmap #60) : remonte en tête du sélecteur. */
   favorite?: boolean;
+  /** Paroles synchronisées (roadmap #99), extraites des meta events
+   * "lyrics" du fichier MIDI d'origine. */
+  lyrics?: LyricLine[];
 }
 
 // --- Notation d'écriture des morceaux de démo -----------------------------

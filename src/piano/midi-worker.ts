@@ -19,9 +19,16 @@ export interface SerializedTrack {
   instrumentName: string;
 }
 
+export interface SerializedLyric {
+  time: number;
+  text: string;
+}
+
 export interface MidiWorkerResult {
   name: string;
   tracks: SerializedTrack[];
+  /** Meta events "lyrics" (roadmap #99), convertis en secondes. */
+  lyrics?: SerializedLyric[];
 }
 
 self.onmessage = async (e: MessageEvent<ArrayBuffer>) => {
@@ -29,8 +36,19 @@ self.onmessage = async (e: MessageEvent<ArrayBuffer>) => {
   let result: MidiWorkerResult;
   try {
     const midi = new Midi(e.data);
+    // Paroles (roadmap #99) : meta events "lyrics" de l'en-tête,
+    // convertis des ticks vers les secondes via le header.
+    const lyrics = (midi.header.meta as { type?: string; text?: string }[])
+      .filter((m) => m.type === "lyrics" && typeof m.text === "string")
+      .map((m) => ({
+        time: midi.header.ticksToSeconds((m as { ticks?: number }).ticks ?? 0),
+        text: (m as { text?: string }).text ?? "",
+      }))
+      .filter((l) => l.text.length > 0)
+      .sort((a, b) => a.time - b.time);
     result = {
       name: midi.name ?? "",
+      lyrics: lyrics.length > 0 ? lyrics : undefined,
       tracks: midi.tracks.map((track, index) => ({
         index,
         name: track.name ?? "",

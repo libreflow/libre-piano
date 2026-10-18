@@ -282,6 +282,49 @@ button:active:not(:disabled) {
   width: 56px;
 }
 
+/* Bandeau de lecture (roadmaps #41/#99) : paroles + mesures. */
+.playback-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 1.6rem;
+}
+.lyrics-line {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  animation: lyrics-in 0.25s ease-out;
+}
+@keyframes lyrics-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.measure-track {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.measure-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.measure-dot.strong {
+  background: var(--text-faint);
+}
+.measure-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
 /* Indicateur de santé audio (roadmap #76) : discret, sous les contrôles. */
 .audio-health {
   font-size: 0.72rem;

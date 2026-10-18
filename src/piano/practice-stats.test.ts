@@ -6,6 +6,7 @@ import {
   summarize,
   formatSessionDate,
   sessionFrom,
+  buildSessionReport,
 } from "./practice-stats";
 import type { Song } from "./songs";
 
@@ -107,5 +108,25 @@ describe("practice-stats (roadmap #38)", () => {
     expect(s.noteCount).toBe(2);
     expect(s.date).toBe("2026-10-18T12:00:00.000Z");
     vi.useRealTimers();
+  });
+});
+
+describe("roadmap #40 : rapport de session", () => {
+  it("produit un JSON complet avec agrégats et sessions", () => {
+    const stats = recordSession({}, "s1", session(80));
+    const report = buildSessionReport("Ma chanson", stats, "s1");
+    const parsed = JSON.parse(report);
+    expect(parsed.app).toBe("libre-piano");
+    expect(parsed.song).toBe("Ma chanson");
+    expect(parsed.summary.bestScore).toBe(80);
+    expect(parsed.summary.sessionCount).toBe(1);
+    expect(parsed.sessions).toHaveLength(1);
+  });
+
+  it("un morceau sans session donne un rapport vide mais valide", () => {
+    const report = buildSessionReport("Vide", {}, "unknown");
+    const parsed = JSON.parse(report);
+    expect(parsed.summary.sessionCount).toBe(0);
+    expect(parsed.sessions).toEqual([]);
   });
 });

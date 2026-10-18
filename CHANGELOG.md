@@ -4,6 +4,10 @@
 
 ### Fonctionnalités
 
+- Mode echo (call & response) : l'app joue une phrase de 6 notes, à toi de la rejouer — phrase par phrase, avec compteur de fautes
+- Paroles synchronisées : les meta events « lyrics » des fichiers MIDI s'affichent pendant la lecture
+- Marqueurs de mesures pendant la lecture (piste de points, temps fort accentué)
+- Rapport de progression exportable en JSON depuis le panneau apprentissage
 - Pédale de sustain réaliste : les notes tenues s'éteignent doucement (release 3,5 s) au lieu d'être coupées net
 - Égaliseur 3 bandes (graves/médiums/aigus, ±12 dB), persisté
 - Sélecteur d'import : chaque piste est taggée « main droite » ou « main gauche » (heuristique tessiture + densité)
