@@ -244,13 +244,16 @@ export default function Piano() {
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
 
+  // Enregistrement live (roadmap #46) : capture les notes jouées.
+  const recorder = useRecorder();
+
   const noteOn = useCallback(
     (note: string) => {
       if (status !== "ready" || !samplerRef.current) return;
       rawNoteOn(note);
       markNoteOn(note);
       handlePlayedNote(note);
-      recorder.captureNoteOn(note);
+      recorderRef.current.captureNoteOn(note);
     },
     [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote]
   );
@@ -275,7 +278,7 @@ export default function Piano() {
       // Retirer aussi un éventuel reste de sustain : sinon la touche
       // resterait affichée « sustained » (muette) après re-jeu sans pédale.
       clearSustainedNote(note);
-      recorder.captureNoteOff(note);
+      recorderRef.current.captureNoteOff(note);
     },
     [samplerRef, rawNoteOff, markNoteOff, sustainOnRef, clearSustainedNote]
   );
@@ -406,8 +409,11 @@ export default function Piano() {
     confirmImport,
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessageAuto);
-  // Enregistrement live (roadmap #46) : capture les notes jouées.
-  const recorder = useRecorder();
+
+  const recorderRef = useRef(recorder);
+  useEffect(() => {
+    recorderRef.current = recorder;
+  }, [recorder]);
   const toggleRecording = useCallback(() => {
     if (recorder.isRecording) {
       const song = recorder.stop();
