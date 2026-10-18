@@ -688,6 +688,14 @@ button:active:not(:disabled) {
   font-size: 0.8rem;
 }
 
+/* Stats de progression dans le panneau apprentissage (roadmap #38). */
+.practice-stats {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 /* Touche attendue : halo vert pulsant, prioritaire sur les autres états. */
 .key.expected {
   box-shadow:

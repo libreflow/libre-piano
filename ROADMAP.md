@@ -52,7 +52,7 @@ incrément livrable indépendamment.
 35. Ralentissement automatique des passages denses détectés
 36. Affichage d'une partition simplifiée en parallèle du clavier
 37. Mode "main gauche seule" / "main droite seule" si deux pistes identifiées
-38. Statistiques de progression par morceau (temps passé, dernière session, score)
+38. ✅ Statistiques de progression par morceau (meilleur score, sessions, moyenne, dernière date)
 39. Leçons progressives (du plus simple au plus complexe)
 40. Export d'un rapport de session (notes ratées, tempo réel vs cible)
 41. Marqueurs de mesures / repères visuels pendant la lecture
