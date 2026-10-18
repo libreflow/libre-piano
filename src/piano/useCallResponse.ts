@@ -101,7 +101,8 @@ export function useCallResponse(
     setState(IDLE);
   }, [clearTimers]);
 
-  /** Joue la phrase i (phase call) puis bascule en attente. */
+  /** Joue la phrase i (phase call) puis bascule en attente.
+   * Stable : ne lit que des refs, aucune dep externe. */
   const playPhrase = useCallback(
     (index: number) => {
       const phrase = phrasesRef.current[index];
@@ -147,41 +148,39 @@ export function useCallResponse(
   const phraseRef = useRef<Phrase | null>(null);
 
   /** À brancher sur les notes jouées : avance la réponse. */
-  const handlePlayedNote = useCallback((note: string) => {
-    if (phaseRef.current !== "response") return;
-    setState((prev) => {
-      if (!prev.active || prev.done) return prev;
-      const expectedNote = prev.expected[prev.responseStep];
-      if (note === expectedNote) {
-        const nextStep = prev.responseStep + 1;
-        if (nextStep >= prev.expected.length) {
-          // Phrase rejouée : suivante ou fin.
-          const nextPhrase = prev.phraseIndex + 1;
-          if (nextPhrase >= prev.phraseCount) {
-            phaseRef.current = "call";
+  const handlePlayedNote = useCallback(
+    (note: string) => {
+      if (phaseRef.current !== "response") return;
+      setState((prev) => {
+        if (!prev.active || prev.done) return prev;
+        const expectedNote = prev.expected[prev.responseStep];
+        if (note === expectedNote) {
+          const nextStep = prev.responseStep + 1;
+          if (nextStep >= prev.expected.length) {
+            // Phrase rejouée : suivante ou fin.
+            const nextPhrase = prev.phraseIndex + 1;
+            if (nextPhrase >= prev.phraseCount) {
+              phaseRef.current = "call";
+              window.setTimeout(() => {
+                // Fin : la session se termine.
+                setState((p) => ({ ...p, phase: "call", done: true, expected: [] }));
+                phaseRef.current = "idle";
+              }, 0);
+              return { ...prev, responseStep: nextStep, done: true, expected: [] };
+            }
             window.setTimeout(() => {
-              // Fin : la session se termine.
-              setState((p) => ({ ...p, phase: "call", done: true, expected: [] }));
-              phaseRef.current = "idle";
-            }, 0);
-            return { ...prev, responseStep: nextStep, done: true, expected: [] };
+              playPhrase(nextPhrase);
+            }, 600);
+            return { ...prev, responseStep: nextStep };
           }
-          window.setTimeout(() => {
-            playPhraseRef.current?.(nextPhrase);
-          }, 600);
           return { ...prev, responseStep: nextStep };
         }
-        return { ...prev, responseStep: nextStep };
-      }
-      return { ...prev, mistakes: prev.mistakes + 1 };
-    });
-  }, []);
-
-  // Ref-miroir de playPhrase pour les timers.
-  const playPhraseRef = useRef<typeof playPhrase | null>(null);
-  useEffect(() => {
-    playPhraseRef.current = playPhrase;
-  }, [playPhrase]);
+        return { ...prev, mistakes: prev.mistakes + 1 };
+      });
+      // playPhrase est stable (refs internes uniquement).
+    },
+    [playPhrase]
+  );
 
   return { state, start, stop, playPhrase, handlePlayedNote };
 }
