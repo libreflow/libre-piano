@@ -1,5 +1,11 @@
 # Changelog
 
+## Non publié
+
+### Corrections de bugs
+
+- Décalage d'octave : les touches du clavier PC jouent enfin la fenêtre affichée (l'étiquette et le son étaient désynchronisés depuis l'introduction du décalage — le hook ne recevait pas `octaveShift`)
+
 ## 0.3.0 — 2026-10-18
 
 ### Fonctionnalités (roadmap #23, #27, #33, #38, #42, #46, #48, #50, #51, #53, #60, #62, #64)

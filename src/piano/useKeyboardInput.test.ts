@@ -374,3 +374,35 @@ describe("régression : décalage d'octave et notes jouées synchrones", () => {
     expect(noteOn).toHaveBeenNthCalledWith(2, "C4");
   });
 });
+
+describe("régression : octaveShift passé au hook (bug affichage ≠ clavier)", () => {
+  it("un octaveShift non nul décale bien les notes jouées", () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const { result, rerender } = renderHook(
+      (props: { octaveShift?: number }) =>
+        useKeyboardInput({
+          layout: "azerty",
+          octaveShift: props.octaveShift,
+          isPlayingRef: { current: false },
+          noteOn,
+          noteOff,
+          onSustainChange: vi.fn(),
+          releaseSustained: vi.fn(),
+        }),
+      { initialProps: { octaveShift: 0 } }
+    );
+    void result;
+    // Sans décalage : Q = C3
+    press("keydown", "q");
+    press("keyup", "q");
+    expect(noteOn).toHaveBeenCalledWith("C3");
+    // Décalage +1 octave : Q doit jouer C4, comme l'étiquette affichée.
+    act(() => {
+      rerender({ octaveShift: 1 });
+    });
+    press("keydown", "q");
+    press("keyup", "q");
+    expect(noteOn).toHaveBeenCalledWith("C4");
+  });
+});

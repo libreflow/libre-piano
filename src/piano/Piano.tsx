@@ -343,6 +343,7 @@ export default function Piano() {
   }, [metronome]);
   useKeyboardInput({
     layout: keyboardLayout,
+    octaveShift,
     isPlayingRef,
     noteOn,
     noteOff,
