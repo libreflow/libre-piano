@@ -272,6 +272,16 @@ button:active:not(:disabled) {
   text-align: center;
 }
 
+/* Égaliseur compact (roadmap #24) : 3 mini-sliders sur une ligne. */
+.eq-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.eq-band input[type="range"] {
+  width: 56px;
+}
+
 /* Indicateur de santé audio (roadmap #76) : discret, sous les contrôles. */
 .audio-health {
   font-size: 0.72rem;
@@ -564,10 +574,34 @@ button:active:not(:disabled) {
   }
 }
 
+@media (max-width: 880px) {
+  /* Roadmap #19 : les groupes de contrôle passent à la ligne et
+     respirent sur les écrans étroits. */
+  .control-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .playback-controls {
+    gap: 0.45rem;
+    padding: 0.5rem 0.6rem;
+  }
+  .speed-label input[type="range"] {
+    width: 90px;
+  }
+}
+
 @media (max-width: 760px) {
   .piano {
     --key-w: 36px;
     --key-h: 160px;
+  }
+  .playback-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .control-group {
+    width: 100%;
   }
   .key {
     padding-bottom: 6px;

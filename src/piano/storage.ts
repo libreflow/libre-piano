@@ -9,6 +9,7 @@ import {
   VOLUME_DEFAULT_PERCENT,
 } from "./constants";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "./transpose";
+import { EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB } from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
 export const STATE_VERSION = 3;
@@ -27,6 +28,8 @@ export interface PersistedState {
   reverb: number;
   /** Transposition des morceaux en demi-tons (roadmap #53). */
   transpose: number;
+  /** Égaliseur 3 bandes en dB (roadmap #24). */
+  eq: { low: number; mid: number; high: number };
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -41,6 +44,7 @@ export const DEFAULT_STATE: PersistedState = {
   theme: "dark",
   reverb: REVERB_DEFAULT_PERCENT,
   transpose: 0,
+  eq: { low: EQ_DEFAULT_DB, mid: EQ_DEFAULT_DB, high: EQ_DEFAULT_DB },
 };
 
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
@@ -74,6 +78,13 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
   // Réverbe absente (états v3 antérieurs) : défaut sec.
   const reverb = num(raw.reverb, DEFAULT_STATE.reverb, 0, 100);
   const transpose = num(raw.transpose, 0, TRANSPOSE_MIN, TRANSPOSE_MAX);
+  // Égaliseur : états antérieurs sans eq -> neutre.
+  const eqRaw = raw.eq as { low?: unknown; mid?: unknown; high?: unknown } | undefined;
+  const eq = {
+    low: num(eqRaw?.low, EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB),
+    mid: num(eqRaw?.mid, EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB),
+    high: num(eqRaw?.high, EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB),
+  };
   return {
     ...DEFAULT_STATE,
     ...raw,
@@ -85,6 +96,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     theme,
     reverb,
     transpose,
+    eq,
     importedSongs: Array.isArray(raw.importedSongs)
       ? raw.importedSongs
           .filter(

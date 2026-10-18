@@ -112,3 +112,37 @@ describe("roadmap #51 : vélocité des notes importées", () => {
     expect(song.events[1].velocity).toBeCloseTo(0.9);
   });
 });
+
+describe("roadmap #37/#52 : détection main gauche/droite", () => {
+  it("tagge la piste aiguë en main droite et la grave en main gauche", () => {
+    const midi = new Midi();
+    const melody = midi.addTrack();
+    melody.name = "Melody";
+    for (let i = 0; i < 10; i++) {
+      melody.addNote({ midi: 72 + (i % 3), time: i * 0.5, duration: 0.4 });
+    }
+    const bass = midi.addTrack();
+    bass.name = "Bass";
+    for (let i = 0; i < 12; i++) {
+      bass.addNote({ midi: 40 + (i % 2), time: i * 0.5, duration: 0.4 });
+    }
+    const buffer = midi.toArray().slice().buffer;
+    const summaries = summarizeTracks(new Midi(buffer));
+    const right = summaries.find((t) => t.name === "Melody");
+    const left = summaries.find((t) => t.name === "Bass");
+    expect(right?.handRole).toBe("right");
+    expect(right?.likelyMelody).toBe(true);
+    expect(left?.handRole).toBe("left");
+  });
+
+  it("une piste unique est la main droite, sans main gauche", () => {
+    const midi = new Midi();
+    const solo = midi.addTrack();
+    for (let i = 0; i < 6; i++) {
+      solo.addNote({ midi: 70 + (i % 4), time: i * 0.5, duration: 0.3 });
+    }
+    const buffer = midi.toArray().slice().buffer;
+    const summaries = summarizeTracks(new Midi(buffer));
+    expect(summaries[0].handRole).toBe("right");
+  });
+});

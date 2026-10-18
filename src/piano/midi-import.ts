@@ -45,6 +45,9 @@ export interface TrackSummary {
   chordRatio: number;
   /** Heuristique : cette piste ressemble à la mélodie principale. */
   likelyMelody: boolean;
+  /** Main probable (roadmap #37/#52) : "right" pour la mélodie, "left"
+   * pour l'accompagnement grave, null si indéterminé. */
+  handRole: "left" | "right" | null;
 }
 
 /** Lit un fichier .mid/.midi (ArrayBuffer) sans encore rien convertir :
@@ -61,7 +64,7 @@ export async function loadMidi(buffer: ArrayBuffer): Promise<Midi> {
  * tessiture (la mélodie est en général la plus aiguë) et taux d'accords
  * (la mélodie joue une note à la fois, l'accompagnement joue des accords). */
 export function summarizeTracks(midi: MidiLike): TrackSummary[] {
-  const raw = midi.tracks.map((track, index) => {
+  const raw: TrackSummary[] = midi.tracks.map((track, index): TrackSummary => {
     const notes = track.notes;
     let avgPitch = 0;
     let minPitch = 0;
@@ -102,6 +105,7 @@ export function summarizeTracks(midi: MidiLike): TrackSummary[] {
       avgPitch,
       chordRatio,
       likelyMelody: false,
+      handRole: null,
     };
   });
 
@@ -111,7 +115,22 @@ export function summarizeTracks(midi: MidiLike): TrackSummary[] {
     (t) => t.noteCount > 0 && !t.percussion && t.chordRatio < MELODY_CHORD_RATIO_THRESHOLD
   );
   const melodyTrack = candidates.sort((a, b) => b.avgPitch - a.avgPitch)[0];
-  if (melodyTrack) melodyTrack.likelyMelody = true;
+  if (melodyTrack) {
+    melodyTrack.likelyMelody = true;
+    melodyTrack.handRole = "right";
+  }
+  // Main gauche (roadmap #37) : parmi les pistes restantes non-percussion,
+  // la plus grave pondérée par sa densité — l'accompagnement typique
+  // (basse/accords) vit sous la mélodie.
+  const leftCandidates = raw.filter(
+    (t) => t.noteCount > 0 && !t.percussion && t !== melodyTrack
+  );
+  const leftTrack = leftCandidates.sort(
+    (a, b) =>
+      // score : grave et dense d'abord (pitch plus petit = plus grave)
+      b.noteCount / (b.avgPitch + 1) - a.noteCount / (a.avgPitch + 1)
+  )[0];
+  if (leftTrack) leftTrack.handRole = "left";
 
   return raw;
 }
