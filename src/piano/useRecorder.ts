@@ -27,20 +27,29 @@ interface OpenNote {
 
 export function useRecorder(nowFn: () => number = () => getContext().now()) {
   const [isRecording, setIsRecording] = useState(false);
+  // Miroirs refs : les callbacks de capture sont stables (pas de
+  // recréation quand isRecording change), ils lisent ces refs à chaud.
+  const isRecordingRef = useRef(false);
+  const nowFnRef = useRef(nowFn);
+  useEffect(() => {
+    nowFnRef.current = nowFn;
+  }, [nowFn]);
   const startRef = useRef(0);
   const openRef = useRef<Map<string, OpenNote>>(new Map());
   const eventsRef = useRef<SongEvent[]>([]);
 
   const start = useCallback(() => {
-    startRef.current = nowFn();
+    startRef.current = nowFnRef.current();
     openRef.current = new Map();
     eventsRef.current = [];
+    isRecordingRef.current = true;
     setIsRecording(true);
-  }, [nowFn]);
+  }, []);
 
   const stop = useCallback((): Song | null => {
     // Notes restées ouvertes : durée jusqu'à l'arrêt, plafonnée.
-    const now = nowFn();
+    isRecordingRef.current = false;
+    const now = nowFnRef.current();
     for (const [note, open] of openRef.current) {
       const duration = Math.min(
         Math.max(now - open.time, MIN_CAPTURED_DURATION_SEC),
@@ -63,38 +72,29 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
       events,
       source: "imported",
     };
-  }, [nowFn]);
+  }, []);
 
-  const captureNoteOn = useCallback(
-    (note: string, velocity?: number) => {
-      if (!isRecording) return;
-      openRef.current.set(note, { time: nowFn() - startRef.current, velocity });
-    },
-    [isRecording, nowFn]
-  );
+  const captureNoteOn = useCallback((note: string, velocity?: number) => {
+    if (!isRecordingRef.current) return;
+    openRef.current.set(note, { time: nowFnRef.current() - startRef.current, velocity });
+  }, []);
 
-  const captureNoteOff = useCallback(
-    (note: string) => {
-      if (!isRecording) return;
-      const open = openRef.current.get(note);
-      if (!open) return;
-      openRef.current.delete(note);
-      const duration = Math.min(
-        Math.max(nowFn() - startRef.current - open.time, MIN_CAPTURED_DURATION_SEC),
-        MAX_CAPTURED_DURATION_SEC
-      );
-      eventsRef.current.push({
-        time: open.time,
-        note,
-        duration,
-        velocity: open.velocity,
-      });
-    },
-    [isRecording, nowFn]
-  );
+  const captureNoteOff = useCallback((note: string) => {
+    if (!isRecordingRef.current) return;
+    const open = openRef.current.get(note);
+    if (!open) return;
+    openRef.current.delete(note);
+    const duration = Math.min(
+      Math.max(
+        nowFnRef.current() - startRef.current - open.time,
+        MIN_CAPTURED_DURATION_SEC
+      ),
+      MAX_CAPTURED_DURATION_SEC
+    );
+    eventsRef.current.push({ time: open.time, note, duration, velocity: open.velocity });
+  }, []);
 
-  // Sécurité : arrêter l'enregistrement au démontage pour ne pas
-  // garder des refs vivantes.
+  // Sécurité : libérer les refs au démontage.
   useEffect(() => {
     return () => {
       openRef.current = new Map();
