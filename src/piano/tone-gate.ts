@@ -11,6 +11,7 @@ export {
   Loop,
   Reverb,
   EQ3,
+  Analyser,
   ToneAudioBuffer,
   getContext,
   getTransport,

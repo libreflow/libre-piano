@@ -4,6 +4,7 @@ import { getKeyToNote, KeyboardLayout } from "./notes";
 
 interface KeyboardHandlers {
   layout: KeyboardLayout;
+  shortcuts?: ShortcutConfig;
   octaveShift?: number;
   isPlayingRef: React.RefObject<boolean>;
   noteOn: (note: string) => void;
@@ -14,10 +15,23 @@ interface KeyboardHandlers {
 }
 
 // Clavier PC -> touches du piano (désactivé pendant la lecture auto)
+/** Raccourcis personnalisables (roadmap #65) : codes de touches
+ * physiques (KeyboardEvent.code), persistés. */
+export interface ShortcutConfig {
+  sustain: string;
+  togglePlayback: string;
+}
+
+export const DEFAULT_SHORTCUTS: ShortcutConfig = {
+  sustain: "Space",
+  togglePlayback: "Enter",
+};
+
 // + pédale de sustain sur la barre d'espace maintenue.
 export function useKeyboardInput({
   layout,
   octaveShift = 0,
+  shortcuts = DEFAULT_SHORTCUTS,
   isPlayingRef,
   noteOn,
   noteOff,
@@ -60,7 +74,7 @@ export function useKeyboardInput({
     // dans Tauri ; sinon le premier keydown s'en charge via ensureStarted).
     void ensureAudioStarted();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === shortcuts.sustain) {
         e.preventDefault();
         if (!sustainRef.current && !isPlayingRef.current) {
           sustainRef.current = true;
@@ -68,12 +82,13 @@ export function useKeyboardInput({
         }
         return;
       }
-      if (e.code === "Enter" && onTogglePlayback) {
-        const target = e.target as HTMLElement;
+      if (e.code === shortcuts.togglePlayback && onTogglePlayback) {
+        const target = e.target as HTMLElement | null;
         // Ignorer si le focus est dans un élément interactif — y compris
         // les labels du sélecteur de pistes (sinon Entrée lancerait la
         // lecture derrière le dialogue au lieu de valider l'import).
-        if (!target.closest("button, select, input, a, label")) {
+        // closest peut manquer (cible window) : traiter comme non-interactif.
+        if (!target?.closest?.("button, select, input, a, label")) {
           e.preventDefault();
           onTogglePlayback();
         }
@@ -88,7 +103,7 @@ export function useKeyboardInput({
       noteOn(note);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === shortcuts.sustain) {
         // Bug 4 : ne rien relâcher si la pédale n'était pas enfoncée,
         // sinon on coupe des notes sustain d'une session précédente.
         if (sustainRef.current) releaseSustain();
@@ -125,7 +140,15 @@ export function useKeyboardInput({
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [isPlayingRef, noteOn, noteOff, onSustainChange, onTogglePlayback, releaseSustain]);
+  }, [
+    isPlayingRef,
+    shortcuts,
+    noteOn,
+    noteOff,
+    onSustainChange,
+    onTogglePlayback,
+    releaseSustain,
+  ]);
 
   return { sustainRef };
 }

@@ -282,6 +282,18 @@ button:active:not(:disabled) {
   width: 56px;
 }
 
+/* Visualiseur audio (roadmap #30). */
+.waveform-canvas {
+  display: block;
+  max-width: 480px;
+  width: 100%;
+  height: 48px;
+  margin: 0 auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
 /* Bandeau de lecture (roadmaps #41/#99) : paroles + mesures. */
 .playback-overlay {
   display: flex;

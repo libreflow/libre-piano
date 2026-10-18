@@ -4,6 +4,9 @@
 
 ### Fonctionnalités
 
+- Vélocité au clic : plus tu cliques bas sur la touche, plus la note est forte (comme un vrai clavier)
+- Visualiseur : forme d'onde du signal, activable depuis les Réglages
+- Raccourcis personnalisables : pédale de sustain et lecture/arrêt remappables (bouton dédié, appuie la nouvelle touche), persistés
 - Mode echo (call & response) : l'app joue une phrase de 6 notes, à toi de la rejouer — phrase par phrase, avec compteur de fautes
 - Paroles synchronisées : les meta events « lyrics » des fichiers MIDI s'affichent pendant la lecture
 - Marqueurs de mesures pendant la lecture (piste de points, temps fort accentué)
