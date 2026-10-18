@@ -268,7 +268,11 @@ export default function Piano() {
     );
 
   // Métronome (roadmap #27) : tick de sampler sur le Transport.
-  const triggerTick = useMemo(() => makeTickTrigger(samplerRef), [samplerRef]);
+  // useCallback et pas useMemo : ne touche pas la ref pendant le render
+  // (la lisera seulement à l'intérieur du callback, au moment du tick).
+  const triggerTick = useCallback(() => {
+    makeTickTrigger(samplerRef)();
+  }, [samplerRef]);
   const metronome = useMetronome(triggerTick);
   const metronomeEnabledRef = useRef(false);
   useEffect(() => {
