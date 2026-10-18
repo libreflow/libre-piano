@@ -126,6 +126,9 @@ export function buildSongFromTracks(
         time: note.time,
         note: midiToNoteName(clamped),
         duration: Math.max(note.duration, MIN_IMPORTED_NOTE_DURATION_SEC),
+        // Vélocité réelle de la note MIDI (0-1) : l'accompagnement joué
+        // doux dans le fichier le restera à la lecture (roadmap #51).
+        velocity: note.velocity,
       });
     }
   });

@@ -193,3 +193,28 @@ describe("roadmap #64 : thème clair/sombre persisté (v3)", () => {
     expect(loadPersistedState().theme).toBe("dark");
   });
 });
+
+describe("roadmap #23 : réverbe persistée", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("reverb absente (état v3 ancien) vaut 0 par défaut", () => {
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({ version: 3, theme: "dark" })
+    );
+    expect(loadPersistedState().reverb).toBe(0);
+  });
+
+  it("conserve la réverbe persistée et recale les valeurs hors bornes", () => {
+    const state: PersistedState = { ...DEFAULT_STATE, reverb: 45 };
+    expect(savePersistedState(state)).toBe(true);
+    expect(loadPersistedState().reverb).toBe(45);
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({ version: 3, reverb: 400 })
+    );
+    expect(loadPersistedState().reverb).toBe(100);
+  });
+});

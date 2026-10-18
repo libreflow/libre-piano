@@ -2,7 +2,10 @@
 
 ## Non publié
 
-### Fonctionnalités (roadmap #33, #42, #48, #62, #64)
+### Fonctionnalités (roadmap #23, #33, #42, #48, #51, #62, #64)
+
+- Réverbe réglable : nœud `Tone.Reverb` inséré entre le sampler et la sortie, slider persisté (0 = sec)
+- Import MIDI : la vélocité de chaque note est conservée et jouée (l'accompagnement doux reste doux)
 
 - Thème clair/sombre commutable et persisté (préférences v3, migration automatique)
 - Export/import de la configuration complète en JSON (morceaux importés + préférences), validé par le même sanitize que le localStorage
@@ -22,7 +25,7 @@
 
 - Import dynamique de `@tonejs/midi` : bundle initial 533 → 505 kB (chunk MIDI chargé à l'import)
 - Messages de statut auto-effacés après 8 s
-- Suite de tests : 101 tests, exécution accélérée (pool vmThreads)
+- Suite de tests : 104 tests, exécution accélérée (pool vmThreads)
 
 ## 0.2.1 — 2026-10-17
 

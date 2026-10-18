@@ -2,8 +2,12 @@
 // préférences utilisateur, pour qu'ils survivent à la fermeture de l'app.
 
 import type { KeyboardLayout, LabelMode } from "./notes";
-import type { Song } from "./songs";
-import { SPEED_DEFAULT_PERCENT, VOLUME_DEFAULT_PERCENT } from "./constants";
+import type { Song, SongEvent } from "./songs";
+import {
+  REVERB_DEFAULT_PERCENT,
+  SPEED_DEFAULT_PERCENT,
+  VOLUME_DEFAULT_PERCENT,
+} from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
 export const STATE_VERSION = 3;
@@ -18,6 +22,8 @@ export interface PersistedState {
   labelMode: LabelMode;
   keyboardLayout: KeyboardLayout;
   theme: "dark" | "light";
+  /** Réverbe : part wet en % (roadmap #23). */
+  reverb: number;
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -30,6 +36,7 @@ export const DEFAULT_STATE: PersistedState = {
   labelMode: "lettres",
   keyboardLayout: "azerty",
   theme: "dark",
+  reverb: REVERB_DEFAULT_PERCENT,
 };
 
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
@@ -60,6 +67,8 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
       : DEFAULT_STATE.keyboardLayout;
   const theme =
     raw.theme === "dark" || raw.theme === "light" ? raw.theme : DEFAULT_STATE.theme;
+  // Réverbe absente (états v3 antérieurs) : défaut sec.
+  const reverb = num(raw.reverb, DEFAULT_STATE.reverb, 0, 100);
   return {
     ...DEFAULT_STATE,
     ...raw,
@@ -69,6 +78,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     labelMode,
     keyboardLayout,
     theme,
+    reverb,
     importedSongs: Array.isArray(raw.importedSongs)
       ? raw.importedSongs
           .filter(
@@ -78,21 +88,32 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
               typeof song.title === "string" &&
               Array.isArray(song.events)
           )
-          .map((song) => ({
+          .map((song): Song => ({
             ...song,
             // Chaque événement doit avoir des temps finis >= 0 et une
             // note valide : un event corrompu produirait des NaN dans
             // le Part de lecture.
-            events: song.events.filter(
-              (ev: unknown): ev is { time: number; note: string; duration: number } =>
-                typeof ev === "object" &&
-                ev !== null &&
-                Number.isFinite((ev as { time?: unknown }).time) &&
-                (ev as { time: number }).time >= 0 &&
-                Number.isFinite((ev as { duration?: unknown }).duration) &&
-                (ev as { duration: number }).duration > 0 &&
-                typeof (ev as { note?: unknown }).note === "string"
-            ),
+            events: song.events
+              .filter(
+                (ev: unknown): ev is { time: number; note: string; duration: number } =>
+                  typeof ev === "object" &&
+                  ev !== null &&
+                  Number.isFinite((ev as { time?: unknown }).time) &&
+                  (ev as { time: number }).time >= 0 &&
+                  Number.isFinite((ev as { duration?: unknown }).duration) &&
+                  (ev as { duration: number }).duration > 0 &&
+                  typeof (ev as { note?: unknown }).note === "string"
+              )
+              .map((ev): SongEvent => {
+                const v = (ev as { velocity?: unknown }).velocity;
+                // Vélocité invalide ou nulle : on la retire (intensité pleine).
+                if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+                  const { velocity: _drop, ...rest } = ev as { velocity?: unknown };
+                  void _drop;
+                  return rest as SongEvent;
+                }
+                return { ...ev, velocity: Math.min(1, v) };
+              }),
           }))
           .filter((song) => song.events.length > 0)
       : [],

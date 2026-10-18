@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Reverb,
   Sampler,
   ToneAudioBuffer,
   getDestination,
   getTransport,
   tuneForLowLatency,
 } from "./tone-gate";
-import { VOLUME_MIN_PERCENT, VOLUME_MAX_PERCENT } from "./constants";
+import {
+  VOLUME_MIN_PERCENT,
+  VOLUME_MAX_PERCENT,
+  REVERB_MIN_PERCENT,
+  REVERB_MAX_PERCENT,
+} from "./constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
 
@@ -49,8 +55,11 @@ export const SAMPLE_URLS: Record<string, string> = {
 /** Nombre d'échantillons réels (dérivé, plus de constante découplée). */
 export const SAMPLE_COUNT = Object.keys(SAMPLE_URLS).length;
 
-export function useAudioEngine(volume: number) {
+export function useAudioEngine(volume: number, reverbPercent: number) {
   const samplerRef = useRef<Sampler | null>(null);
+  // Réverbe (roadmap #23) : chaîne sampler -> reverb -> destination.
+  // Nœud créé au montage, la profondeur est pilotée par le slider.
+  const reverbRef = useRef<Reverb | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
   // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
   const [loadedCount, setLoadedCount] = useState(0);
@@ -100,18 +109,23 @@ export function useAudioEngine(volume: number) {
       for (const [note, buffer] of buffers) {
         samples[note] = buffer;
       }
+      const reverb = new Reverb({ decay: 2.4, preDelay: 0.02 }).toDestination();
+      reverb.wet.value = 0;
+      reverbRef.current = reverb;
       samplerRef.current = new Sampler({
         urls: samples,
         release: 1,
         onload: () => setStatus("ready"),
         onerror: () => setStatus("error"),
-      }).toDestination();
+      }).connect(reverb);
     });
 
     return () => {
       disposed = true;
       samplerRef.current?.dispose();
       samplerRef.current = null;
+      reverbRef.current?.dispose();
+      reverbRef.current = null;
       buffers.forEach((b) => b.dispose());
       getTransport().stop();
       getTransport().cancel();
@@ -124,6 +138,12 @@ export function useAudioEngine(volume: number) {
     getDestination().volume.value = pct <= 0 ? -Infinity : 20 * Math.log10(pct / 100);
   }, [volume]);
 
+  // Réverbe : le slider pilote la part wet du nœud (0 = complètement sec).
+  useEffect(() => {
+    const pct = Math.max(REVERB_MIN_PERCENT, Math.min(REVERB_MAX_PERCENT, reverbPercent));
+    if (reverbRef.current) reverbRef.current.wet.value = pct / 100;
+  }, [reverbPercent]);
+
   const noteOn = useCallback((note: string) => {
     samplerRef.current?.triggerAttack(note);
   }, []);
@@ -133,8 +153,8 @@ export function useAudioEngine(volume: number) {
   }, []);
 
   const triggerAttackRelease = useCallback(
-    (note: string, duration: number, time?: number) => {
-      samplerRef.current?.triggerAttackRelease(note, duration, time);
+    (note: string, duration: number, time?: number, velocity?: number) => {
+      samplerRef.current?.triggerAttackRelease(note, duration, time, velocity);
     },
     []
   );

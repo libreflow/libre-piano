@@ -8,6 +8,7 @@ import { getContext, start } from "tone";
 export {
   Sampler,
   Part,
+  Reverb,
   ToneAudioBuffer,
   getContext,
   getTransport,

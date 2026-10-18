@@ -99,3 +99,16 @@ describe("buildSongFromTracks", () => {
     expect(() => buildSongFromTracks(midi, [], "X")).toThrow();
   });
 });
+
+describe("roadmap #51 : vélocité des notes importées", () => {
+  it("conserve la vélocité de chaque note MIDI", () => {
+    const midi = new Midi();
+    const track = midi.addTrack();
+    track.addNote({ midi: 60, time: 0, duration: 0.5, velocity: 0.3 });
+    track.addNote({ midi: 64, time: 1, duration: 0.5, velocity: 0.9 });
+    const buffer = midi.toArray().slice().buffer;
+    const { song } = buildSongFromTracks(new Midi(buffer), [0], "V");
+    expect(song.events[0].velocity).toBeCloseTo(0.3);
+    expect(song.events[1].velocity).toBeCloseTo(0.9);
+  });
+});
