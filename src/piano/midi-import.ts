@@ -1,4 +1,16 @@
 import type { Midi } from "@tonejs/midi";
+
+/** Vue structurelle d'un fichier MIDI : satisfaite aussi bien par l'objet
+ * `Midi` de @tonejs/midi que par les plain-objects sérialisés issus du
+ * Web Worker (roadmap #75) — les fonctions ci-dessous acceptent les deux. */
+export interface MidiLike {
+  name?: string;
+  tracks: {
+    name?: string;
+    notes: { midi: number; time: number; duration: number; velocity?: number }[];
+    instrument?: { name?: string; percussion?: boolean };
+  }[];
+}
 import { clampMidiToKeyboard, midiToNoteName } from "./notes";
 import type { Song, SongEvent } from "./songs";
 import {
@@ -48,7 +60,7 @@ export async function loadMidi(buffer: ArrayBuffer): Promise<Midi> {
  * avec des indices heuristiques pour distinguer mélodie et accompagnement :
  * tessiture (la mélodie est en général la plus aiguë) et taux d'accords
  * (la mélodie joue une note à la fois, l'accompagnement joue des accords). */
-export function summarizeTracks(midi: Midi): TrackSummary[] {
+export function summarizeTracks(midi: MidiLike): TrackSummary[] {
   const raw = midi.tracks.map((track, index) => {
     const notes = track.notes;
     let avgPitch = 0;
@@ -107,7 +119,7 @@ export function summarizeTracks(midi: Midi): TrackSummary[] {
 /** Construit notre morceau interne à partir des pistes sélectionnées
  * (indices dans midi.tracks), jouable sur le clavier à 2 octaves affiché. */
 export function buildSongFromTracks(
-  midi: Midi,
+  midi: MidiLike,
   trackIndices: number[],
   title: string
 ): ParsedMidi {

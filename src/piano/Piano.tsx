@@ -15,6 +15,7 @@ import {
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
 import { useTrackPreview } from "./useTrackPreview";
+import { audioHealth, formatHealth } from "./audio-health";
 import { useRecorder } from "./useRecorder";
 import { downloadSongAsMidi } from "./midi-export";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
@@ -154,6 +155,7 @@ export default function Piano() {
     samplerRef,
     status,
     loadedCount,
+    retryLoading,
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
     triggerAttackRelease,
@@ -667,9 +669,15 @@ export default function Piano() {
         </div>
       )}
       {status === "error" && (
-        <div className="piano-loading">
-          Impossible de charger les sons du piano. Vérifie l'installation ou réinstalle
-          l'application.
+        <div className="piano-loading" role="alert">
+          Impossible de charger les sons du piano — un ou plusieurs échantillons manquent
+          ou sont illisibles.{" "}
+          <button className="import-btn" onClick={retryLoading}>
+            Réessayer
+          </button>
+          <span className="piano-error-hint">
+            Si le problème persiste, réinstalle l'application.
+          </span>
         </div>
       )}
 
@@ -1058,6 +1066,11 @@ export default function Piano() {
         <span className="loop-total">/ {selectedSongDuration.toFixed(1)}s au total</span>
       </div>
 
+      {status === "ready" && (
+        <div className="audio-health" role="status" aria-label="Santé audio">
+          {formatHealth(audioHealth())}
+        </div>
+      )}
       {isDragOver && (
         <div className="drop-overlay" role="status">
           Dépose ton fichier .mid / .midi pour l'importer
@@ -1181,7 +1194,12 @@ export default function Piano() {
         </div>
       )}
 
-      <div className="piano-scroll" ref={pianoScrollRef}>
+      <div
+        className="piano-scroll"
+        ref={pianoScrollRef}
+        role="group"
+        aria-label="Clavier de piano 88 touches — joué au clavier PC ou à la souris, hors navigation Tab"
+      >
         <div
           className={`piano ${isPlaying ? "piano-readonly" : ""}`}
           style={{ ["--white-keys" as any]: whiteKeyCount }}
@@ -1193,6 +1211,7 @@ export default function Piano() {
                 k.note.startsWith("C") ? " octave-marker" : ""
               }`}
               style={{ ["--index" as any]: k.whiteIndex }}
+              tabIndex={-1}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture?.(e.pointerId);
                 handlePointerDown(k.note);
@@ -1220,6 +1239,7 @@ export default function Piano() {
               key={k.note}
               className={`key black ${keyStateClass(k.note)}`}
               style={{ ["--index" as any]: k.whiteIndex }}
+              tabIndex={-1}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture?.(e.pointerId);
                 handlePointerDown(k.note);

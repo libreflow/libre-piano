@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { trackNodeCreate, trackNodeDispose } from "./audio-health";
 import {
   Reverb,
   Sampler,
@@ -63,6 +64,10 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
   const [status, setStatus] = useState<SamplerStatus>("loading");
   // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
   const [loadedCount, setLoadedCount] = useState(0);
+  // Retry (roadmap #73) : numéro de tentative, incrémenté par
+  // l'utilisateur depuis le message d'erreur. L'effect de chargement
+  // dépend de ce compteur et se relance proprement (dispose inclus).
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let disposed = false;
@@ -95,6 +100,7 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
           }
         );
         buffers.set(note, buffer);
+        trackNodeCreate();
       });
 
     const allSettled = Promise.all(entries.map(([n, f]) => loadOne(n, f)));
@@ -110,6 +116,7 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
         samples[note] = buffer;
       }
       const reverb = new Reverb({ decay: 2.4, preDelay: 0.02 }).toDestination();
+      trackNodeCreate();
       reverb.wet.value = 0;
       reverbRef.current = reverb;
       samplerRef.current = new Sampler({
@@ -118,18 +125,31 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
         onload: () => setStatus("ready"),
         onerror: () => setStatus("error"),
       }).connect(reverb);
+      trackNodeCreate();
     });
 
     return () => {
       disposed = true;
       samplerRef.current?.dispose();
+      trackNodeDispose();
       samplerRef.current = null;
       reverbRef.current?.dispose();
+      trackNodeDispose();
       reverbRef.current = null;
-      buffers.forEach((b) => b.dispose());
+      buffers.forEach((b) => {
+        b.dispose();
+        trackNodeDispose();
+      });
       getTransport().stop();
       getTransport().cancel();
     };
+  }, [attempt]);
+
+  /** Retry manuel après un échec de chargement (roadmap #73). */
+  const retryLoading = useCallback(() => {
+    setLoadedCount(0);
+    setStatus("loading");
+    setAttempt((n) => n + 1);
   }, []);
 
   // Volume maître : % linéaire -> dB pour Tone.js (0% = muet).
@@ -159,5 +179,13 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
     []
   );
 
-  return { samplerRef, status, loadedCount, noteOn, noteOff, triggerAttackRelease };
+  return {
+    samplerRef,
+    status,
+    loadedCount,
+    retryLoading,
+    noteOn,
+    noteOff,
+    triggerAttackRelease,
+  };
 }
