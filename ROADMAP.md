@@ -82,9 +82,9 @@ incrément livrable indépendamment.
 59. Import d'un dossier entier de fichiers `.mid`
 60. Favoris/tags pour organiser les morceaux importés
 61. Sauvegarde locale de la progression d'apprentissage
-62. Export/import de la configuration complète (changement de machine)
+62. ✅ Export/import de la configuration complète (changement de machine)
 63. Profils utilisateurs multiples
-64. Thème clair/sombre avec préférence sauvegardée
+64. ✅ Thème clair/sombre avec préférence sauvegardée
 65. Raccourcis clavier personnalisables
 
 ## Phase 7 — Entrée MIDI matérielle (66–72)

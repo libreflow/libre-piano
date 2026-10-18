@@ -6,7 +6,7 @@ import type { Song } from "./songs";
 import { SPEED_DEFAULT_PERCENT, VOLUME_DEFAULT_PERCENT } from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export interface PersistedState {
   version: number;
@@ -35,6 +35,12 @@ export const DEFAULT_STATE: PersistedState = {
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
  * (speed: "abc", labelMode inconnu...) produit des NaN silencieux qui
  * cassent la lecture auto. Chaque champ est ramené à un type sûr. */
+/** Valide un état brut (localStorage ou import de configuration) : chaque
+ * champ inconnu/corrompu est ramené à une valeur sûre. */
+export function sanitizeState(raw: Partial<PersistedState>): PersistedState {
+  return sanitize(raw);
+}
+
 function sanitize(raw: Partial<PersistedState>): PersistedState {
   const num = (v: unknown, fallback: number, min: number, max: number) => {
     const n = typeof v === "number" ? v : Number(v);
@@ -52,6 +58,8 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     raw.keyboardLayout === "azerty" || raw.keyboardLayout === "qwerty"
       ? raw.keyboardLayout
       : DEFAULT_STATE.keyboardLayout;
+  const theme =
+    raw.theme === "dark" || raw.theme === "light" ? raw.theme : DEFAULT_STATE.theme;
   return {
     ...DEFAULT_STATE,
     ...raw,
@@ -60,6 +68,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     showKeyLabels: typeof raw.showKeyLabels === "boolean" ? raw.showKeyLabels : true,
     labelMode,
     keyboardLayout,
+    theme,
     importedSongs: Array.isArray(raw.importedSongs)
       ? raw.importedSongs
           .filter(
@@ -112,6 +121,14 @@ function migrate(parsed: Record<string, unknown>): PersistedState {
           : "lettres"),
     };
   }
+  // v2 -> v3 : ajout du thème ("dark" par défaut, l'existant reste sombre).
+  if ((state as { version: number }).version === 2) {
+    state = {
+      ...state,
+      version: 3,
+      theme: (state as { theme?: "dark" | "light" }).theme ?? "dark",
+    };
+  }
   if ((state as { version: number }).version !== STATE_VERSION) {
     return { ...DEFAULT_STATE };
   }
@@ -120,12 +137,15 @@ function migrate(parsed: Record<string, unknown>): PersistedState {
 
 export function loadPersistedState(): PersistedState {
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}:v${STATE_VERSION}`);
-    // Clé historique (première version, sans suffixe) : la lire pour
-    // ne pas perdre l'état des utilisateurs existants.
-    const legacy = raw ?? localStorage.getItem("libre-piano:state:v1");
-    if (!legacy) return { ...DEFAULT_STATE };
-    return migrate(JSON.parse(legacy));
+    // Repli sur les clés des versions précédentes (v2, puis v1
+    // historique) pour ne jamais perdre l'état des utilisateurs existants ;
+    // migrate() les ramène au format courant.
+    const raw =
+      localStorage.getItem(`libre-piano:state:v${STATE_VERSION}`) ??
+      localStorage.getItem(`libre-piano:state:v${STATE_VERSION - 1}`) ??
+      localStorage.getItem("libre-piano:state:v1");
+    if (!raw) return { ...DEFAULT_STATE };
+    return migrate(JSON.parse(raw));
   } catch {
     // localStorage indisponible ou JSON corrompu : on repart des valeurs
     // par défaut plutôt que de faire planter l'app.

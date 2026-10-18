@@ -143,7 +143,7 @@ button:active:not(:disabled) {
 }
 
 .play-btn:hover:not(:disabled) {
-  background: #2b8a45;
+  background: color-mix(in srgb, var(--play) 85%, black);
 }
 
 .play-btn:disabled {
@@ -160,7 +160,7 @@ button:active:not(:disabled) {
 }
 
 .stop-btn:hover {
-  background: #c24444;
+  background: color-mix(in srgb, var(--stop) 85%, black);
 }
 
 .import-btn {
