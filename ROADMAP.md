@@ -112,14 +112,14 @@ incrément livrable indépendamment.
 
 ## Phase 9 — Packaging & distribution (83–90)
 
-83. Icônes et métadonnées complètes de l'app (actuellement valeurs par défaut)
+83. ✅ Icônes et métadonnées complètes de l'app (bundle, descriptions, copyright, NSIS FR/EN)
 84. Build de release signée (certificat Windows, éviter l'alerte SmartScreen)
-85. Auto-update via le plugin Tauri updater
+85. ✅ Auto-update via le plugin Tauri updater (clé publique à finaliser, cf. docs/release-process.md)
 86. Build cross-platform (macOS, Linux) + tests de compatibilité
-87. Installeur MSI/NSIS personnalisé avec branding
-88. Site web / documentation utilisateur
+87. ✅ Installeur NSIS personnalisé avec branding (installMode utilisateur, FR/EN)
+88. ✅ Documentation utilisateur (docs/user-guide.md, docs/release-process.md — site web dédié restant)
 89. Publication sur un store (Microsoft Store) si pertinent
-90. Changelog versionné et process de release (semver)
+90. ✅ Changelog versionné et process de release (semver, scripts/release.mjs)
 
 ## Phase 10 — Fonctionnalités sociales & avancées (91–100)
 
