@@ -49,10 +49,6 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signature des artefacts updater (auto-update, roadmap #85).
-          # Voir docs/release-process.md pour générer la paire de clés.
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: "Libre Piano v__VERSION__"
@@ -60,6 +56,3 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-          # Génère latest.json consommé par le plugin updater de l'app.
-          uploadUpdaterJson: true
-          updaterJsonPreferNsis: true
