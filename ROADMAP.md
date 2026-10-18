@@ -34,7 +34,7 @@ incrément livrable indépendamment.
 
 21. Sélecteur d'instrument (piano, e-piano, orgue… via plusieurs `Tone.Sampler`)
 22. ✅ Contrôle de volume maître
-23. Réverbe réglable (`Tone.Reverb`)
+23. ✅ Réverbe réglable (`Tone.Reverb`)
 24. Égaliseur simple (graves/médiums/aigus)
 25. ✅ Barre de progression réelle du chargement des échantillons (actuellement binaire)
 26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
@@ -68,7 +68,7 @@ incrément livrable indépendamment.
 48. ✅ Glisser-déposer un fichier MIDI directement sur la fenêtre
 49. Support des fichiers MusicXML en plus du MIDI
 50. Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
-51. Mélange de pistes avec volume individuel par piste (pas juste tout/rien)
+51. ✅ Mélange de pistes avec volume individuel par piste (vélocité MIDI par note, conservée à l'import et à la lecture)
 52. Affiner l'heuristique main gauche/droite (au-delà de tessiture + chordRatio)
 53. Transposition manuelle (+/- demi-tons) en plus du clampage automatique
 54. Historique des imports récents avec rechargement rapide

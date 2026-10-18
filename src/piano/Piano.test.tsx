@@ -9,6 +9,7 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
     triggerRelease = vi.fn();
     triggerAttackRelease = vi.fn();
     toDestination = vi.fn().mockReturnThis();
+    connect = vi.fn().mockReturnThis();
     dispose = vi.fn();
   }
   class MockPart {
@@ -18,7 +19,7 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
   return { MockSampler, MockPart };
 });
 
-const { MockToneAudioBuffer } = vi.hoisted(() => {
+const { MockToneAudioBuffer, MockReverb } = vi.hoisted(() => {
   class MockToneAudioBuffer {
     loaded = Promise.resolve();
     constructor(
@@ -31,11 +32,17 @@ const { MockToneAudioBuffer } = vi.hoisted(() => {
     }
     dispose() {}
   }
-  return { MockToneAudioBuffer };
+  class MockReverb {
+    wet = { value: 0 };
+    toDestination = vi.fn().mockReturnThis();
+    dispose = vi.fn();
+  }
+  return { MockToneAudioBuffer, MockReverb };
 });
 
 vi.mock("./tone-gate", () => ({
   ToneAudioBuffer: MockToneAudioBuffer,
+  Reverb: MockReverb,
   start: vi.fn().mockResolvedValue(undefined),
   getContext: () => ({ state: "running", lookAhead: 0.1 }),
   tuneForLowLatency: vi.fn(),

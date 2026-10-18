@@ -16,7 +16,7 @@ export function usePlayback(
   selectedSongId: string,
   speed: number,
   loop: LoopState,
-  triggerNote: (note: string, duration: number, time: number) => void,
+  triggerNote: (note: string, duration: number, time: number, velocity?: number) => void,
   onAutoNoteOn: (note: string) => void,
   onAutoNoteOff: (note: string) => void
 ) {
@@ -84,11 +84,12 @@ export function usePlayback(
       time: e.time / speedFactor,
       note: e.note,
       duration: e.duration / speedFactor,
+      velocity: e.velocity,
     }));
     const totalDuration = (sectionEnd - sectionStart) / speedFactor;
 
     const part = new Part<SongEvent>((time, event) => {
-      triggerNote(event.note, event.duration, time);
+      triggerNote(event.note, event.duration, time, event.velocity);
       getDraw().schedule(() => onAutoNoteOn(event.note), time);
       getDraw().schedule(
         () => onAutoNoteOff(event.note),

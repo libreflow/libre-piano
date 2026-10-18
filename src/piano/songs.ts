@@ -9,6 +9,9 @@ export interface SongEvent {
   time: number; // secondes depuis le début du morceau
   note: string; // ex: "C4", "D#3"
   duration: number; // secondes
+  /** Vélocité 0-1 (roadmap #51) : uniquement pour les notes importées du
+   * MIDI, qui portent une intensité par note. Absent = intensité pleine. */
+  velocity?: number;
 }
 
 export interface Song {

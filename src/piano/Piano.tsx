@@ -27,6 +27,8 @@ import {
   SPEED_STEP_PERCENT,
   VOLUME_MIN_PERCENT,
   VOLUME_MAX_PERCENT,
+  REVERB_MIN_PERCENT,
+  REVERB_MAX_PERCENT,
   DISPLAY_CHORD_RATIO_THRESHOLD,
   STATUS_MESSAGE_TIMEOUT_MS,
 } from "./constants";
@@ -76,6 +78,7 @@ export default function Piano() {
       : (BUILTIN_SONGS[0]?.id ?? "")
   );
   const [speed, setSpeed] = useState(initialState.speed);
+  const [reverb, setReverb] = useState(initialState.reverb);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -135,7 +138,7 @@ export default function Piano() {
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
     triggerAttackRelease,
-  } = useAudioEngine(volume);
+  } = useAudioEngine(volume, reverb);
 
   const markNoteOn = useCallback((note: string) => {
     setActiveNotes((prev) => new Set(prev).add(note));
@@ -373,6 +376,7 @@ export default function Piano() {
       labelMode,
       keyboardLayout,
       theme,
+      reverb,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -391,6 +395,7 @@ export default function Piano() {
     labelMode,
     keyboardLayout,
     theme,
+    reverb,
     setStatusMessageAuto,
   ]);
 
@@ -640,6 +645,18 @@ export default function Piano() {
               onChange={(e) => setVolume(Number(e.target.value))}
             />
             <span>{volume}%</span>
+          </label>
+          <label className="speed-label volume" title="Profondeur de la réverbe">
+            <VolumeIcon />
+            <input
+              type="range"
+              min={REVERB_MIN_PERCENT}
+              max={REVERB_MAX_PERCENT}
+              step={5}
+              value={reverb}
+              onChange={(e) => setReverb(Number(e.target.value))}
+            />
+            <span>Réverbe {reverb}%</span>
           </label>
         </div>
 
