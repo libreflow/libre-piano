@@ -43,8 +43,9 @@ npm run format         # Prettier
 npm test               # tests unitaires (Vitest)
 ```
 
-Voir [`ARCHITECTURE.md`](./ARCHITECTURE.md) pour la structure du code et
-[`ROADMAP.md`](./ROADMAP.md) pour le plan d'amélioration détaillé.
+Voir [`ARCHITECTURE.md`](./ARCHITECTURE.md) pour la structure du code,
+[`ROADMAP.md`](./ROADMAP.md) pour le plan d'amélioration détaillé, et la
+[documentation utilisateur](./docs/user-guide.md) pour prise en main.
 
 ## Stack
 
