@@ -12,6 +12,49 @@ import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "./transpose";
 import { EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB } from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
+/** Clé du profil actif (roadmap #63) : indépendante des données. */
+const PROFILE_KEY = "libre-piano:profile";
+
+/** Nom du profil par défaut. */
+export const DEFAULT_PROFILE = "default";
+
+/** Nom du profil actif, validé. */
+export function getActiveProfile(): string {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw && raw.length > 0 ? raw : DEFAULT_PROFILE;
+  } catch {
+    return DEFAULT_PROFILE;
+  }
+}
+
+/** Change de profil (les données de chaque profil vivent dans des
+ * clés séparées, rien à migrer). */
+export function setActiveProfile(profile: string): void {
+  try {
+    localStorage.setItem(PROFILE_KEY, profile);
+  } catch {
+    // Stockage indisponible : le profil ne survivra pas, sans crash.
+  }
+}
+
+/** Liste les profils existants (dérivée des clés de données). */
+export function listProfiles(): string[] {
+  const profiles = new Set<string>([DEFAULT_PROFILE]);
+  try {
+    const prefix = `${STORAGE_KEY}:v${STATE_VERSION}:`;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(prefix)) {
+        const profile = key.slice(prefix.length);
+        if (profile.length > 0) profiles.add(profile);
+      }
+    }
+  } catch {
+    // localStorage indisponible : profil par défaut seul.
+  }
+  return [...profiles];
+}
 export const STATE_VERSION = 3;
 
 export interface PersistedState {
@@ -202,10 +245,23 @@ export function loadPersistedState(): PersistedState {
     // Repli sur les clés des versions précédentes (v2, puis v1
     // historique) pour ne jamais perdre l'état des utilisateurs existants ;
     // migrate() les ramène au format courant.
+    const profile = getActiveProfile();
+    const profileSuffix = profile === DEFAULT_PROFILE ? "" : `:${profile}`;
+    // Clés de repli : l'état historique sans suffixe n'appartient qu'au
+    // profil par défaut (l'utilisateur existant garde ses données) ; un
+    // profil nommé neuf part des défauts.
+    const fallbacks =
+      profile === DEFAULT_PROFILE
+        ? [
+            `libre-piano:state:v${STATE_VERSION}`,
+            `libre-piano:state:v${STATE_VERSION - 1}`,
+            "libre-piano:state:v1",
+          ]
+        : [`libre-piano:state:v${STATE_VERSION - 1}`, "libre-piano:state:v1"];
     const raw =
-      localStorage.getItem(`libre-piano:state:v${STATE_VERSION}`) ??
-      localStorage.getItem(`libre-piano:state:v${STATE_VERSION - 1}`) ??
-      localStorage.getItem("libre-piano:state:v1");
+      localStorage.getItem(`libre-piano:state:v${STATE_VERSION}${profileSuffix}`) ??
+      fallbacks.map((k) => localStorage.getItem(k)).find((v) => v !== null) ??
+      null;
     if (!raw) return { ...DEFAULT_STATE };
     return migrate(JSON.parse(raw));
   } catch {
@@ -220,8 +276,10 @@ export function loadPersistedState(): PersistedState {
  * l'utilisateur au lieu d'échouer silencieusement. */
 export function savePersistedState(state: PersistedState): boolean {
   try {
+    const profile = getActiveProfile();
+    const profileSuffix = profile === DEFAULT_PROFILE ? "" : `:${profile}`;
     localStorage.setItem(
-      `${STORAGE_KEY}:v${STATE_VERSION}`,
+      `${STORAGE_KEY}:v${STATE_VERSION}${profileSuffix}`,
       JSON.stringify({ ...state, version: STATE_VERSION })
     );
     return true;

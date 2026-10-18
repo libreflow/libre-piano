@@ -3,6 +3,9 @@ import {
   loadPersistedState,
   savePersistedState,
   DEFAULT_STATE,
+  getActiveProfile,
+  setActiveProfile,
+  listProfiles,
   type PersistedState,
 } from "./storage";
 
@@ -292,5 +295,32 @@ describe("roadmap #24 : égaliseur persisté", () => {
       JSON.stringify({ version: 3, eq: { low: 99, mid: "abc", high: -99 } })
     );
     expect(loadPersistedState().eq).toEqual({ low: 12, mid: 0, high: -12 });
+  });
+});
+
+describe("roadmap #63 : profils utilisateurs", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("profil par défaut sans sélection", () => {
+    expect(getActiveProfile()).toBe("default");
+    expect(listProfiles()).toEqual(["default"]);
+  });
+
+  it("chaque profil a ses données indépendantes", () => {
+    const stateA: PersistedState = { ...DEFAULT_STATE, speed: 90 };
+    expect(savePersistedState(stateA)).toBe(true);
+    setActiveProfile("alice");
+    // alice n'a rien encore : défauts ; puis elle sauvegarde sa vitesse.
+    expect(loadPersistedState().speed).toBe(DEFAULT_STATE.speed);
+    const stateB: PersistedState = { ...DEFAULT_STATE, speed: 140 };
+    expect(savePersistedState(stateB)).toBe(true);
+    expect(loadPersistedState().speed).toBe(140);
+    // retour au profil par défaut : les données d'origine sont intactes.
+    setActiveProfile("default");
+    expect(loadPersistedState().speed).toBe(90);
+    // alice apparaît dans la liste.
+    expect(listProfiles()).toContain("alice");
   });
 });
