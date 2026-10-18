@@ -42,7 +42,7 @@ describe("storage", () => {
       JSON.stringify({ speed: 90, showKeyLabels: true, keyboardLayout: "qwerty" })
     );
     const state = loadPersistedState();
-    expect(state.version).toBe(2);
+    expect(state.version).toBe(3);
     expect(state.speed).toBe(90);
     expect(state.keyboardLayout).toBe("qwerty");
     // showKeyLabels=true -> labelMode "lettres"
@@ -160,5 +160,36 @@ describe("régression : événements corrompus dans les morceaux persistés", ()
       })
     );
     expect(loadPersistedState().importedSongs).toHaveLength(0);
+  });
+});
+
+describe("roadmap #64 : thème clair/sombre persisté (v3)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("migre un état v2 en v3 avec thème dark par défaut", () => {
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({ version: 2, speed: 90 })
+    );
+    const state = loadPersistedState();
+    expect(state.version).toBe(3);
+    expect(state.theme).toBe("dark");
+    expect(state.speed).toBe(90);
+  });
+
+  it("conserve un thème light persisté", () => {
+    const state: PersistedState = { ...DEFAULT_STATE, theme: "light" };
+    expect(savePersistedState(state)).toBe(true);
+    expect(loadPersistedState().theme).toBe("light");
+  });
+
+  it("repart sur dark si le thème persisté est invalide", () => {
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({ version: 3, theme: "neon" })
+    );
+    expect(loadPersistedState().theme).toBe("dark");
   });
 });

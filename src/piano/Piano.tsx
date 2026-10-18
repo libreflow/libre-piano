@@ -14,6 +14,8 @@ import {
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
+import { buildConfigFile, parseConfigFile } from "./config-io";
+import { sanitizeState } from "./storage";
 import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
@@ -44,11 +46,14 @@ import {
   PracticeIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  SunIcon,
+  MoonIcon,
 } from "./icons";
 import "./Piano.css";
 
 export default function Piano() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const configInputRef = useRef<HTMLInputElement | null>(null);
   const pianoScrollRef = useRef<HTMLDivElement | null>(null);
   // Notes allumées par une action directe (souris / clavier PC).
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
@@ -89,6 +94,8 @@ export default function Piano() {
     return map;
   }, [windowKeys]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Thème clair/sombre (roadmap #64), persisté avec les préférences.
+  const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   // Efface automatiquement le message de statut après quelques secondes,
@@ -365,7 +372,7 @@ export default function Piano() {
       showKeyLabels: labelMode !== "none",
       labelMode,
       keyboardLayout,
-      theme: "dark",
+      theme,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -383,9 +390,65 @@ export default function Piano() {
     volume,
     labelMode,
     keyboardLayout,
+    theme,
     setStatusMessageAuto,
   ]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  // Export de la configuration complète (roadmap #62) : télécharge un JSON
+  // avec morceaux importés + préférences, transférable vers une autre machine.
+  const exportConfig = useCallback(() => {
+    const cfg = buildConfigFile({
+      importedSongs,
+      selectedSongId,
+      speed,
+      volume,
+      showKeyLabels: labelMode !== "none",
+      labelMode,
+      keyboardLayout,
+      theme,
+    });
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "libre-piano-config.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout, theme]);
+
+  const importConfig = useCallback(
+    async (file: File) => {
+      try {
+        const parsed = parseConfigFile(JSON.parse(await file.text()));
+        if (!parsed) {
+          setStatusMessageAuto(
+            "Fichier de configuration invalide (pas un export Libre Piano)."
+          );
+          return;
+        }
+        const clean = sanitizeState(parsed.state);
+        setImportedSongs(clean.importedSongs);
+        setSpeed(clean.speed);
+        setVolume(clean.volume);
+        setLabelMode(clean.labelMode);
+        setKeyboardLayout(clean.keyboardLayout);
+        setTheme(clean.theme);
+        setStatusMessageAuto(
+          `Configuration importée : ${clean.importedSongs.length} morceau(x), préférences restaurées.`
+        );
+      } catch {
+        setStatusMessageAuto("Impossible de lire ce fichier de configuration.");
+      }
+    },
+    [setStatusMessageAuto]
+  );
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
   const toggleFullscreen = async () => {
     try {
       const win = getCurrentWindow();
@@ -652,6 +715,49 @@ export default function Piano() {
             ))}
           </div>
 
+          <button
+            className="import-btn"
+            onClick={toggleTheme}
+            aria-pressed={theme === "light"}
+            title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
+            aria-label={
+              theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre"
+            }
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            {theme === "dark" ? "Clair" : "Sombre"}
+          </button>
+          <button
+            className="import-btn"
+            onClick={exportConfig}
+            disabled={isPlaying}
+            title="Exporter morceaux importés + préférences en JSON"
+            aria-label="Exporter la configuration"
+          >
+            <ExpandIcon />
+            Exporter
+          </button>
+          <button
+            className="import-btn"
+            onClick={() => configInputRef.current?.click()}
+            disabled={isPlaying}
+            title="Importer un fichier de configuration Libre Piano"
+            aria-label="Importer la configuration"
+          >
+            <ImportIcon />
+            Config
+          </button>
+          <input
+            ref={configInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void importConfig(file);
+            }}
+            style={{ display: "none" }}
+          />
           <button
             className="import-btn"
             onClick={toggleFullscreen}

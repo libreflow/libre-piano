@@ -6,7 +6,6 @@
 
 - Thème clair/sombre commutable et persisté (préférences v3, migration automatique)
 - Export/import de la configuration complète en JSON (morceaux importés + préférences), validé par le même sanitize que le localStorage
-- Mode apprentissage : score de justesse (0–100) affiché en fin de session
 
 - Mode apprentissage : score de justesse (0–100) affiché en fin de session
 - Mode apprentissage : la touche suivante est surlignée en anticipation (liseré discret)

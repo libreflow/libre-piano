@@ -1,5 +1,5 @@
 :root {
-  /* Design system — thème sombre unique */
+  /* Design system — thème sombre (défaut) */
   --bg-app: #12141f;
   --bg-panel: #1c1f2e;
   --bg-panel-hover: #262a3d;
@@ -33,6 +33,28 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
+}
+
+/* Thème clair (roadmap #64) : redéfinition des variables du chrome.
+   Les touches du piano gardent leurs couleurs physiques (ivoire/ébène). */
+:root[data-theme="light"] {
+  --bg-app: #f2f3f8;
+  --bg-panel: #ffffff;
+  --bg-panel-hover: #eceef6;
+  --bg-input: #ffffff;
+  --border-subtle: #d6dae8;
+  --border-strong: #b8bfd4;
+  --text-primary: #1d2130;
+  --text-secondary: #4c5268;
+  --text-faint: #6a7089;
+  --accent: #6244d8;
+  --accent-soft: rgba(98, 68, 216, 0.1);
+  --play: #2b7a3f;
+  --stop: #b84040;
+  --sustain: #7c5cff;
+  background-image:
+    radial-gradient(ellipse at 20% -10%, rgba(98, 68, 216, 0.06), transparent 50%),
+    radial-gradient(ellipse at 90% 110%, rgba(79, 156, 255, 0.05), transparent 50%);
 }
 
 * {
