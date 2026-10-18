@@ -4,6 +4,8 @@
 
 ### Corrections de bugs (audit complet)
 
+- **Lecture des fichiers .mid inaudible** : les vélocités quasi nulles du fichier (ghost notes, encodage compressé — une note à vélocité byte 1 sort à 0.008) rendaient la lecture muette. Normalisation à l'import : plancher jouable 0.25, défaut 0.8, nuances relatives conservées au-dessus du seuil. Les morceaux déjà importés sont réparés au chargement (plancher appliqué par le sanitize).
+
 - **Echo** : le mode était inutilisable au-delà de la première phrase (compteur de phrases jamais posé après le refactor du démarrage) — le récap de fin affiche maintenant les fautes **cumulées** sur tout le morceau
 - **Apprentissage + transposition** : la touche attendue correspond désormais au morceau transposé, comme la lecture
 - **Echo double-démarrage** : `start()` programme la phrase une seule fois (timers doublés supprimés)
