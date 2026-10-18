@@ -15,6 +15,8 @@ import {
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
 import { useTrackPreview } from "./useTrackPreview";
+import { useRecorder } from "./useRecorder";
+import { downloadSongAsMidi } from "./midi-export";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
@@ -248,6 +250,7 @@ export default function Piano() {
       rawNoteOn(note);
       markNoteOn(note);
       handlePlayedNote(note);
+      recorderRef.current.captureNoteOn(note);
     },
     [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote]
   );
@@ -272,6 +275,7 @@ export default function Piano() {
       // Retirer aussi un éventuel reste de sustain : sinon la touche
       // resterait affichée « sustained » (muette) après re-jeu sans pédale.
       clearSustainedNote(note);
+      recorderRef.current.captureNoteOff(note);
     },
     [samplerRef, rawNoteOff, markNoteOff, sustainOnRef, clearSustainedNote]
   );
@@ -402,6 +406,34 @@ export default function Piano() {
     confirmImport,
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessageAuto);
+  // Enregistrement live (roadmap #46) : capture les notes jouées.
+  const recorder = useRecorder();
+  const recorderRef = useRef(recorder);
+  useEffect(() => {
+    recorderRef.current = recorder;
+  }, [recorder]);
+  const toggleRecording = useCallback(() => {
+    if (recorder.isRecording) {
+      const song = recorder.stop();
+      if (song) {
+        addImportedSong(song);
+        setStatusMessageAuto(
+          `Enregistrement sauvegardé : « ${song.title} » (${song.events.length} notes).`
+        );
+      } else {
+        setStatusMessageAuto("Enregistrement vide : aucune note capturée.");
+      }
+    } else {
+      if (isPlayingRef.current) stopPlaybackAndClear();
+      recorder.start();
+    }
+  }, [
+    recorder,
+    addImportedSong,
+    setStatusMessageAuto,
+    isPlayingRef,
+    stopPlaybackAndClear,
+  ]);
 
   // La lecture ne démarre pas tant que le dialogue de sélection de
   // pistes est ouvert (sinon elle jouerait derrière le dialogue).
@@ -702,6 +734,32 @@ export default function Piano() {
                 <ImportIcon /> Importer
               </>
             )}
+          </button>
+          <button
+            className={`import-btn ${recorder.isRecording ? "stop-btn" : ""}`}
+            onClick={toggleRecording}
+            disabled={isPlaying || isImporting}
+            aria-pressed={recorder.isRecording}
+            title={
+              recorder.isRecording
+                ? "Arrêter l'enregistrement et sauvegarder dans la bibliothèque"
+                : "Enregistrer ce que tu joues"
+            }
+          >
+            {recorder.isRecording ? "■ Stopper" : "● Enregistrer"}
+          </button>
+          <button
+            className="import-btn"
+            onClick={() => {
+              if (selectedSong)
+                void downloadSongAsMidi(selectedSong).then((ok) => {
+                  if (!ok) setStatusMessageAuto("Échec de l'export MIDI.");
+                });
+            }}
+            disabled={isPlaying || !selectedSong}
+            title="Exporter le morceau sélectionné en fichier .mid"
+          >
+            <ExpandIcon /> .mid
           </button>
           <input
             ref={fileInputRef}
