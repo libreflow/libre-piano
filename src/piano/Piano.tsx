@@ -87,6 +87,7 @@ import {
   ChevronRightIcon,
   SunIcon,
   MoonIcon,
+  SettingsIcon,
 } from "./icons";
 import "./Piano.css";
 
@@ -211,6 +212,26 @@ function PianoInner() {
   const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Menu Paramètres (refonte UI) : les options secondaires y sont regroupées.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSettingsOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [settingsOpen]);
   // Efface automatiquement le message de statut après quelques secondes,
   // sauf s'il est remplacé entre-temps.
   const statusMessageRef = useRef<string | null>(null);
@@ -1216,124 +1237,137 @@ function PianoInner() {
         </div>
 
         <div className="control-group" aria-label="Affichage">
-          <div
-            className="segmented"
-            role="radiogroup"
-            aria-label="Étiquettes des touches"
-          >
-            {(
-              [
-                ["lettres", "A B C"],
-                ["solfege", "Do Ré"],
-                ["both", "A B C + Do"],
-                ["none", "Rien"],
-              ] as const
-            ).map(([mode, label]) => (
-              <button
-                key={mode}
-                role="radio"
-                aria-checked={labelMode === mode}
-                className={labelMode === mode ? "seg-active" : ""}
-                onClick={() => setLabelMode(mode)}
-                title={`Étiquettes : ${label}`}
-              >
-                <TagsIcon />
-                {label}
-              </button>
-            ))}
+          <div className="settings-menu" ref={settingsRef}>
+            <button
+              className={`import-btn ${settingsOpen ? "seg-active" : ""}`}
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={settingsOpen}
+              aria-pressed={settingsOpen}
+              title="Paramètres"
+            >
+              <SettingsIcon />
+              Paramètres
+            </button>
+            {settingsOpen && (
+              <div className="settings-panel" role="menu" aria-label="Paramètres">
+                <h4>Affichage</h4>
+                <div
+                  className="segmented"
+                  role="radiogroup"
+                  aria-label="Étiquettes des touches"
+                >
+                  {(
+                    [
+                      ["lettres", "A B C"],
+                      ["solfege", "Do Ré"],
+                      ["both", "A B C + Do"],
+                      ["none", "Rien"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      role="radio"
+                      aria-checked={labelMode === mode}
+                      className={labelMode === mode ? "seg-active" : ""}
+                      onClick={() => setLabelMode(mode)}
+                      title={`Étiquettes : ${label}`}
+                    >
+                      <TagsIcon />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="import-btn"
+                  onClick={() => setShowVisualizer((v) => !v)}
+                  aria-pressed={showVisualizer}
+                  title="Afficher la forme d'onde pendant le jeu"
+                >
+                  {showVisualizer ? "Masquer l'onde" : "Onde"}
+                </button>
+                <button
+                  className="import-btn"
+                  onClick={toggleFullscreen}
+                  aria-pressed={isFullscreen}
+                >
+                  {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
+                  {isFullscreen ? "Quitter" : "Plein écran"}
+                </button>
+                <h4>Langue</h4>
+                <button
+                  className="import-btn"
+                  onClick={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
+                  title="Interface language / Langue de l'interface"
+                  aria-label="Switch language (FR/EN)"
+                >
+                  {language === "fr" ? "FR" : "EN"}
+                </button>
+                <h4>Raccourcis</h4>
+                <button
+                  className="import-btn"
+                  onClick={() => {
+                    setStatusMessageAuto(
+                      "Appuie la touche à utiliser pour la pédale de sustain…"
+                    );
+                    setRemapCapture("sustain");
+                    setSettingsOpen(false);
+                  }}
+                  title="Personnaliser le raccourci de la pédale (roadmap #65)"
+                >
+                  Pédale : {shortcuts.sustain === "Space" ? "Espace" : shortcuts.sustain}
+                </button>
+                <button
+                  className="import-btn"
+                  onClick={() => {
+                    setStatusMessageAuto(
+                      "Appuie la touche à utiliser pour lecture/arrêt…"
+                    );
+                    setRemapCapture("togglePlayback");
+                    setSettingsOpen(false);
+                  }}
+                  title="Personnaliser le raccourci lecture/arrêt (roadmap #65)"
+                >
+                  Lecture :{" "}
+                  {shortcuts.togglePlayback === "Enter"
+                    ? "Entrée"
+                    : shortcuts.togglePlayback}
+                </button>
+                <h4>Configuration</h4>
+                <button
+                  className="import-btn"
+                  onClick={exportConfig}
+                  disabled={isPlaying}
+                  title="Exporter morceaux importés + préférences en JSON"
+                  aria-label="Exporter la configuration"
+                >
+                  <ExpandIcon />
+                  Exporter
+                </button>
+                <button
+                  className="import-btn"
+                  onClick={() => configInputRef.current?.click()}
+                  disabled={isPlaying}
+                  title="Importer un fichier de configuration Libre Piano"
+                  aria-label="Importer la configuration"
+                >
+                  <ImportIcon />
+                  Config
+                </button>
+                <input
+                  ref={configInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void importConfig(file);
+                  }}
+                  style={{ display: "none" }}
+                />
+              </div>
+            )}
           </div>
-
-          <button
-            className="import-btn"
-            onClick={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
-            title="Interface language / Langue de l'interface"
-            aria-label="Switch language (FR/EN)"
-          >
-            {language === "fr" ? "FR" : "EN"}
-          </button>
-          <button
-            className="import-btn"
-            onClick={() => setShowVisualizer((v) => !v)}
-            aria-pressed={showVisualizer}
-            title="Afficher la forme d'onde pendant le jeu"
-          >
-            {showVisualizer ? "Masquer l'onde" : "Onde"}
-          </button>
-          <button
-            className="import-btn"
-            onClick={toggleTheme}
-            aria-pressed={theme === "light"}
-            title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
-            aria-label={
-              theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre"
-            }
-          >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            {theme === "dark" ? "Clair" : "Sombre"}
-          </button>
-          <button
-            className="import-btn"
-            onClick={exportConfig}
-            disabled={isPlaying}
-            title="Exporter morceaux importés + préférences en JSON"
-            aria-label="Exporter la configuration"
-          >
-            <ExpandIcon />
-            Exporter
-          </button>
-          <button
-            className="import-btn"
-            onClick={() => configInputRef.current?.click()}
-            disabled={isPlaying}
-            title="Importer un fichier de configuration Libre Piano"
-            aria-label="Importer la configuration"
-          >
-            <ImportIcon />
-            Config
-          </button>
-          <input
-            ref={configInputRef}
-            type="file"
-            accept=".json,application/json"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) void importConfig(file);
-            }}
-            style={{ display: "none" }}
-          />
-          <button
-            className="import-btn"
-            onClick={toggleFullscreen}
-            aria-pressed={isFullscreen}
-          >
-            {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
-            {isFullscreen ? "Quitter" : "Plein écran"}
-          </button>
-
-          <button
-            className="import-btn"
-            onClick={() => {
-              setStatusMessageAuto(
-                "Appuie la touche à utiliser pour la pédale de sustain…"
-              );
-              setRemapCapture("sustain");
-            }}
-            title="Personnaliser le raccourci de la pédale (roadmap #65)"
-          >
-            Pédale : {shortcuts.sustain === "Space" ? "Espace" : shortcuts.sustain}
-          </button>
-          <button
-            className="import-btn"
-            onClick={() => {
-              setStatusMessageAuto("Appuie la touche à utiliser pour lecture/arrêt…");
-              setRemapCapture("togglePlayback");
-            }}
-            title="Personnaliser le raccourci lecture/arrêt (roadmap #65)"
-          >
-            Lecture :{" "}
-            {shortcuts.togglePlayback === "Enter" ? "Entrée" : shortcuts.togglePlayback}
-          </button>
           <span
             className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
             title="Maintenir la barre d'espace = pédale de sustain"
@@ -1343,6 +1377,17 @@ function PianoInner() {
           </span>
         </div>
       </div>
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        aria-pressed={theme === "light"}
+        title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
+        aria-label={
+          theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre"
+        }
+      >
+        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+      </button>
       <div className="loop-controls">
         <label className="loop-toggle">
           <input

@@ -899,3 +899,72 @@ button:active:not(:disabled) {
   border-bottom-width: 2px;
   border-radius: 5px;
 }
+
+/* ---------- Refonte UI : menu Paramètres + thème en haut à droite ---------- */
+.settings-menu {
+  position: relative;
+}
+
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 15rem;
+  max-width: min(22rem, 90vw);
+  padding: 0.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.settings-panel h4 {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.settings-panel .segmented {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.settings-panel .import-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
