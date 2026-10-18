@@ -282,6 +282,27 @@ button:active:not(:disabled) {
   width: 56px;
 }
 
+/* Barre de profils (roadmap #63). */
+.profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.profile-bar select,
+.profile-bar input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+.profile-bar input {
+  width: 120px;
+}
+
 /* Visualiseur audio (roadmap #30). */
 .waveform-canvas {
   display: block;

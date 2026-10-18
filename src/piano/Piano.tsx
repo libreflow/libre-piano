@@ -21,7 +21,15 @@ import { downloadSongAsMidi } from "./midi-export";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
-import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
+import {
+  loadPersistedState,
+  savePersistedState,
+  STATE_VERSION,
+  getActiveProfile,
+  setActiveProfile,
+  listProfiles,
+  DEFAULT_PROFILE,
+} from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import {
@@ -81,7 +89,70 @@ import {
 } from "./icons";
 import "./Piano.css";
 
+/**
+ * Wrapper (roadmap #63) : le sélecteur de profil vit ici ; changer de
+ * profil remonte le Piano interne (key) — tout l'état (morceaux,
+ * préférences, stats) est relu depuis la clé du profil.
+ */
 export default function Piano() {
+  const [profile, setProfile] = useState(getActiveProfile);
+  const [profiles, setProfiles] = useState(listProfiles);
+  const [newProfile, setNewProfile] = useState("");
+
+  const switchProfile = (next: string) => {
+    setActiveProfile(next);
+    setProfile(next);
+    setProfiles(listProfiles());
+  };
+
+  return (
+    <>
+      <PianoInner key={profile} />
+      <div className="profile-bar">
+        <label>
+          Profil :{" "}
+          <select
+            value={profile}
+            onChange={(e) => switchProfile(e.target.value)}
+            aria-label="Profil utilisateur"
+          >
+            {profiles.map((p) => (
+              <option key={p} value={p}>
+                {p === DEFAULT_PROFILE ? "défaut" : p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <input
+          type="text"
+          value={newProfile}
+          onChange={(e) => setNewProfile(e.target.value)}
+          placeholder="nouveau profil"
+          aria-label="Nom du nouveau profil"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newProfile.trim().length > 0) {
+              switchProfile(newProfile.trim());
+              setNewProfile("");
+            }
+          }}
+        />
+        <button
+          className="import-btn"
+          onClick={() => {
+            if (newProfile.trim().length > 0) {
+              switchProfile(newProfile.trim());
+              setNewProfile("");
+            }
+          }}
+        >
+          Créer
+        </button>
+      </div>
+    </>
+  );
+}
+
+function PianoInner() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const configInputRef = useRef<HTMLInputElement | null>(null);
   const pianoScrollRef = useRef<HTMLDivElement | null>(null);

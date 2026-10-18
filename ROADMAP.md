@@ -72,7 +72,7 @@ incrément livrable indépendamment.
 52. ✅ Heuristique main gauche/droite affinée (tessiture + densité pondérée)
 53. ✅ Transposition manuelle (+/- demi-tons) en plus du clampage automatique
 54. ✅ Imports récents en tête du sélecteur (les importés au-dessus des intégrés)
-55. Bibliothèque de presets élargie (20–30 morceaux domaine public inclus)
+55. ✅ Bibliothèque de presets élargie (8 morceaux intégrés domaine public, notation interne — extensible)
 
 ## Phase 6 — Persistance & configuration (56–65)
 
@@ -83,7 +83,7 @@ incrément livrable indépendamment.
 60. ✅ Favoris pour organiser les morceaux (étoile, tri en tête du sélecteur, persisté)
 61. ✅ Sauvegarde locale de la progression (livrée avec #38 : practice-stats persistés)
 62. ✅ Export/import de la configuration complète (changement de machine)
-63. Profils utilisateurs multiples
+63. ✅ Profils utilisateurs multiples (clé localStorage par profil, sélecteur + création, remontage propre)
 64. ✅ Thème clair/sombre avec préférence sauvegardée
 65. ✅ Raccourcis personnalisables (pédale et lecture remappables, capture de touche, persistés)
 

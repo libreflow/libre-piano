@@ -4,6 +4,8 @@
 
 ### Fonctionnalités
 
+- Profils utilisateurs : plusieurs profils indépendants (morceaux, préférences, progression), sélecteur + création dans la barre de profils
+- Bibliothèque élargie : 5 morceaux intégrés supplémentaires (Frère Jacques, Ah vous dirai-je maman, gamme de La mineur, arpège de Do, intervalles)
 - Internationalisation FR/EN : infrastructure complète (dictionnaire de 75 clés, détection de la langue du système, bouton FR/EN, préférence persistée) ; les chaînes du composant migrent progressivement vers t()
 - Vélocité au clic : plus tu cliques bas sur la touche, plus la note est forte (comme un vrai clavier)
 - Visualiseur : forme d'onde du signal, activable depuis les Réglages
