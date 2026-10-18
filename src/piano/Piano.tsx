@@ -33,6 +33,8 @@ import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
 import { useVisualizer } from "./useVisualizer";
+import { useI18n } from "./useI18n";
+import { detectLanguage, type Language } from "./i18n";
 import {
   loadStats,
   saveStats,
@@ -109,6 +111,11 @@ export default function Piano() {
   const [eq, setEq] = useState(initialState.eq);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
   const [shortcuts, setShortcuts] = useState(initialState.shortcuts ?? DEFAULT_SHORTCUTS);
+  // i18n (roadmap #82) : langue persistée, détection système au premier lancement.
+  const [language, setLanguage] = useState<Language>(
+    initialState.language ?? detectLanguage()
+  );
+  const { t } = useI18n(language);
   const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
@@ -593,6 +600,7 @@ export default function Piano() {
       eq,
       visualizer: showVisualizer,
       shortcuts,
+      language,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -616,6 +624,7 @@ export default function Piano() {
     eq,
     showVisualizer,
     shortcuts,
+    language,
     setStatusMessageAuto,
   ]);
 
@@ -765,10 +774,9 @@ export default function Piano() {
       )}
       {status === "error" && (
         <div className="piano-loading" role="alert">
-          Impossible de charger les sons du piano — un ou plusieurs échantillons manquent
-          ou sont illisibles.{" "}
+          {t("loadError")}{" "}
           <button className="import-btn" onClick={retryLoading}>
-            Réessayer
+            {t("retry")}
           </button>
           <span className="piano-error-hint">
             Si le problème persiste, réinstalle l'application.
@@ -1137,6 +1145,14 @@ export default function Piano() {
             ))}
           </div>
 
+          <button
+            className="import-btn"
+            onClick={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
+            title="Interface language / Langue de l'interface"
+            aria-label="Switch language (FR/EN)"
+          >
+            {language === "fr" ? "FR" : "EN"}
+          </button>
           <button
             className="import-btn"
             onClick={() => setShowVisualizer((v) => !v)}

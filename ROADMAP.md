@@ -108,7 +108,7 @@ incrément livrable indépendamment.
 79. Gestion multi-fenêtre (plusieurs morceaux ouverts en parallèle)
 80. ✅ Optimisation du bundle (code splitting MIDI, lazy loading @tonejs/midi)
 81. ✅ Audit d'accessibilité clavier (touches hors Tab-order, aria du clavier, focus sur les contrôles)
-82. Internationalisation (FR/EN)
+82. ✅ Internationalisation FR/EN (infrastructure complète : dictionnaires, hook, langue persistée, toggle — migration progressive des chaînes du composant)
 
 ## Phase 9 — Packaging & distribution (83–90)
 
