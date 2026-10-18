@@ -19,6 +19,8 @@ export interface Song {
   title: string;
   events: SongEvent[];
   source: "builtin" | "imported";
+  /** Favori (roadmap #60) : remonte en tête du sélecteur. */
+  favorite?: boolean;
 }
 
 // --- Notation d'écriture des morceaux de démo -----------------------------

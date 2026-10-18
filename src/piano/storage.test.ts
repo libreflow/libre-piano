@@ -218,3 +218,45 @@ describe("roadmap #23 : réverbe persistée", () => {
     expect(loadPersistedState().reverb).toBe(100);
   });
 });
+
+describe("roadmap #60 : favoris persistés", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("conserve le flag favorite des morceaux importés", () => {
+    const state: PersistedState = {
+      ...DEFAULT_STATE,
+      importedSongs: [
+        {
+          id: "f1",
+          title: "Favori",
+          source: "imported",
+          favorite: true,
+          events: [{ time: 0, note: "C4", duration: 0.5 }],
+        },
+      ],
+    };
+    expect(savePersistedState(state)).toBe(true);
+    expect(loadPersistedState().importedSongs[0].favorite).toBe(true);
+  });
+
+  it("retire un favorite invalide", () => {
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({
+        version: 3,
+        importedSongs: [
+          {
+            id: "f2",
+            title: "X",
+            source: "imported",
+            favorite: "yes",
+            events: [{ time: 0, note: "C4", duration: 0.5 }],
+          },
+        ],
+      })
+    );
+    expect(loadPersistedState().importedSongs[0].favorite).toBeUndefined();
+  });
+});

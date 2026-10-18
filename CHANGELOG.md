@@ -2,7 +2,10 @@
 
 ## Non publié
 
-### Fonctionnalités (roadmap #23, #33, #42, #48, #51, #62, #64)
+### Fonctionnalités (roadmap #23, #33, #42, #48, #51, #53, #60, #62, #64)
+
+- Transposition manuelle de la lecture (± 11 demi-tons, boutons ◀ ▶, persistée) — les notes hors clavier restent en place
+- Favoris : étoile sur le morceau sélectionné, tri en tête du sélecteur, persisté pour les morceaux importés
 
 - Réverbe réglable : nœud `Tone.Reverb` inséré entre le sampler et la sortie, slider persisté (0 = sec)
 - Import MIDI : la vélocité de chaque note est conservée et jouée (l'accompagnement doux reste doux)
@@ -25,7 +28,7 @@
 
 - Import dynamique de `@tonejs/midi` : bundle initial 533 → 505 kB (chunk MIDI chargé à l'import)
 - Messages de statut auto-effacés après 8 s
-- Suite de tests : 104 tests, exécution accélérée (pool vmThreads)
+- Suite de tests : 112 tests, exécution accélérée (pool vmThreads)
 
 ## 0.2.1 — 2026-10-17
 

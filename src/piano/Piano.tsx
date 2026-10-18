@@ -14,6 +14,7 @@ import {
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
+import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
 import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
@@ -79,6 +80,7 @@ export default function Piano() {
   );
   const [speed, setSpeed] = useState(initialState.speed);
   const [reverb, setReverb] = useState(initialState.reverb);
+  const [transpose, setTranspose] = useState(initialState.transpose);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -166,7 +168,30 @@ export default function Piano() {
   useEffect(() => {
     sustainOnRef.current = sustainOn;
   }, [sustainOn]);
-  const allSongs = useMemo(() => [...BUILTIN_SONGS, ...importedSongs], [importedSongs]);
+  // Favoris (roadmap #60) : persistés pour les importés, en mémoire pour
+  // les morceaux intégrés (ils sont des constantes du module songs).
+  const [builtinFavorites, setBuiltinFavorites] = useState<Set<string>>(
+    () => new Set(initialState.importedSongs.filter((s) => s.favorite).map((s) => s.id))
+  );
+  const allSongs = useMemo(() => {
+    const withFav = [...BUILTIN_SONGS, ...importedSongs];
+    if (builtinFavorites.size === 0) return withFav;
+    return withFav.map((s) =>
+      s.source === "builtin" && builtinFavorites.has(s.id) ? { ...s, favorite: true } : s
+    );
+  }, [importedSongs, builtinFavorites]);
+  const toggleFavorite = useCallback((id: string) => {
+    setImportedSongs((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, favorite: !s.favorite } : s))
+    );
+    setBuiltinFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const selectedSong = useMemo(
     () => allSongs.find((s) => s.id === selectedSongId),
     [allSongs, selectedSongId]
@@ -218,10 +243,16 @@ export default function Piano() {
     });
   }, [samplerRef]);
 
+  // Transposition (roadmap #53) : morceaux transposés au moment de la
+  // lecture (l'original importé reste intact dans le localStorage).
+  const playableSongs = useMemo(
+    () => allSongs.map((song) => transposedSong(song, transpose)),
+    [allSongs, transpose]
+  );
   const { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback } =
     usePlayback(
       status === "ready",
-      allSongs,
+      playableSongs,
       selectedSongId,
       speed,
       { loopEnabled, loopStart, loopEnd },
@@ -377,6 +408,7 @@ export default function Piano() {
       keyboardLayout,
       theme,
       reverb,
+      transpose,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -396,6 +428,7 @@ export default function Piano() {
     keyboardLayout,
     theme,
     reverb,
+    transpose,
     setStatusMessageAuto,
   ]);
 
@@ -540,13 +573,32 @@ export default function Piano() {
             onChange={(e) => setSelectedSongId(e.target.value)}
             disabled={isPlaying}
           >
-            {allSongs.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.source === "imported" ? `♪ ${s.title}` : s.title}
-              </option>
-            ))}
+            {[...allSongs]
+              .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.favorite ? "★ " : ""}
+                  {s.source === "imported" ? `♪ ${s.title}` : s.title}
+                </option>
+              ))}
           </select>
 
+          {selectedSong && (
+            <button
+              className="import-btn"
+              onClick={() => toggleFavorite(selectedSong.id)}
+              disabled={isPlaying}
+              aria-pressed={Boolean(selectedSong.favorite)}
+              title={
+                selectedSong.favorite
+                  ? "Retirer des favoris"
+                  : "Ajouter aux favoris (remonte en tête)"
+              }
+              aria-label="Basculer le favori de ce morceau"
+            >
+              <StarIcon />
+            </button>
+          )}
           {selectedSong?.source === "imported" && (
             <button
               className="import-btn delete-song"
@@ -658,6 +710,30 @@ export default function Piano() {
             />
             <span>Réverbe {reverb}%</span>
           </label>
+          <div
+            className="segmented"
+            role="group"
+            aria-label="Transposition en demi-tons"
+            title="Transposer la lecture (± demi-tons)"
+          >
+            <button
+              onClick={() => setTranspose((v) => Math.max(TRANSPOSE_MIN, v - 1))}
+              disabled={transpose <= TRANSPOSE_MIN || isPlaying}
+              aria-label="Transposer un demi-ton plus bas"
+            >
+              <ChevronLeftIcon />
+            </button>
+            <span className="octave-label" aria-live="polite">
+              {transpose > 0 ? `+${transpose}` : transpose} st
+            </span>
+            <button
+              onClick={() => setTranspose((v) => Math.min(TRANSPOSE_MAX, v + 1))}
+              disabled={transpose >= TRANSPOSE_MAX || isPlaying}
+              aria-label="Transposer un demi-ton plus haut"
+            >
+              <ChevronRightIcon />
+            </button>
+          </div>
         </div>
 
         <div className="control-group" aria-label="Disposition du clavier">
