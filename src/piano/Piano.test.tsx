@@ -9,6 +9,7 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
     triggerRelease = vi.fn();
     triggerAttackRelease = vi.fn();
     toDestination = vi.fn().mockReturnThis();
+    connect = vi.fn().mockReturnThis();
     dispose = vi.fn();
   }
   class MockPart {
