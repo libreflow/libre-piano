@@ -59,6 +59,9 @@ export function useCallResponse(
   const [state, setState] = useState<CallResponseState>(IDLE);
   const phrasesRef = useRef<Phrase[]>([]);
   const phaseRef = useRef<CallResponsePhase>("idle");
+  // B8 (audit) : fautes cumulées sur toute la session — l'état ne porte
+  // que les fautes de la phrase courante pour l'affichage.
+  const totalMistakesRef = useRef(0);
   const timersRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -78,22 +81,15 @@ export function useCallResponse(
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
+  // B2 (audit) : playPhrase pose l'état ET les timers. start() délègue —
+  // plus de double-programmation quand l'appelant enchaîne start() +
+  // playPhrase(0). Le ref casse la dépendance circulaire
+  // (playPhrase est déclaré plus bas).
+  const playPhraseRef = useRef<((index: number) => void) | null>(null);
   const start = useCallback(() => {
-    const phrases = phrasesRef.current;
-    if (phrases.length === 0) return;
-    clearTimers();
-    setState({
-      active: true,
-      phase: "call",
-      phraseIndex: 0,
-      phraseCount: phrases.length,
-      expected: [],
-      responseStep: 0,
-      mistakes: 0,
-      done: false,
-    });
-    phaseRef.current = "call";
-  }, [clearTimers]);
+    if (phrasesRef.current.length === 0) return;
+    playPhraseRef.current?.(0);
+  }, []);
 
   const stop = useCallback(() => {
     clearTimers();
@@ -108,6 +104,7 @@ export function useCallResponse(
       const phrase = phrasesRef.current[index];
       if (!phrase) return;
       clearTimers();
+      if (index === 0) totalMistakesRef.current = 0;
       phraseRef.current = phrase;
       phaseRef.current = "call";
       setState((prev) => ({
@@ -115,6 +112,9 @@ export function useCallResponse(
         active: true,
         phase: "call",
         phraseIndex: index,
+        // B2/B8 (audit) : playPhrase pose aussi le total — start()
+        // délègue entièrement, phraseCount doit vivre ici.
+        phraseCount: phrasesRef.current.length,
         expected: [],
         responseStep: 0,
         mistakes: 0,
@@ -147,6 +147,11 @@ export function useCallResponse(
   // Phrase courante, accédée par playPhrase.
   const phraseRef = useRef<Phrase | null>(null);
 
+  // Alimente le ref de start (B2) : playPhrase est stable (refs internes).
+  useEffect(() => {
+    playPhraseRef.current = playPhrase;
+  }, [playPhrase]);
+
   /** À brancher sur les notes jouées : avance la réponse. */
   const handlePlayedNote = useCallback(
     (note: string) => {
@@ -161,12 +166,25 @@ export function useCallResponse(
             const nextPhrase = prev.phraseIndex + 1;
             if (nextPhrase >= prev.phraseCount) {
               phaseRef.current = "call";
+              // B8 (audit) : récap de fin avec les fautes cumulées.
+              const total = totalMistakesRef.current;
               window.setTimeout(() => {
-                // Fin : la session se termine.
-                setState((p) => ({ ...p, phase: "call", done: true, expected: [] }));
+                setState((p) => ({
+                  ...p,
+                  phase: "call",
+                  done: true,
+                  expected: [],
+                  mistakes: total,
+                }));
                 phaseRef.current = "idle";
               }, 0);
-              return { ...prev, responseStep: nextStep, done: true, expected: [] };
+              return {
+                ...prev,
+                responseStep: nextStep,
+                done: true,
+                expected: [],
+                mistakes: total,
+              };
             }
             window.setTimeout(() => {
               playPhrase(nextPhrase);
@@ -175,6 +193,7 @@ export function useCallResponse(
           }
           return { ...prev, responseStep: nextStep };
         }
+        totalMistakesRef.current += 1;
         return { ...prev, mistakes: prev.mistakes + 1 };
       });
       // playPhrase est stable (refs internes uniquement).

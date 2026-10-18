@@ -43,5 +43,6 @@ export function audioHealth(): AudioHealth {
 
 /** Format court pour l'indicateur UI. */
 export function formatHealth(h: AudioHealth): string {
-  return `latence ${h.baseLatencyMs + h.lookAheadMs} ms · ${h.contextState}`;
+  // B11 (audit) : sampleRate affiché (champ désormais utilisé).
+  return `latence ${h.baseLatencyMs + h.lookAheadMs} ms · ${Math.round(h.sampleRate / 1000)} kHz · ${h.contextState}`;
 }

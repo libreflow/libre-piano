@@ -1,5 +1,21 @@
 # Changelog
 
+## Non publié
+
+### Corrections de bugs (audit complet)
+
+- **Echo** : le mode était inutilisable au-delà de la première phrase (compteur de phrases jamais posé après le refactor du démarrage) — le récap de fin affiche maintenant les fautes **cumulées** sur tout le morceau
+- **Apprentissage + transposition** : la touche attendue correspond désormais au morceau transposé, comme la lecture
+- **Echo double-démarrage** : `start()` programme la phrase une seule fois (timers doublés supprimés)
+- **Remap de raccourci** : appuyer une touche pour la capturer ne joue plus de note parasite (clavier neutralisé pendant la capture)
+- **Plein écran** : le bouton reste synchronisé après une sortie native (F11, Échap)
+- **Enregistrement clavier PC** : vélocité par défaut explicite capturée (cohérent avec la souris)
+- **Paroles** : plus de ligne périmée affichée pendant l'echo (masquées hors lecture auto)
+- **Suppression d'un morceau** : ses statistiques d'apprentissage sont nettoyées (plus d'entrées orphelines)
+- **Sélecteur de morceau** : désactivé pendant un enregistrement (cohérence d'état)
+- Indicateur audio : fréquence d'échantillonnage affichée
+- `npm run release` : refuse de poser le tag tant que le bump de version n'est pas commité (l'incident v0.4.0 ne se reproduira plus)
+
 ## 0.4.0 — 2026-10-18
 
 ### Fonctionnalités

@@ -438,3 +438,27 @@ describe("roadmap #65 : raccourcis personnalisables", () => {
     expect(onSustainChange).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("audit B12 : remap capture neutralise le clavier", () => {
+  it("ignoreNotes=true bloque notes et pédale pendant la capture", () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const onSustainChange = vi.fn();
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "azerty",
+        ignoreNotes: true,
+        isPlayingRef: { current: false },
+        noteOn,
+        noteOff,
+        onSustainChange,
+        releaseSustained: vi.fn(),
+        onTogglePlayback: vi.fn(),
+      })
+    );
+    press("keydown", "q");
+    press("keydown", " ", { code: "Space" });
+    expect(noteOn).not.toHaveBeenCalled();
+    expect(onSustainChange).not.toHaveBeenCalled();
+  });
+});

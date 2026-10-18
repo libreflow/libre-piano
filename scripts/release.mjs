@@ -56,11 +56,26 @@ Version ${version} alignée. Prochaines étapes :
    (le workflow Release build génère les binaires + le draft de release)
 `);
 
+// B7 (audit) : le tag doit pointer sur le commit de la release — on ne
+// le crée QUE si les bumps sont déjà commités, sinon un tag posé avant
+// le commit pointerait sur l'ancien code.
 if (!noTag) {
+  try {
+    execSync("git diff --quiet HEAD -- package.json", { stdio: "pipe" });
+  } catch {
+    console.error(
+      "✗ Les bumps de version ne sont pas encore commités. Commite d'abord (étape 2), puis pose le tag : git tag v" +
+        version +
+        " && git push origin v" +
+        version +
+        ". Un tag posé avant le commit pointerait sur l'ancien code (bug B7 de l'audit)."
+    );
+    process.exit(1);
+  }
   try {
     execSync(`git tag -a v${version} -m "Release v${version}"`, { stdio: "inherit" });
     console.log(
-      `Tag v${version} créé (non poussé). Pousse-le : git push origin v${version}`
+      `Tag v${version} créé sur le commit courant (non poussé). Pousse-le : git push origin v${version}`
     );
   } catch {
     console.error("✗ Impossible de créer le tag (déjà existant ?).");

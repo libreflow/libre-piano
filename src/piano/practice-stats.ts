@@ -73,6 +73,15 @@ export function saveStats(stats: StatsBySong): boolean {
   }
 }
 
+/** B10 (audit) : retire les stats d'un morceau supprimé — évite les
+ * entrées orphelines qui s'accumulent dans le stockage. */
+export function removeStats(stats: StatsBySong, songId: string): StatsBySong {
+  if (!(songId in stats)) return stats;
+  const next = { ...stats };
+  delete next[songId];
+  return next;
+}
+
 export function recordSession(
   stats: StatsBySong,
   songId: string,

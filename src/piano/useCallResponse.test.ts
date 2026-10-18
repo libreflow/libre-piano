@@ -98,3 +98,67 @@ describe("useCallResponse (roadmap #43)", () => {
     expect(result.current.state.phase).toBe("idle");
   });
 });
+
+describe("audit : régressions echo", () => {
+  it("B2 : start() programme la phrase 0 une seule fois (pas de double timers)", async () => {
+    const demo = vi.fn();
+    const { result } = renderHook(() => useCallResponse(song, demo));
+    act(() => result.current.start());
+    // start() seul suffit : la phase doit passer par call puis response.
+    expect(result.current.state.active).toBe(true);
+    expect(result.current.state.phraseIndex).toBe(0);
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(result.current.state.phase).toBe("response");
+    act(() => result.current.stop());
+  });
+
+  it("B8 : les fautes se cumulent entre les phrases", async () => {
+    const demo = vi.fn();
+    const { result } = renderHook(() => useCallResponse(song, demo));
+    act(() => result.current.start());
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+    });
+    // 1 faute + 6 bonnes = phrase 1 complète
+    act(() => result.current.handlePlayedNote("Z9"));
+    act(() => result.current.handlePlayedNote("C4"));
+    act(() => result.current.handlePlayedNote("D4"));
+    act(() => result.current.handlePlayedNote("E4"));
+    act(() => result.current.handlePlayedNote("F4"));
+    act(() => result.current.handlePlayedNote("G4"));
+    act(() => result.current.handlePlayedNote("A4"));
+    // phrase 2 démarre (600 ms de pause) puis se joue (~2,8 s) :
+    // avancer assez pour être en phase response.
+    // attendre la phrase 2 (index 1) puis sa phase response
+    for (let i = 0; i < 20; i++) {
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      if (
+        result.current.state.phraseIndex === 1 &&
+        result.current.state.phase === "response"
+      )
+        break;
+    }
+    expect(result.current.state.phraseIndex).toBe(1);
+    expect(result.current.state.phase).toBe("response");
+    // 1 faute + 6 bonnes = phrase 2 complète
+    act(() => result.current.handlePlayedNote("Z9"));
+    act(() => result.current.handlePlayedNote("C4"));
+    act(() => result.current.handlePlayedNote("D4"));
+    act(() => result.current.handlePlayedNote("E4"));
+    act(() => result.current.handlePlayedNote("F4"));
+    act(() => result.current.handlePlayedNote("G4"));
+    act(() => result.current.handlePlayedNote("A4"));
+    // le setState final passe par un setTimeout(0) : le laisser mûrir.
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+    });
+    // fin : le récap doit montrer 2 fautes cumulées, pas 1.
+    expect(result.current.state.done).toBe(true);
+    expect(result.current.state.mistakes).toBe(2);
+    act(() => result.current.stop());
+  });
+});
