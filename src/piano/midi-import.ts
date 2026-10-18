@@ -1,10 +1,11 @@
-import type { Midi } from "@tonejs/midi";
-
 /** Vue structurelle d'un fichier MIDI : satisfaite aussi bien par l'objet
  * `Midi` de @tonejs/midi que par les plain-objects sérialisés issus du
  * Web Worker (roadmap #75) — les fonctions ci-dessous acceptent les deux. */
 export interface MidiLike {
   name?: string;
+  /** Paroles synchronisées (roadmap #99) — présentes si le fichier
+   * contient des meta events "lyrics". */
+  lyrics?: { time: number; text: string }[];
   tracks: {
     name?: string;
     notes: { midi: number; time: number; duration: number; velocity?: number }[];
@@ -52,11 +53,39 @@ export interface TrackSummary {
 
 /** Lit un fichier .mid/.midi (ArrayBuffer) sans encore rien convertir :
  * on garde l'objet Midi pour laisser l'utilisateur choisir les pistes. */
-export async function loadMidi(buffer: ArrayBuffer): Promise<Midi> {
+export async function loadMidi(buffer: ArrayBuffer): Promise<MidiLike> {
   // Import dynamique : @tonejs/midi est volumineux et ne sert qu'ici,
   // il reste hors du bundle initial (chargé au premier import).
+  // Repli synchrone (worker indisponible) : on extrait aussi les
+  // paroles pour ne pas les perdre sur ce chemin.
   const { Midi } = await import("@tonejs/midi");
-  return new Midi(buffer);
+  const midi = new Midi(buffer);
+  const meta = midi.header.meta as { type?: string; text?: string; ticks?: number }[];
+  const lyrics = meta
+    .filter((m) => m.type === "lyrics" && typeof m.text === "string")
+    .map((m) => ({
+      time: midi.header.ticksToSeconds(m.ticks ?? 0),
+      text: m.text ?? "",
+    }))
+    .filter((l) => l.text.length > 0)
+    .sort((a, b) => a.time - b.time);
+  return {
+    name: midi.name,
+    lyrics: lyrics.length > 0 ? lyrics : undefined,
+    tracks: midi.tracks.map((track) => ({
+      name: track.name,
+      notes: track.notes.map((n) => ({
+        midi: n.midi,
+        time: n.time,
+        duration: n.duration,
+        velocity: n.velocity,
+      })),
+      instrument: {
+        name: track.instrument?.name,
+        percussion: track.instrument?.percussion,
+      },
+    })),
+  };
 }
 
 /** Résume le contenu de chaque piste pour affichage dans un sélecteur,
@@ -191,6 +220,8 @@ export function buildSongFromTracks(
       title: midi.name?.trim() || title,
       events,
       source: "imported",
+      // Paroles synchronisées (roadmap #99).
+      lyrics: midi.lyrics && midi.lyrics.length > 0 ? midi.lyrics : undefined,
     },
     warnings,
   };

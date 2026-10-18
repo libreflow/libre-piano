@@ -120,3 +120,33 @@ export function sessionFrom(
     date: new Date().toISOString(),
   };
 }
+
+/** Export d'un rapport de session (roadmap #40) : JSON téléchargeable
+ * avec le détail et les agrégats, pour suivi ou partage. */
+export function buildSessionReport(
+  songTitle: string,
+  stats: StatsBySong,
+  songId: string
+): string {
+  const sessions = stats[songId] ?? [];
+  const summary = summarize(sessions);
+  const report = {
+    app: "libre-piano",
+    generatedAt: new Date().toISOString(),
+    song: songTitle,
+    summary,
+    sessions,
+  };
+  return JSON.stringify(report, null, 2);
+}
+
+/** Télécharge le rapport en fichier JSON. */
+export function downloadSessionReport(songTitle: string, reportJson: string): void {
+  const blob = new Blob([reportJson], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rapport-${songTitle.replace(/[\\/:*?"<>|]/g, "_")}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
