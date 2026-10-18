@@ -4,6 +4,15 @@
 
 ### Fonctionnalités
 
+- Pédale de sustain réaliste : les notes tenues s'éteignent doucement (release 3,5 s) au lieu d'être coupées net
+- Égaliseur 3 bandes (graves/médiums/aigus, ±12 dB), persisté
+- Sélecteur d'import : chaque piste est taggée « main droite » ou « main gauche » (heuristique tessiture + densité)
+- Bouton Replay : rejoue le dernier enregistrement
+- Imports récents en tête du sélecteur
+- Layout responsive des contrôles (petits écrans)
+
+### Qualité
+
 - Web Worker pour le parsing MIDI : les gros fichiers ne bloquent plus l'UI, avec repli synchrone automatique
 - Indicateur de santé audio (latence, état du contexte) sous les contrôles
 - Message d'erreur de chargement des sons avec bouton « Réessayer »
@@ -13,6 +22,7 @@
 - Accessibilité clavier : les 88 touches sortent de l'ordre de Tabulation (le jeu reste au clavier PC), aria du clavier complété
 - Monitoring des nœuds audio : comptage create/dispose, testé (fuites visibles)
 - Tests de performance : 6000 et 8000 notes MIDI traitées sous 2 s
+- Progression d'apprentissage persistée (finalise #38, roadmap #61)
 - Bundle : le parsing MIDI vit dans un chunk worker séparé
 
 ## 0.3.1 — 2026-10-18

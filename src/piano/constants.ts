@@ -55,3 +55,8 @@ export const STATUS_MESSAGE_TIMEOUT_MS = 8000;
 export const REVERB_MIN_PERCENT = 0;
 export const REVERB_MAX_PERCENT = 100;
 export const REVERB_DEFAULT_PERCENT = 0;
+
+/** Bornes des curseurs d'égaliseur (dB, appliqués aux 3 bandes). */
+export const EQ_MIN_DB = -12;
+export const EQ_MAX_DB = 12;
+export const EQ_DEFAULT_DB = 0;

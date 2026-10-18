@@ -48,6 +48,8 @@ import {
   VOLUME_MAX_PERCENT,
   REVERB_MIN_PERCENT,
   REVERB_MAX_PERCENT,
+  EQ_MIN_DB,
+  EQ_MAX_DB,
   DISPLAY_CHORD_RATIO_THRESHOLD,
   STATUS_MESSAGE_TIMEOUT_MS,
 } from "./constants";
@@ -99,6 +101,7 @@ export default function Piano() {
   const [speed, setSpeed] = useState(initialState.speed);
   const [reverb, setReverb] = useState(initialState.reverb);
   const [transpose, setTranspose] = useState(initialState.transpose);
+  const [eq, setEq] = useState(initialState.eq);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -158,8 +161,9 @@ export default function Piano() {
     retryLoading,
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
+    releaseSustainedNote,
     triggerAttackRelease,
-  } = useAudioEngine(volume, reverb);
+  } = useAudioEngine(volume, reverb, eq);
 
   const markNoteOn = useCallback((note: string) => {
     setActiveNotes((prev) => new Set(prev).add(note));
@@ -299,12 +303,15 @@ export default function Piano() {
       captureNoteOff,
     ]
   );
+  // Roadmap #28 : le relâchement de la pédale libère les notes tenues
+  // avec un release réellement prolongé (elles s'éteignent doucement
+  // au lieu d'être coupées net).
   const releaseSustained = useCallback(() => {
     setSustainedNotes((prev) => {
-      prev.forEach((note) => samplerRef.current?.triggerRelease(note));
+      prev.forEach((note) => releaseSustainedNote(note));
       return new Set();
     });
-  }, [samplerRef]);
+  }, [releaseSustainedNote]);
 
   // Transposition (roadmap #53) : morceaux transposés au moment de la
   // lecture (l'original importé reste intact dans le localStorage).
@@ -431,10 +438,14 @@ export default function Piano() {
   // Volontairement non mémoïsé (comme toggleTheme/handleMouseDown) : le
   // Compiler ne peut pas préserver une mémoïsation lisant isPlayingRef,
   // et ce handler UI n'a pas besoin d'identité stable.
+  // Replay (roadmap #45) : dernier enregistrement sélectionnable en un
+  // clic pour le rejouer.
+  const [lastRecordingId, setLastRecordingId] = useState<string | null>(null);
   const toggleRecording = () => {
     if (isRecording) {
       const song = stopRecording();
       if (song) {
+        setLastRecordingId(song.id);
         addImportedSong(song);
         setStatusMessageAuto(
           `Enregistrement sauvegardé : « ${song.title} » (${song.events.length} notes).`
@@ -518,6 +529,7 @@ export default function Piano() {
       theme,
       reverb,
       transpose,
+      eq,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -538,6 +550,7 @@ export default function Piano() {
     theme,
     reverb,
     transpose,
+    eq,
     setStatusMessageAuto,
   ]);
 
@@ -690,6 +703,13 @@ export default function Piano() {
           >
             {[...allSongs]
               .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
+              // Imports récents en tête (roadmap #54) : les morceaux
+              // importés/enregistrés s'empilent au-dessus des intégrés,
+              // ordre d'ajout décroissant (le plus récent d'abord).
+              .sort(
+                (a, b) =>
+                  Number(b.source === "imported") - Number(a.source === "imported")
+              )
               .map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.favorite ? "★ " : ""}
@@ -768,6 +788,21 @@ export default function Piano() {
           >
             {isRecording ? "■ Stopper" : "● Enregistrer"}
           </button>
+          {lastRecordingId && (
+            <button
+              className="import-btn"
+              onClick={() => {
+                setSelectedSongId(lastRecordingId);
+                setStatusMessageAuto(
+                  "Dernier enregistrement sélectionné — ▶ pour le rejouer."
+                );
+              }}
+              title="Rejouer le dernier enregistrement (le sélectionne)"
+              aria-label="Rejouer le dernier enregistrement"
+            >
+              <PlayIcon /> Replay
+            </button>
+          )}
           <button
             className="import-btn"
             onClick={() => {
@@ -867,6 +902,42 @@ export default function Piano() {
               onChange={(e) => setReverb(Number(e.target.value))}
             />
             <span>Réverbe {reverb}%</span>
+          </label>
+          <label className="speed-label eq-band" title="Égaliseur — graves">
+            <span aria-hidden="true">EQ</span>
+            <input
+              type="range"
+              min={EQ_MIN_DB}
+              max={EQ_MAX_DB}
+              step={1}
+              value={eq.low}
+              onChange={(e) =>
+                setEq((prev) => ({ ...prev, low: Number(e.target.value) }))
+              }
+              aria-label="Égaliseur — bandes graves"
+            />
+            <input
+              type="range"
+              min={EQ_MIN_DB}
+              max={EQ_MAX_DB}
+              step={1}
+              value={eq.mid}
+              onChange={(e) =>
+                setEq((prev) => ({ ...prev, mid: Number(e.target.value) }))
+              }
+              aria-label="Égaliseur — bandes médiums"
+            />
+            <input
+              type="range"
+              min={EQ_MIN_DB}
+              max={EQ_MAX_DB}
+              step={1}
+              value={eq.high}
+              onChange={(e) =>
+                setEq((prev) => ({ ...prev, high: Number(e.target.value) }))
+              }
+              aria-label="Égaliseur — bandes aigus"
+            />
           </label>
           <div
             className="segmented"
@@ -1153,6 +1224,11 @@ export default function Piano() {
                         : "monophonique"}
                       {t.percussion ? " · percussion" : ""}
                       {t.instrumentName ? ` · ${t.instrumentName}` : ""}
+                      {t.handRole === "right"
+                        ? " · main droite"
+                        : t.handRole === "left"
+                          ? " · main gauche"
+                          : ""}
                     </span>
                   </span>
                 </label>

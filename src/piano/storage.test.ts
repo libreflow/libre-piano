@@ -260,3 +260,31 @@ describe("roadmap #60 : favoris persistés", () => {
     expect(loadPersistedState().importedSongs[0].favorite).toBeUndefined();
   });
 });
+
+describe("roadmap #24 : égaliseur persisté", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("eq absent (état antérieur) vaut neutre", () => {
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({ version: 3, theme: "dark" })
+    );
+    expect(loadPersistedState().eq).toEqual({ low: 0, mid: 0, high: 0 });
+  });
+
+  it("conserve l'eq persisté et recale les bandes hors bornes", () => {
+    const state: PersistedState = {
+      ...DEFAULT_STATE,
+      eq: { low: 6, mid: -3, high: 2 },
+    };
+    expect(savePersistedState(state)).toBe(true);
+    expect(loadPersistedState().eq).toEqual({ low: 6, mid: -3, high: 2 });
+    localStorage.setItem(
+      "libre-piano:state:v3",
+      JSON.stringify({ version: 3, eq: { low: 99, mid: "abc", high: -99 } })
+    );
+    expect(loadPersistedState().eq).toEqual({ low: 12, mid: 0, high: -12 });
+  });
+});

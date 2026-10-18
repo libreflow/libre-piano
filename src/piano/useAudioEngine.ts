@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trackNodeCreate, trackNodeDispose } from "./audio-health";
 import {
+  EQ3,
   Reverb,
   Sampler,
   ToneAudioBuffer,
@@ -14,8 +15,16 @@ import {
   REVERB_MIN_PERCENT,
   REVERB_MAX_PERCENT,
 } from "./constants";
+import { EQ_MIN_DB, EQ_MAX_DB } from "./constants";
 
 export type SamplerStatus = "loading" | "ready" | "error";
+
+/** Release d'une note normale (secondes). */
+const NOTE_RELEASE_SEC = 1;
+/** Release d'une note tenue par la pédale de sustain (roadmap #28) :
+ * la note continue de sonner en s'éteignant doucement, comme une vraie
+ * pédale forte — au lieu d'être coupée net au relâchement de la pédale. */
+const SUSTAINED_RELEASE_SEC = 3.5;
 
 // Échantillons Salamander Grand Piano, servis localement depuis public/samples
 // (pas de dépendance réseau au lancement). Tone.Sampler repitch entre les
@@ -56,11 +65,23 @@ export const SAMPLE_URLS: Record<string, string> = {
 /** Nombre d'échantillons réels (dérivé, plus de constante découplée). */
 export const SAMPLE_COUNT = Object.keys(SAMPLE_URLS).length;
 
-export function useAudioEngine(volume: number, reverbPercent: number) {
+export interface EqSettings {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+export function useAudioEngine(
+  volume: number,
+  reverbPercent: number,
+  eq: EqSettings = { low: 0, mid: 0, high: 0 }
+) {
   const samplerRef = useRef<Sampler | null>(null);
   // Réverbe (roadmap #23) : chaîne sampler -> reverb -> destination.
   // Nœud créé au montage, la profondeur est pilotée par le slider.
   const reverbRef = useRef<Reverb | null>(null);
+  // Égaliseur (roadmap #24) : chaîne sampler -> reverb -> eq -> destination.
+  const eqRef = useRef<EQ3 | null>(null);
   const [status, setStatus] = useState<SamplerStatus>("loading");
   // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
   const [loadedCount, setLoadedCount] = useState(0);
@@ -115,13 +136,16 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
       for (const [note, buffer] of buffers) {
         samples[note] = buffer;
       }
-      const reverb = new Reverb({ decay: 2.4, preDelay: 0.02 }).toDestination();
+      const eq = new EQ3().toDestination();
+      trackNodeCreate();
+      eqRef.current = eq;
+      const reverb = new Reverb({ decay: 2.4, preDelay: 0.02 }).connect(eq);
       trackNodeCreate();
       reverb.wet.value = 0;
       reverbRef.current = reverb;
       samplerRef.current = new Sampler({
         urls: samples,
-        release: 1,
+        release: NOTE_RELEASE_SEC,
         onload: () => setStatus("ready"),
         onerror: () => setStatus("error"),
       }).connect(reverb);
@@ -136,6 +160,9 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
       reverbRef.current?.dispose();
       trackNodeDispose();
       reverbRef.current = null;
+      eqRef.current?.dispose();
+      trackNodeDispose();
+      eqRef.current = null;
       buffers.forEach((b) => {
         b.dispose();
         trackNodeDispose();
@@ -158,6 +185,16 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
     getDestination().volume.value = pct <= 0 ? -Infinity : 20 * Math.log10(pct / 100);
   }, [volume]);
 
+  // Égaliseur (roadmap #24) : 3 bandes en dB, clampées.
+  useEffect(() => {
+    const eqNode = eqRef.current;
+    if (!eqNode) return;
+    const clamp = (v: number) => Math.max(EQ_MIN_DB, Math.min(EQ_MAX_DB, v));
+    eqNode.low.value = clamp(eq.low);
+    eqNode.mid.value = clamp(eq.mid);
+    eqNode.high.value = clamp(eq.high);
+  }, [eq.low, eq.mid, eq.high]);
+
   // Réverbe : le slider pilote la part wet du nœud (0 = complètement sec).
   useEffect(() => {
     const pct = Math.max(REVERB_MIN_PERCENT, Math.min(REVERB_MAX_PERCENT, reverbPercent));
@@ -170,6 +207,16 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
 
   const noteOff = useCallback((note: string) => {
     samplerRef.current?.triggerRelease(note);
+  }, []);
+  /** Libère une note tenue par la pédale (roadmap #28) : release long,
+   * la note s'éteint doucement au lieu d'être coupée. */
+  const releaseSustainedNote = useCallback((note: string) => {
+    const sampler = samplerRef.current;
+    if (!sampler) return;
+    const previous = sampler.release;
+    sampler.release = SUSTAINED_RELEASE_SEC;
+    sampler.triggerRelease(note);
+    sampler.release = previous;
   }, []);
 
   const triggerAttackRelease = useCallback(
@@ -186,6 +233,7 @@ export function useAudioEngine(volume: number, reverbPercent: number) {
     retryLoading,
     noteOn,
     noteOff,
+    releaseSustainedNote,
     triggerAttackRelease,
   };
 }

@@ -10,6 +10,7 @@ export {
   Part,
   Loop,
   Reverb,
+  EQ3,
   ToneAudioBuffer,
   getContext,
   getTransport,

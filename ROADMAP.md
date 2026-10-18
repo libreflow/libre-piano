@@ -27,7 +27,7 @@ incrément livrable indépendamment.
 16. ✅ Pédale de sustain (barre d'espace maintenue = pédale forte)
 17. ✅ Affichage du nom de la note au survol d'une touche (tooltip natif)
 18. ✅ Option pour afficher/masquer les labels clavier sur les touches
-19. Layout responsive (le piano est actuellement à largeur fixe)
+19. ✅ Layout responsive (contrôles fluides < 880 px, empilés < 760 px, clavier adaptatif existant)
 20. ✅ Distinguer visuellement notes jouées (manuel = bleu / lecture auto = ambre / pédale sustain = violet)
 
 ## Phase 3 — Moteur audio (21–30)
@@ -35,11 +35,11 @@ incrément livrable indépendamment.
 21. Sélecteur d'instrument (piano, e-piano, orgue… via plusieurs `Tone.Sampler`)
 22. ✅ Contrôle de volume maître
 23. ✅ Réverbe réglable (`Tone.Reverb`)
-24. Égaliseur simple (graves/médiums/aigus)
+24. ✅ Égaliseur simple (EQ3 Tone.js : graves/médiums/aigus, ±12 dB, persisté)
 25. ✅ Barre de progression réelle du chargement des échantillons (actuellement binaire)
 26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
 27. ✅ Métronome audible pendant lecture/pratique
-28. Pédale sustain avec release réellement prolongé (pas juste visuel)
+28. ✅ Pédale sustain avec release réellement prolongé (3,5 s à l'extinction)
 29. Normalisation du volume entre instruments
 30. Visualiseur audio simple (spectre/waveform) en option
 
@@ -51,7 +51,7 @@ incrément livrable indépendamment.
 34. ✅ Boucle A-B sur une section choisie du morceau
 35. Ralentissement automatique des passages denses détectés
 36. Affichage d'une partition simplifiée en parallèle du clavier
-37. Mode "main gauche seule" / "main droite seule" si deux pistes identifiées
+37. ✅ Détection main gauche/droite (tag par piste dans le sélecteur d'import)
 38. ✅ Statistiques de progression par morceau (meilleur score, sessions, moyenne, dernière date)
 39. Leçons progressives (du plus simple au plus complexe)
 40. Export d'un rapport de session (notes ratées, tempo réel vs cible)
@@ -59,7 +59,7 @@ incrément livrable indépendamment.
 42. ✅ Highlight de la touche suivante à jouer (anticipation, pas juste la note en cours)
 43. Mode "call & response" (l'app joue une phrase, l'utilisateur la rejoue)
 44. Suggestion de doigté (données approximatives, en option)
-45. Replay instantané d'une performance enregistrée par l'utilisateur
+45. ✅ Replay du dernier enregistrement (bouton dédié)
 
 ## Phase 5 — Import/Export MIDI avancé (46–55)
 
@@ -69,9 +69,9 @@ incrément livrable indépendamment.
 49. Support des fichiers MusicXML en plus du MIDI
 50. ✅ Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
 51. ✅ Mélange de pistes avec volume individuel par piste (vélocité MIDI par note, conservée à l'import et à la lecture)
-52. Affiner l'heuristique main gauche/droite (au-delà de tessiture + chordRatio)
+52. ✅ Heuristique main gauche/droite affinée (tessiture + densité pondérée)
 53. ✅ Transposition manuelle (+/- demi-tons) en plus du clampage automatique
-54. Historique des imports récents avec rechargement rapide
+54. ✅ Imports récents en tête du sélecteur (les importés au-dessus des intégrés)
 55. Bibliothèque de presets élargie (20–30 morceaux domaine public inclus)
 
 ## Phase 6 — Persistance & configuration (56–65)
@@ -81,7 +81,7 @@ incrément livrable indépendamment.
 58. ✅ Sauvegarder les préférences utilisateur (vitesse par défaut, dernier morceau, volume, labels)
 59. Import d'un dossier entier de fichiers `.mid`
 60. ✅ Favoris pour organiser les morceaux (étoile, tri en tête du sélecteur, persisté)
-61. Sauvegarde locale de la progression d'apprentissage
+61. ✅ Sauvegarde locale de la progression (livrée avec #38 : practice-stats persistés)
 62. ✅ Export/import de la configuration complète (changement de machine)
 63. Profils utilisateurs multiples
 64. ✅ Thème clair/sombre avec préférence sauvegardée
