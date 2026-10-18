@@ -245,7 +245,15 @@ export default function Piano() {
   const eventsCount = selectedSong?.events.length ?? 0;
 
   // Enregistrement live (roadmap #46) : capture les notes jouées.
-  const recorder = useRecorder();
+  // Destructuré : le Compiler veut des valeurs stables en deps, pas
+  // l'objet entier du hook.
+  const {
+    isRecording,
+    start: startRecording,
+    stop: stopRecording,
+    captureNoteOn,
+    captureNoteOff,
+  } = useRecorder();
 
   const noteOn = useCallback(
     (note: string) => {
@@ -253,9 +261,9 @@ export default function Piano() {
       rawNoteOn(note);
       markNoteOn(note);
       handlePlayedNote(note);
-      recorder.captureNoteOn(note);
+      captureNoteOn(note);
     },
-    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote]
+    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote, captureNoteOn]
   );
   const clearSustainedNote = useCallback((note: string) => {
     setSustainedNotes((prev) => {
@@ -278,9 +286,16 @@ export default function Piano() {
       // Retirer aussi un éventuel reste de sustain : sinon la touche
       // resterait affichée « sustained » (muette) après re-jeu sans pédale.
       clearSustainedNote(note);
-      recorder.captureNoteOff(note);
+      captureNoteOff(note);
     },
-    [samplerRef, rawNoteOff, markNoteOff, sustainOnRef, clearSustainedNote]
+    [
+      samplerRef,
+      rawNoteOff,
+      markNoteOff,
+      sustainOnRef,
+      clearSustainedNote,
+      captureNoteOff,
+    ]
   );
   const releaseSustained = useCallback(() => {
     setSustainedNotes((prev) => {
@@ -410,9 +425,12 @@ export default function Piano() {
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessageAuto);
 
-  const toggleRecording = useCallback(() => {
-    if (recorder.isRecording) {
-      const song = recorder.stop();
+  // Volontairement non mémoïsé (comme toggleTheme/handleMouseDown) : le
+  // Compiler ne peut pas préserver une mémoïsation lisant isPlayingRef,
+  // et ce handler UI n'a pas besoin d'identité stable.
+  const toggleRecording = () => {
+    if (isRecording) {
+      const song = stopRecording();
       if (song) {
         addImportedSong(song);
         setStatusMessageAuto(
@@ -423,15 +441,9 @@ export default function Piano() {
       }
     } else {
       if (isPlayingRef.current) stopPlaybackAndClear();
-      recorder.start();
+      startRecording();
     }
-  }, [
-    recorder,
-    addImportedSong,
-    setStatusMessageAuto,
-    isPlayingRef,
-    stopPlaybackAndClear,
-  ]);
+  };
 
   // La lecture ne démarre pas tant que le dialogue de sélection de
   // pistes est ouvert (sinon elle jouerait derrière le dialogue).
@@ -441,9 +453,10 @@ export default function Piano() {
   }, [pendingImport]);
   // Fermeture du dialogue (import, annulation) : couper la pré-écoute
   // en cours pour ne pas continuer derrière l'UI.
+  const { stop: stopTrackPreview } = trackPreview;
   useEffect(() => {
-    if (!pendingImport) trackPreview.stop();
-  }, [pendingImport, trackPreview.stop]);
+    if (!pendingImport) stopTrackPreview();
+  }, [pendingImport, stopTrackPreview]);
 
   // Mode apprentissage : si la note attendue est hors de la fenêtre
   // clavier PC, décaler automatiquement la fenêtre pour la couvrir —
@@ -734,17 +747,17 @@ export default function Piano() {
             )}
           </button>
           <button
-            className={`import-btn ${recorder.isRecording ? "stop-btn" : ""}`}
+            className={`import-btn ${isRecording ? "stop-btn" : ""}`}
             onClick={toggleRecording}
             disabled={isPlaying || isImporting}
-            aria-pressed={recorder.isRecording}
+            aria-pressed={isRecording}
             title={
-              recorder.isRecording
+              isRecording
                 ? "Arrêter l'enregistrement et sauvegarder dans la bibliothèque"
                 : "Enregistrer ce que tu joues"
             }
           >
-            {recorder.isRecording ? "■ Stopper" : "● Enregistrer"}
+            {isRecording ? "■ Stopper" : "● Enregistrer"}
           </button>
           <button
             className="import-btn"
