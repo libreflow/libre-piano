@@ -28,6 +28,14 @@ import {
 } from "./useMetronome";
 import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
+import {
+  loadStats,
+  saveStats,
+  recordSession,
+  sessionFrom,
+  summarize,
+  formatSessionDate,
+} from "./practice-stats";
 import { useKeyboardInput } from "./useKeyboardInput";
 import {
   SPEED_MIN_PERCENT,
@@ -207,6 +215,30 @@ export default function Piano() {
   // Mode apprentissage : la note attendue est surlignée, la session
   // avance quand l'utilisateur joue la bonne note.
   const practice = usePractice(selectedSong);
+  // Statistiques de progression (roadmap #38) : persistées dans une clé
+  // localStorage dédiée, hors état principal.
+  const [stats, setStats] = useState(loadStats);
+  const doneRef = useRef(false);
+  useEffect(() => {
+    if (practice.state.done && !doneRef.current && selectedSong) {
+      doneRef.current = true;
+      const next = recordSession(
+        stats,
+        selectedSong.id,
+        sessionFrom(practice.state.score ?? 100, practice.state.mistakes, selectedSong)
+      );
+      setStats(next);
+      saveStats(next);
+    } else if (!practice.state.done) {
+      doneRef.current = false;
+    }
+  }, [
+    practice.state.done,
+    practice.state.score,
+    practice.state.mistakes,
+    selectedSong,
+    stats,
+  ]);
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
 
@@ -965,6 +997,16 @@ export default function Piano() {
 
       {practice.state.active && (
         <div className="practice-panel" role="status">
+          {(() => {
+            const summary = summarize(stats[selectedSongId]);
+            return summary.sessionCount > 0 ? (
+              <span className="practice-stats">
+                Meilleur : <strong>{summary.bestScore}/100</strong> ·{" "}
+                {summary.sessionCount} session(s) · moyenne {summary.averageScore}% · le{" "}
+                {formatSessionDate(summary.lastSessionDate)}
+              </span>
+            ) : null;
+          })()}
           {practice.state.done ? (
             <>
               <strong>Session terminée !</strong> {eventsCount} notes,{" "}
