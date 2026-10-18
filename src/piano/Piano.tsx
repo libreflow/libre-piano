@@ -20,6 +20,12 @@ import { sanitizeState } from "./storage";
 import { loadPersistedState, savePersistedState, STATE_VERSION } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
+import {
+  useMetronome,
+  makeTickTrigger,
+  startTransportForMetronome,
+} from "./useMetronome";
+import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
 import { useKeyboardInput } from "./useKeyboardInput";
 import {
@@ -261,6 +267,19 @@ export default function Piano() {
       markAutoNoteOff
     );
 
+  // Métronome (roadmap #27) : tick de sampler sur le Transport.
+  const triggerTick = useMemo(() => makeTickTrigger(samplerRef), [samplerRef]);
+  const metronome = useMetronome(triggerTick);
+  const metronomeEnabledRef = useRef(false);
+  useEffect(() => {
+    metronomeEnabledRef.current = metronome.enabled;
+  }, [metronome.enabled]);
+  const toggleMetronome = useCallback(() => {
+    metronome.toggle();
+    // Le Transport doit tourner pour que le Loop du métronome tique :
+    // si on l'active pendant l'arrêt de la lecture, on le démarre.
+    if (!metronomeEnabledRef.current) startTransportForMetronome();
+  }, [metronome]);
   useKeyboardInput({
     layout: keyboardLayout,
     isPlayingRef,
@@ -686,6 +705,23 @@ export default function Piano() {
             <span>{speed}%</span>
           </label>
 
+          <label className="speed-label" title="Métronome (BPM)">
+            <input
+              type="checkbox"
+              checked={metronome.enabled}
+              onChange={toggleMetronome}
+              disabled={false}
+            />
+            <input
+              type="range"
+              min={METRONOME_MIN_BPM}
+              max={METRONOME_MAX_BPM}
+              step={1}
+              value={metronome.bpm}
+              onChange={(e) => metronome.setBpm(Number(e.target.value))}
+            />
+            <span>{metronome.bpm} BPM</span>
+          </label>
           <label className="speed-label volume">
             <VolumeIcon />
             <input
