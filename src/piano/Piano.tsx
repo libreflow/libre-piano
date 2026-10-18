@@ -15,6 +15,8 @@ import {
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
 import { useTrackPreview } from "./useTrackPreview";
+import { useRecorder } from "./useRecorder";
+import { downloadSongAsMidi } from "./midi-export";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
@@ -242,14 +244,26 @@ export default function Piano() {
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
 
+  // Enregistrement live (roadmap #46) : capture les notes jouées.
+  // Destructuré : le Compiler veut des valeurs stables en deps, pas
+  // l'objet entier du hook.
+  const {
+    isRecording,
+    start: startRecording,
+    stop: stopRecording,
+    captureNoteOn,
+    captureNoteOff,
+  } = useRecorder();
+
   const noteOn = useCallback(
     (note: string) => {
       if (status !== "ready" || !samplerRef.current) return;
       rawNoteOn(note);
       markNoteOn(note);
       handlePlayedNote(note);
+      captureNoteOn(note);
     },
-    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote]
+    [status, samplerRef, rawNoteOn, markNoteOn, handlePlayedNote, captureNoteOn]
   );
   const clearSustainedNote = useCallback((note: string) => {
     setSustainedNotes((prev) => {
@@ -272,8 +286,16 @@ export default function Piano() {
       // Retirer aussi un éventuel reste de sustain : sinon la touche
       // resterait affichée « sustained » (muette) après re-jeu sans pédale.
       clearSustainedNote(note);
+      captureNoteOff(note);
     },
-    [samplerRef, rawNoteOff, markNoteOff, sustainOnRef, clearSustainedNote]
+    [
+      samplerRef,
+      rawNoteOff,
+      markNoteOff,
+      sustainOnRef,
+      clearSustainedNote,
+      captureNoteOff,
+    ]
   );
   const releaseSustained = useCallback(() => {
     setSustainedNotes((prev) => {
@@ -403,6 +425,26 @@ export default function Piano() {
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessageAuto);
 
+  // Volontairement non mémoïsé (comme toggleTheme/handleMouseDown) : le
+  // Compiler ne peut pas préserver une mémoïsation lisant isPlayingRef,
+  // et ce handler UI n'a pas besoin d'identité stable.
+  const toggleRecording = () => {
+    if (isRecording) {
+      const song = stopRecording();
+      if (song) {
+        addImportedSong(song);
+        setStatusMessageAuto(
+          `Enregistrement sauvegardé : « ${song.title} » (${song.events.length} notes).`
+        );
+      } else {
+        setStatusMessageAuto("Enregistrement vide : aucune note capturée.");
+      }
+    } else {
+      if (isPlayingRef.current) stopPlaybackAndClear();
+      startRecording();
+    }
+  };
+
   // La lecture ne démarre pas tant que le dialogue de sélection de
   // pistes est ouvert (sinon elle jouerait derrière le dialogue).
   const pendingImportRef = useRef(false);
@@ -411,9 +453,10 @@ export default function Piano() {
   }, [pendingImport]);
   // Fermeture du dialogue (import, annulation) : couper la pré-écoute
   // en cours pour ne pas continuer derrière l'UI.
+  const { stop: stopTrackPreview } = trackPreview;
   useEffect(() => {
-    if (!pendingImport) trackPreview.stop();
-  }, [pendingImport, trackPreview.stop]);
+    if (!pendingImport) stopTrackPreview();
+  }, [pendingImport, stopTrackPreview]);
 
   // Mode apprentissage : si la note attendue est hors de la fenêtre
   // clavier PC, décaler automatiquement la fenêtre pour la couvrir —
@@ -702,6 +745,32 @@ export default function Piano() {
                 <ImportIcon /> Importer
               </>
             )}
+          </button>
+          <button
+            className={`import-btn ${isRecording ? "stop-btn" : ""}`}
+            onClick={toggleRecording}
+            disabled={isPlaying || isImporting}
+            aria-pressed={isRecording}
+            title={
+              isRecording
+                ? "Arrêter l'enregistrement et sauvegarder dans la bibliothèque"
+                : "Enregistrer ce que tu joues"
+            }
+          >
+            {isRecording ? "■ Stopper" : "● Enregistrer"}
+          </button>
+          <button
+            className="import-btn"
+            onClick={() => {
+              if (selectedSong)
+                void downloadSongAsMidi(selectedSong).then((ok) => {
+                  if (!ok) setStatusMessageAuto("Échec de l'export MIDI.");
+                });
+            }}
+            disabled={isPlaying || !selectedSong}
+            title="Exporter le morceau sélectionné en fichier .mid"
+          >
+            <ExpandIcon /> .mid
           </button>
           <input
             ref={fileInputRef}

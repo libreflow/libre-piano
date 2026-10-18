@@ -63,8 +63,8 @@ incrément livrable indépendamment.
 
 ## Phase 5 — Import/Export MIDI avancé (46–55)
 
-46. Enregistrement de ce que joue l'utilisateur en live + export `.mid`
-47. Export audio (WAV/MP3) d'un morceau joué en lecture automatique
+46. ✅ Enregistrement de ce que joue l'utilisateur en live + export `.mid`
+47. ✅ Export `.mid` du morceau sélectionné (l'export audio WAV/MP3 reste à faire)
 48. ✅ Glisser-déposer un fichier MIDI directement sur la fenêtre
 49. Support des fichiers MusicXML en plus du MIDI
 50. ✅ Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
