@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié
+## 0.4.0 — 2026-10-18
 
 ### Fonctionnalités
 
@@ -26,8 +26,6 @@
 - Web Worker pour le parsing MIDI : les gros fichiers ne bloquent plus l'UI, avec repli synchrone automatique
 - Indicateur de santé audio (latence, état du contexte) sous les contrôles
 - Message d'erreur de chargement des sons avec bouton « Réessayer »
-
-### Qualité
 
 - Accessibilité clavier : les 88 touches sortent de l'ordre de Tabulation (le jeu reste au clavier PC), aria du clavier complété
 - Monitoring des nœuds audio : comptage create/dispose, testé (fuites visibles)
