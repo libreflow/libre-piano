@@ -14,6 +14,7 @@ import {
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
+import { useTrackPreview } from "./useTrackPreview";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
@@ -267,6 +268,8 @@ export default function Piano() {
       markAutoNoteOff
     );
 
+  // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
+  const trackPreview = useTrackPreview(triggerAttackRelease);
   // Métronome (roadmap #27) : tick de sampler sur le Transport.
   // useCallback et pas useMemo : ne touche pas la ref pendant le render
   // (la lisera seulement à l'intérieur du callback, au moment du tick).
@@ -374,6 +377,11 @@ export default function Piano() {
   useEffect(() => {
     pendingImportRef.current = Boolean(pendingImport);
   }, [pendingImport]);
+  // Fermeture du dialogue (import, annulation) : couper la pré-écoute
+  // en cours pour ne pas continuer derrière l'UI.
+  useEffect(() => {
+    if (!pendingImport) trackPreview.stop();
+  }, [pendingImport, trackPreview.stop]);
 
   // Mode apprentissage : si la note attendue est hors de la fenêtre
   // clavier PC, décaler automatiquement la fenêtre pour la couvrir —
@@ -1023,6 +1031,30 @@ export default function Piano() {
                     </span>
                   </span>
                 </label>
+                <button
+                  className="import-btn preview-btn"
+                  onClick={() => {
+                    if (trackPreview.previewingTrack === t.index) {
+                      trackPreview.stop();
+                      return;
+                    }
+                    const notes = pendingImport.midi.tracks[t.index]?.notes ?? [];
+                    trackPreview.preview(t.index, notes);
+                  }}
+                  aria-pressed={trackPreview.previewingTrack === t.index}
+                  title="Écouter un extrait de cette piste"
+                  aria-label={`Pré-écouter la piste ${t.name}`}
+                >
+                  {trackPreview.previewingTrack === t.index ? (
+                    <>
+                      <StopIcon /> Écoute…
+                    </>
+                  ) : (
+                    <>
+                      <PlayIcon /> Écouter
+                    </>
+                  )}
+                </button>
               </li>
             ))}
           </ul>

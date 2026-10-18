@@ -67,7 +67,7 @@ incrément livrable indépendamment.
 47. Export audio (WAV/MP3) d'un morceau joué en lecture automatique
 48. ✅ Glisser-déposer un fichier MIDI directement sur la fenêtre
 49. Support des fichiers MusicXML en plus du MIDI
-50. Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
+50. ✅ Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
 51. ✅ Mélange de pistes avec volume individuel par piste (vélocité MIDI par note, conservée à l'import et à la lecture)
 52. Affiner l'heuristique main gauche/droite (au-delà de tessiture + chordRatio)
 53. ✅ Transposition manuelle (+/- demi-tons) en plus du clampage automatique
