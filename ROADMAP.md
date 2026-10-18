@@ -70,7 +70,7 @@ incrément livrable indépendamment.
 50. Pré-écoute rapide de chaque piste dans le sélecteur avant de cocher
 51. ✅ Mélange de pistes avec volume individuel par piste (vélocité MIDI par note, conservée à l'import et à la lecture)
 52. Affiner l'heuristique main gauche/droite (au-delà de tessiture + chordRatio)
-53. Transposition manuelle (+/- demi-tons) en plus du clampage automatique
+53. ✅ Transposition manuelle (+/- demi-tons) en plus du clampage automatique
 54. Historique des imports récents avec rechargement rapide
 55. Bibliothèque de presets élargie (20–30 morceaux domaine public inclus)
 
@@ -80,7 +80,7 @@ incrément livrable indépendamment.
 57. Utiliser le plugin Tauri Store ou SQLite pour la persistance locale (plus robuste que localStorage)
 58. ✅ Sauvegarder les préférences utilisateur (vitesse par défaut, dernier morceau, volume, labels)
 59. Import d'un dossier entier de fichiers `.mid`
-60. Favoris/tags pour organiser les morceaux importés
+60. ✅ Favoris pour organiser les morceaux (étoile, tri en tête du sélecteur, persisté)
 61. Sauvegarde locale de la progression d'apprentissage
 62. ✅ Export/import de la configuration complète (changement de machine)
 63. Profils utilisateurs multiples

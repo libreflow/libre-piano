@@ -8,6 +8,7 @@ import {
   SPEED_DEFAULT_PERCENT,
   VOLUME_DEFAULT_PERCENT,
 } from "./constants";
+import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "./transpose";
 
 const STORAGE_KEY = "libre-piano:state";
 export const STATE_VERSION = 3;
@@ -24,6 +25,8 @@ export interface PersistedState {
   theme: "dark" | "light";
   /** Réverbe : part wet en % (roadmap #23). */
   reverb: number;
+  /** Transposition des morceaux en demi-tons (roadmap #53). */
+  transpose: number;
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -37,6 +40,7 @@ export const DEFAULT_STATE: PersistedState = {
   keyboardLayout: "azerty",
   theme: "dark",
   reverb: REVERB_DEFAULT_PERCENT,
+  transpose: 0,
 };
 
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
@@ -69,6 +73,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     raw.theme === "dark" || raw.theme === "light" ? raw.theme : DEFAULT_STATE.theme;
   // Réverbe absente (états v3 antérieurs) : défaut sec.
   const reverb = num(raw.reverb, DEFAULT_STATE.reverb, 0, 100);
+  const transpose = num(raw.transpose, 0, TRANSPOSE_MIN, TRANSPOSE_MAX);
   return {
     ...DEFAULT_STATE,
     ...raw,
@@ -79,6 +84,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     keyboardLayout,
     theme,
     reverb,
+    transpose,
     importedSongs: Array.isArray(raw.importedSongs)
       ? raw.importedSongs
           .filter(
@@ -90,6 +96,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
           )
           .map((song): Song => ({
             ...song,
+            favorite: song.favorite === true ? true : undefined,
             // Chaque événement doit avoir des temps finis >= 0 et une
             // note valide : un event corrompu produirait des NaN dans
             // le Part de lecture.
