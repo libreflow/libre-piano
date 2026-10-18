@@ -38,7 +38,7 @@ incrément livrable indépendamment.
 24. Égaliseur simple (graves/médiums/aigus)
 25. ✅ Barre de progression réelle du chargement des échantillons (actuellement binaire)
 26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
-27. Métronome audible pendant lecture/pratique
+27. ✅ Métronome audible pendant lecture/pratique
 28. Pédale sustain avec release réellement prolongé (pas juste visuel)
 29. Normalisation du volume entre instruments
 30. Visualiseur audio simple (spectre/waveform) en option
