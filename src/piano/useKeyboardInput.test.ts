@@ -406,3 +406,35 @@ describe("régression : octaveShift passé au hook (bug affichage ≠ clavier)",
     expect(noteOn).toHaveBeenCalledWith("C4");
   });
 });
+
+describe("roadmap #65 : raccourcis personnalisables", () => {
+  it("les touches remappées pilotent sustain et lecture", () => {
+    const noteOn = vi.fn();
+    const noteOff = vi.fn();
+    const onSustainChange = vi.fn();
+    const onTogglePlayback = vi.fn();
+    renderHook(() =>
+      useKeyboardInput({
+        layout: "azerty",
+        shortcuts: { sustain: "ShiftLeft", togglePlayback: "KeyP" },
+        isPlayingRef: { current: false },
+        noteOn,
+        noteOff,
+        onSustainChange,
+        releaseSustained: vi.fn(),
+        onTogglePlayback,
+      })
+    );
+    // ShiftLeft = pédale (au lieu de Space)
+    press("keydown", " ", { code: "ShiftLeft" });
+    expect(onSustainChange).toHaveBeenCalledWith(true);
+    press("keyup", " ", { code: "ShiftLeft" });
+    expect(onSustainChange).toHaveBeenCalledWith(false);
+    // P = lecture (au lieu de Enter)
+    press("keydown", "p", { code: "KeyP" });
+    expect(onTogglePlayback).toHaveBeenCalled();
+    // Space ne fait plus la pédale
+    press("keydown", " ", { code: "Space" });
+    expect(onSustainChange).toHaveBeenCalledTimes(2);
+  });
+});

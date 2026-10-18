@@ -23,7 +23,7 @@ incrément livrable indépendamment.
 12. ✅ Bouton pour décaler l'octave de base du mapping clavier PC
 13. ✅ Support tactile (Pointer Events) pour tablette
 14. ✅ Mode plein écran du piano
-15. Support de la vélocité (variation de volume au clic/maintien)
+15. ✅ Support de la vélocité au clic (position verticale sur la touche : haut = doux, bas = fort)
 16. ✅ Pédale de sustain (barre d'espace maintenue = pédale forte)
 17. ✅ Affichage du nom de la note au survol d'une touche (tooltip natif)
 18. ✅ Option pour afficher/masquer les labels clavier sur les touches
@@ -41,7 +41,7 @@ incrément livrable indépendamment.
 27. ✅ Métronome audible pendant lecture/pratique
 28. ✅ Pédale sustain avec release réellement prolongé (3,5 s à l'extinction)
 29. Normalisation du volume entre instruments
-30. Visualiseur audio simple (spectre/waveform) en option
+30. ✅ Visualiseur audio (forme d'onde, activable depuis les Réglages, persisté)
 
 ## Phase 4 — Mode apprentissage avancé (31–45)
 
@@ -85,7 +85,7 @@ incrément livrable indépendamment.
 62. ✅ Export/import de la configuration complète (changement de machine)
 63. Profils utilisateurs multiples
 64. ✅ Thème clair/sombre avec préférence sauvegardée
-65. Raccourcis clavier personnalisables
+65. ✅ Raccourcis personnalisables (pédale et lecture remappables, capture de touche, persistés)
 
 ## Phase 7 — Entrée MIDI matérielle (66–72)
 

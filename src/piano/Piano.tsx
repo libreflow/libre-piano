@@ -32,6 +32,7 @@ import {
 import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
+import { useVisualizer } from "./useVisualizer";
 import {
   loadStats,
   saveStats,
@@ -42,7 +43,7 @@ import {
   buildSessionReport,
   downloadSessionReport,
 } from "./practice-stats";
-import { useKeyboardInput } from "./useKeyboardInput";
+import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
 import {
   SPEED_MIN_PERCENT,
   SPEED_MAX_PERCENT,
@@ -106,6 +107,9 @@ export default function Piano() {
   const [reverb, setReverb] = useState(initialState.reverb);
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
+  const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
+  const [shortcuts, setShortcuts] = useState(initialState.shortcuts ?? DEFAULT_SHORTCUTS);
+  const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -346,6 +350,27 @@ export default function Piano() {
       markAutoNoteOff
     );
 
+  // Capture d'une touche pour remapper un raccourci (roadmap #65).
+  const remapCaptureRef = useRef<"sustain" | "togglePlayback" | null>(null);
+  const [remapping, setRemapping] = useState<"sustain" | "togglePlayback" | null>(null);
+  const setRemapCapture = useCallback((target: "sustain" | "togglePlayback" | null) => {
+    remapCaptureRef.current = target;
+    setRemapping(target);
+  }, []);
+  useEffect(() => {
+    if (!remapping) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      const code = e.code;
+      if (code !== "Escape") {
+        setShortcuts((prev) => ({ ...prev, [remapping]: code }));
+      }
+      setRemapCapture(null);
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
+  }, [remapping, setRemapCapture]);
+
   // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
   // pendant la lecture, pour les marqueurs de mesures et les paroles.
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
@@ -388,6 +413,7 @@ export default function Piano() {
   useKeyboardInput({
     layout: keyboardLayout,
     octaveShift,
+    shortcuts,
     isPlayingRef,
     noteOn,
     noteOff,
@@ -565,6 +591,8 @@ export default function Piano() {
       reverb,
       transpose,
       eq,
+      visualizer: showVisualizer,
+      shortcuts,
     });
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
@@ -586,6 +614,8 @@ export default function Piano() {
     reverb,
     transpose,
     eq,
+    showVisualizer,
+    shortcuts,
     setStatusMessageAuto,
   ]);
 
@@ -655,10 +685,27 @@ export default function Piano() {
     }
   };
 
-  const handlePointerDown = (note: string) => {
+  // Vélocité au clic (roadmap #15) : plus le clic est bas sur la touche,
+  // plus la note est forte — comme un vrai clavier (zone basse = frappe
+  // pleine, haut = pianissimo).
+  const noteOnWithVelocity = useCallback(
+    (note: string, velocity?: number) => {
+      if (status !== "ready" || !samplerRef.current) return;
+      rawNoteOn(note, velocity);
+      markNoteOn(note);
+      playedNoteHandler(note);
+      captureNoteOn(note, velocity);
+    },
+    [status, samplerRef, rawNoteOn, markNoteOn, playedNoteHandler, captureNoteOn]
+  );
+  const handlePointerDown = (note: string, e: React.PointerEvent<HTMLButtonElement>) => {
     if (isPlayingRef.current) return;
     if (getContext().state !== "running") void ensureAudioStarted();
-    noteOn(note);
+    // Position relative verticale : 0 (haut, doux) → 1 (bas, fort),
+    // mappée sur une plage jouable 0.35–1.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rel = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    noteOnWithVelocity(note, 0.35 + rel * 0.65);
   };
   const handlePointerUp = (note: string) => {
     // Toujours relâcher une note active : si la lecture a démarré pendant
@@ -1092,6 +1139,14 @@ export default function Piano() {
 
           <button
             className="import-btn"
+            onClick={() => setShowVisualizer((v) => !v)}
+            aria-pressed={showVisualizer}
+            title="Afficher la forme d'onde pendant le jeu"
+          >
+            {showVisualizer ? "Masquer l'onde" : "Onde"}
+          </button>
+          <button
+            className="import-btn"
             onClick={toggleTheme}
             aria-pressed={theme === "light"}
             title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
@@ -1142,6 +1197,29 @@ export default function Piano() {
             {isFullscreen ? "Quitter" : "Plein écran"}
           </button>
 
+          <button
+            className="import-btn"
+            onClick={() => {
+              setStatusMessageAuto(
+                "Appuie la touche à utiliser pour la pédale de sustain…"
+              );
+              setRemapCapture("sustain");
+            }}
+            title="Personnaliser le raccourci de la pédale (roadmap #65)"
+          >
+            Pédale : {shortcuts.sustain === "Space" ? "Espace" : shortcuts.sustain}
+          </button>
+          <button
+            className="import-btn"
+            onClick={() => {
+              setStatusMessageAuto("Appuie la touche à utiliser pour lecture/arrêt…");
+              setRemapCapture("togglePlayback");
+            }}
+            title="Personnaliser le raccourci lecture/arrêt (roadmap #65)"
+          >
+            Lecture :{" "}
+            {shortcuts.togglePlayback === "Enter" ? "Entrée" : shortcuts.togglePlayback}
+          </button>
           <span
             className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
             title="Maintenir la barre d'espace = pédale de sustain"
@@ -1371,6 +1449,15 @@ export default function Piano() {
         </div>
       )}
 
+      {showVisualizer && (
+        <canvas
+          ref={visualizerCanvasRef}
+          className="waveform-canvas"
+          width={480}
+          height={48}
+          aria-label="Forme d'onde du signal audio"
+        />
+      )}
       {(currentLyric || isPlaying) && (
         <div className="playback-overlay" aria-live="off">
           {selectedSong?.lyrics && selectedSong.lyrics.length > 0 ? (
@@ -1418,7 +1505,7 @@ export default function Piano() {
               tabIndex={-1}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture?.(e.pointerId);
-                handlePointerDown(k.note);
+                handlePointerDown(k.note, e);
               }}
               onPointerUp={() => handlePointerUp(k.note)}
               onPointerCancel={() => handlePointerUp(k.note)}
@@ -1446,7 +1533,7 @@ export default function Piano() {
               tabIndex={-1}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture?.(e.pointerId);
-                handlePointerDown(k.note);
+                handlePointerDown(k.note, e);
               }}
               onPointerUp={() => handlePointerUp(k.note)}
               onPointerCancel={() => handlePointerUp(k.note)}

@@ -30,6 +30,10 @@ export interface PersistedState {
   transpose: number;
   /** Égaliseur 3 bandes en dB (roadmap #24). */
   eq: { low: number; mid: number; high: number };
+  /** Visualiseur audio activé (roadmap #30). */
+  visualizer?: boolean;
+  /** Raccourcis personnalisés (roadmap #65), codes physiques. */
+  shortcuts?: { sustain: string; togglePlayback: string };
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -45,6 +49,7 @@ export const DEFAULT_STATE: PersistedState = {
   reverb: REVERB_DEFAULT_PERCENT,
   transpose: 0,
   eq: { low: EQ_DEFAULT_DB, mid: EQ_DEFAULT_DB, high: EQ_DEFAULT_DB },
+  shortcuts: { sustain: "Space", togglePlayback: "Enter" },
 };
 
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
@@ -97,6 +102,20 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     reverb,
     transpose,
     eq,
+    visualizer: raw.visualizer === true ? true : undefined,
+    shortcuts: {
+      sustain:
+        typeof (raw.shortcuts as { sustain?: unknown } | undefined)?.sustain ===
+          "string" && (raw.shortcuts as { sustain: string }).sustain.length > 0
+          ? (raw.shortcuts as { sustain: string }).sustain
+          : DEFAULT_STATE.shortcuts!.sustain,
+      togglePlayback:
+        typeof (raw.shortcuts as { togglePlayback?: unknown } | undefined)
+          ?.togglePlayback === "string" &&
+        (raw.shortcuts as { togglePlayback: string }).togglePlayback.length > 0
+          ? (raw.shortcuts as { togglePlayback: string }).togglePlayback
+          : DEFAULT_STATE.shortcuts!.togglePlayback,
+    },
     importedSongs: Array.isArray(raw.importedSongs)
       ? raw.importedSongs
           .filter(

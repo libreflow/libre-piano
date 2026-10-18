@@ -201,8 +201,8 @@ export function useAudioEngine(
     if (reverbRef.current) reverbRef.current.wet.value = pct / 100;
   }, [reverbPercent]);
 
-  const noteOn = useCallback((note: string) => {
-    samplerRef.current?.triggerAttack(note);
+  const noteOn = useCallback((note: string, velocity?: number) => {
+    samplerRef.current?.triggerAttack(note, undefined, velocity);
   }, []);
 
   const noteOff = useCallback((note: string) => {
