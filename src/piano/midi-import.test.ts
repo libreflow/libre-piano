@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Midi } from "@tonejs/midi";
-import { buildSongFromTracks, summarizeTracks } from "./midi-import";
+import { buildSongFromTracks, summarizeTracks, normalizeVelocity } from "./midi-import";
 import { MAX_IMPORTED_EVENTS, MIN_IMPORTED_NOTE_DURATION_SEC } from "./constants";
 
 // Construit un ArrayBuffer MIDI minimal à 2 pistes.
@@ -144,5 +144,35 @@ describe("roadmap #37/#52 : détection main gauche/droite", () => {
     const buffer = midi.toArray().slice().buffer;
     const summaries = summarizeTracks(new Midi(buffer));
     expect(summaries[0].handRole).toBe("right");
+  });
+});
+
+describe("bug : lecture .mid inaudible (vélocités quasi nulles)", () => {
+  it("une note à vélocité byte 1 (0.008) est ramenée au plancher jouable", () => {
+    const midi = new Midi();
+    const track = midi.addTrack();
+    track.addNote({ midi: 60, time: 0, duration: 0.5, velocity: 1 / 127 });
+    track.addNote({ midi: 64, time: 1, duration: 0.5, velocity: 0.9 });
+    const buffer = midi.toArray().slice().buffer;
+    const { song } = buildSongFromTracks(new Midi(buffer), [0], "V");
+    expect(song.events[0].velocity).toBe(0.25);
+    expect(song.events[1].velocity).toBeCloseTo(0.9);
+  });
+
+  it("une vélocité nulle vaut le défaut (jamais muette)", () => {
+    // NB : @tonejs/midi élimine les notes à vélocité byte 0 au parsing —
+    // le cas est défensif (données corrompues du localStorage).
+    expect(normalizeVelocity(0)).toBe(0.8);
+  });
+
+  it("normalizeVelocity : bornes et replis", () => {
+    expect(normalizeVelocity(undefined)).toBe(0.8);
+    expect(normalizeVelocity(0)).toBe(0.8);
+    expect(normalizeVelocity(-1)).toBe(0.8);
+    expect(normalizeVelocity(NaN)).toBe(0.8);
+    expect(normalizeVelocity(0.1)).toBe(0.25);
+    expect(normalizeVelocity(0.5)).toBe(0.5);
+    expect(normalizeVelocity(1)).toBe(1);
+    expect(normalizeVelocity(2)).toBe(1);
   });
 });

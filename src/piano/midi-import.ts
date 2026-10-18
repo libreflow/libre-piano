@@ -78,7 +78,7 @@ export async function loadMidi(buffer: ArrayBuffer): Promise<MidiLike> {
         midi: n.midi,
         time: n.time,
         duration: n.duration,
-        velocity: n.velocity,
+        velocity: normalizeVelocity(n.velocity),
       })),
       instrument: {
         name: track.instrument?.name,
@@ -166,6 +166,27 @@ export function summarizeTracks(midi: MidiLike): TrackSummary[] {
 
 /** Construit notre morceau interne à partir des pistes sélectionnées
  * (indices dans midi.tracks), jouable sur le clavier à 2 octaves affiché. */
+/** Plancher de vélocité : en dessous, la note est inaudible à la
+ * lecture (Tone.js multiplie le gain par la vélocité ; 0 = silence). */
+export const MIN_PLAYABLE_VELOCITY = 0.25;
+
+/** Vélocité par défaut quand le fichier n'en fournit pas (ou nulle). */
+export const DEFAULT_IMPORTED_VELOCITY = 0.8;
+
+/**
+ * Normalise la vélocité d'une note importée : les fichiers MIDI
+ * contiennent souvent des vélocités très faibles (ghost notes,
+ * encodage compressé, velocity byte 1 = 0.008) qui rendent la lecture
+ * muette. On écrête par un plancher jouable en conservant les nuances
+ * relatives au-dessus du seuil.
+ */
+export function normalizeVelocity(velocity: number | undefined): number {
+  if (typeof velocity !== "number" || !Number.isFinite(velocity) || velocity <= 0) {
+    return DEFAULT_IMPORTED_VELOCITY;
+  }
+  return Math.max(MIN_PLAYABLE_VELOCITY, Math.min(1, velocity));
+}
+
 export function buildSongFromTracks(
   midi: MidiLike,
   trackIndices: number[],
@@ -186,9 +207,10 @@ export function buildSongFromTracks(
         time: note.time,
         note: midiToNoteName(clamped),
         duration: Math.max(note.duration, MIN_IMPORTED_NOTE_DURATION_SEC),
-        // Vélocité réelle de la note MIDI (0-1) : l'accompagnement joué
-        // doux dans le fichier le restera à la lecture (roadmap #51).
-        velocity: note.velocity,
+        // Vélocité de la note MIDI (0-1), normalisée (cf. normalizeVelocity)
+        // : l'accompagnement joué doux reste plus doux que la mélodie,
+        // sans jamais devenir inaudible.
+        velocity: normalizeVelocity(note.velocity),
       });
     }
   });

@@ -9,6 +9,7 @@ import {
   VOLUME_DEFAULT_PERCENT,
 } from "./constants";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "./transpose";
+import { MIN_PLAYABLE_VELOCITY } from "./midi-import";
 import { EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB } from "./constants";
 
 const STORAGE_KEY = "libre-piano:state";
@@ -196,7 +197,12 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
                   void _drop;
                   return rest as SongEvent;
                 }
-                return { ...ev, velocity: Math.min(1, v) };
+                // Plancher de vélocité : les anciens imports persistés
+                // avec des vélocités quasi nulles restent audibles.
+                return {
+                  ...ev,
+                  velocity: Math.max(MIN_PLAYABLE_VELOCITY, Math.min(1, v)),
+                };
               }),
           }))
           .filter((song) => song.events.length > 0)
