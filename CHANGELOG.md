@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2 — 2026-10-18
+
+### Corrections de bugs
+
+- **Lecture des fichiers .mid inaudible** : les vélocités quasi nulles du fichier (ghost notes, encodage compressé) rendaient la lecture muette depuis l'introduction des vélocités. Normalisation à l'import (plancher jouable) — les morceaux déjà importés sont réparés automatiquement au chargement.
+
 ## 0.4.1 — 2026-10-18
 
 ### Corrections de bugs (audit complet)
