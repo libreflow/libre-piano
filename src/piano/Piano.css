@@ -309,6 +309,22 @@ button:active:not(:disabled) {
   color: var(--text-secondary);
 }
 
+/* Ligne de piste : label + bouton de pré-écoute côte à côte. */
+.track-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.track-list li > label {
+  flex: 1;
+  margin: 0;
+}
+.preview-btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
 .track-list {
   list-style: none;
   margin: 0 0 0.9rem;

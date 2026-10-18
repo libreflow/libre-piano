@@ -2,7 +2,9 @@
 
 ## Non publié
 
-### Fonctionnalités (roadmap #23, #27, #33, #42, #48, #51, #53, #60, #62, #64)
+### Fonctionnalités (roadmap #23, #27, #33, #42, #48, #50, #51, #53, #60, #62, #64)
+
+- Sélecteur d'import : bouton « Écouter » par piste (extrait de 8 s, exclusif, coupé à la fermeture du dialogue)
 
 - Métronome : tick discret (note courte du sampler) sur le Transport, activable pendant la lecture ou seul, tempo réglable 40–240 BPM
 
@@ -30,7 +32,7 @@
 
 - Import dynamique de `@tonejs/midi` : bundle initial 533 → 505 kB (chunk MIDI chargé à l'import)
 - Messages de statut auto-effacés après 8 s
-- Suite de tests : 118 tests, exécution accélérée (pool vmThreads)
+- Suite de tests : 124 tests, exécution accélérée (pool vmThreads)
 
 ## 0.2.1 — 2026-10-17
 
