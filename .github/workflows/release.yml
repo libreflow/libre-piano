@@ -61,5 +61,5 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
           # Génère latest.json consommé par le plugin updater de l'app.
-          updaterJsonPreferTag: true
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
