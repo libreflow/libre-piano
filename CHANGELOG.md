@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié
+## 0.4.1 — 2026-10-18
 
 ### Corrections de bugs (audit complet)
 
