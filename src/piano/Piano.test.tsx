@@ -133,6 +133,9 @@ describe("Piano (rendu)", () => {
     expect(c4).toHaveTextContent("K");
     expect(c4).not.toHaveTextContent("Do");
 
+    // Le segmented vit dans le menu Paramètres : on l'ouvre d'abord.
+    fireEvent.click(screen.getByRole("button", { name: /Paramètres/i }));
+
     // Mode solfège
     const solfegeBtn = screen.getByRole("radio", { name: /Do Ré/i });
     fireEvent.click(solfegeBtn);
@@ -148,6 +151,7 @@ describe("Piano (rendu)", () => {
   it("affiche les noms de solfège avec dièses corrects", () => {
     render(<Piano />);
     const cs3 = screen.getByLabelText("Touche C#3");
+    fireEvent.click(screen.getByRole("button", { name: /Paramètres/i }));
     fireEvent.click(screen.getByRole("radio", { name: /Do Ré/i }));
     expect(cs3).toHaveTextContent("Do#");
   });
