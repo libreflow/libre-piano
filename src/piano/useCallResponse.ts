@@ -120,6 +120,8 @@ export function useCallResponse(
         mistakes: 0,
       }));
       // Les notes sont jouées séquentiellement, à leur intervalle relatif.
+      // Tous les timers (notes + bascule en phase réponse) sont suivis dans
+      // timersRef : stop() doit pouvoir les annuler tous.
       const base = phrase.events[0].time;
       phrase.events.forEach((ev, i) => {
         const delay = (ev.time - base) * 1000;
@@ -127,7 +129,7 @@ export function useCallResponse(
           playDemoRef.current(ev.note, ev.duration);
           // Dernière note écoulée : passer en phase réponse.
           if (i === phrase.events.length - 1) {
-            window.setTimeout(() => {
+            const switchTimer = window.setTimeout(() => {
               phaseRef.current = "response";
               setState((prev) => ({
                 ...prev,
@@ -136,6 +138,7 @@ export function useCallResponse(
                 responseStep: 0,
               }));
             }, ev.duration * 1000);
+            timersRef.current.push(switchTimer);
           }
         }, delay);
         timersRef.current.push(timer);
@@ -186,9 +189,10 @@ export function useCallResponse(
                 mistakes: total,
               };
             }
-            window.setTimeout(() => {
+            const advanceTimer = window.setTimeout(() => {
               playPhrase(nextPhrase);
             }, 600);
+            timersRef.current.push(advanceTimer);
             return { ...prev, responseStep: nextStep };
           }
           return { ...prev, responseStep: nextStep };

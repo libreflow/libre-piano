@@ -24,6 +24,7 @@ import { sanitizeState } from "./storage";
 import {
   loadPersistedState,
   savePersistedState,
+  DEFAULT_STATE,
   STATE_VERSION,
   getActiveProfile,
   setActiveProfile,
@@ -746,6 +747,7 @@ function PianoInner() {
   // avec morceaux importés + préférences, transférable vers une autre machine.
   const exportConfig = useCallback(() => {
     const cfg = buildConfigFile({
+      ...DEFAULT_STATE,
       importedSongs,
       selectedSongId,
       speed,
@@ -754,6 +756,12 @@ function PianoInner() {
       labelMode,
       keyboardLayout,
       theme,
+      reverb,
+      transpose,
+      eq,
+      visualizer: showVisualizer,
+      shortcuts,
+      language,
     });
     const blob = new Blob([JSON.stringify(cfg, null, 2)], {
       type: "application/json",
@@ -764,7 +772,21 @@ function PianoInner() {
     a.download = "libre-piano-config.json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [importedSongs, selectedSongId, speed, volume, labelMode, keyboardLayout, theme]);
+  }, [
+    importedSongs,
+    selectedSongId,
+    speed,
+    volume,
+    labelMode,
+    keyboardLayout,
+    theme,
+    reverb,
+    transpose,
+    eq,
+    showVisualizer,
+    shortcuts,
+    language,
+  ]);
 
   const importConfig = useCallback(
     async (file: File) => {
@@ -960,7 +982,10 @@ function PianoInner() {
               className="play-btn"
               onClick={playSongGuarded}
               disabled={
-                status !== "ready" || Boolean(pendingImport) || practice.state.active
+                status !== "ready" ||
+                Boolean(pendingImport) ||
+                practice.state.active ||
+                callResponse.state.active
               }
             >
               <PlayIcon /> Lecture

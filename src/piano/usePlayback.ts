@@ -23,6 +23,10 @@ export function usePlayback(
   const partRef = useRef<Part<SongEvent> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(false);
+  // ID de l'événement « fin de morceau » programmé sur le Transport : il
+  // doit être retiré ciblé (clear) et non via transport.cancel(), qui
+  // purgerait AUSSI le Loop du métronome (également branché au Transport).
+  const endEventIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -34,8 +38,12 @@ export function usePlayback(
   }, [allSongs, selectedSongId]);
 
   const stopPlayback = useCallback(() => {
-    getTransport().stop();
-    getTransport().cancel();
+    const transport = getTransport();
+    transport.stop();
+    if (endEventIdRef.current !== null) {
+      transport.clear(endEventIdRef.current);
+      endEventIdRef.current = null;
+    }
     partRef.current?.dispose();
     partRef.current = null;
     setIsPlaying(false);
@@ -106,7 +114,7 @@ export function usePlayback(
 
     const transport = getTransport();
     if (!loop.loopEnabled) {
-      transport.scheduleOnce(() => {
+      endEventIdRef.current = transport.scheduleOnce(() => {
         getDraw().schedule(() => stopPlayback(), totalDuration);
       }, totalDuration + PLAYBACK_END_BUFFER_SEC);
     }
