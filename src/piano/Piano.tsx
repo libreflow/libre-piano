@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ensureAudioStarted, getContext, getTransport } from "./tone-gate";
 import {
   getKeyboardLayout,
@@ -22,10 +21,7 @@ import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
 import {
-  loadPersistedState,
-  savePersistedState,
   DEFAULT_STATE,
-  STATE_VERSION,
   getActiveProfile,
   setActiveProfile,
   listProfiles,
@@ -56,6 +52,14 @@ import {
   downloadSessionReport,
 } from "./practice-stats";
 import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
+import { useStatusMessage } from "./hooks/useStatusMessage";
+import { usePianoState } from "./hooks/usePianoState";
+import { useFullscreen } from "./hooks/useFullscreen";
+import {
+  useFavorites,
+  applyBuiltinFavorites,
+  importedFavoriteIds,
+} from "./hooks/useFavorites";
 import {
   SPEED_MIN_PERCENT,
   SPEED_MAX_PERCENT,
@@ -67,7 +71,6 @@ import {
   EQ_MIN_DB,
   EQ_MAX_DB,
   DISPLAY_CHORD_RATIO_THRESHOLD,
-  STATUS_MESSAGE_TIMEOUT_MS,
   REFERENCE_BPM,
 } from "./constants";
 import {
@@ -168,7 +171,8 @@ function PianoInner() {
   const [sustainOn, setSustainOn] = useState(false);
 
   // État persisté (localStorage) : lu une seule fois à l'initialisation.
-  const [initialState] = useState(() => loadPersistedState());
+  // État persisté (Phase A2) : chargement + callback de sauvegarde stable.
+  const { initialState, persist } = usePianoState();
 
   const [importedSongs, setImportedSongs] = useState<Song[]>(initialState.importedSongs);
   const [selectedSongId, setSelectedSongId] = useState(
@@ -208,11 +212,14 @@ function PianoInner() {
     windowKeys.forEach((label, note) => map.set(note, label));
     return map;
   }, [windowKeys]);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   // Thème clair/sombre (roadmap #64), persisté avec les préférences.
   const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
+  // Plein écran (Phase A4) : hook dédié.
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Message de statut auto-expirant (Phase A1) : hook dédié.
+  const { statusMessage, setStatusMessageAuto } =
+    useStatusMessage();
   // Menu Paramètres (refonte UI) : les options secondaires y sont regroupées.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -233,19 +240,6 @@ function PianoInner() {
       window.removeEventListener("keydown", onKey);
     };
   }, [settingsOpen]);
-  // Efface automatiquement le message de statut après quelques secondes,
-  // sauf s'il est remplacé entre-temps.
-  const statusMessageRef = useRef<string | null>(null);
-  const setStatusMessageAuto = useCallback((msg: string) => {
-    statusMessageRef.current = msg;
-    setStatusMessage(msg);
-    window.setTimeout(() => {
-      if (statusMessageRef.current === msg) {
-        statusMessageRef.current = null;
-        setStatusMessage(null);
-      }
-    }, STATUS_MESSAGE_TIMEOUT_MS);
-  }, []);
   // N'avertir qu'une fois par "session de dépassement" du quota.
   const quotaWarnedRef = useRef(false);
 
@@ -300,29 +294,24 @@ function PianoInner() {
   useEffect(() => {
     sustainOnRef.current = sustainOn;
   }, [sustainOn]);
-  // Favoris (roadmap #60) : persistés pour les importés, en mémoire pour
-  // les morceaux intégrés (ils sont des constantes du module songs).
-  const [builtinFavorites, setBuiltinFavorites] = useState<Set<string>>(
-    () => new Set(initialState.importedSongs.filter((s) => s.favorite).map((s) => s.id))
+  // Favoris (roadmap #60, Phase A3) : hook dédié.
+  const { builtinFavorites, toggleFavorite: toggleBuiltinFavorite } = useFavorites(
+    importedFavoriteIds(initialState.importedSongs)
   );
-  const allSongs = useMemo(() => {
-    const withFav = [...BUILTIN_SONGS, ...importedSongs];
-    if (builtinFavorites.size === 0) return withFav;
-    return withFav.map((s) =>
-      s.source === "builtin" && builtinFavorites.has(s.id) ? { ...s, favorite: true } : s
-    );
-  }, [importedSongs, builtinFavorites]);
-  const toggleFavorite = useCallback((id: string) => {
-    setImportedSongs((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, favorite: !s.favorite } : s))
-    );
-    setBuiltinFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const allSongs = useMemo(
+    () =>
+      applyBuiltinFavorites([...BUILTIN_SONGS, ...importedSongs], builtinFavorites),
+    [importedSongs, builtinFavorites]
+  );
+  const toggleFavorite = useCallback(
+    (id: string) => {
+      setImportedSongs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, favorite: !s.favorite } : s))
+      );
+      toggleBuiltinFavorite(id);
+    },
+    [toggleBuiltinFavorite]
+  );
 
   const selectedSong = useMemo(
     () => allSongs.find((s) => s.id === selectedSongId),
@@ -696,8 +685,7 @@ function PianoInner() {
 
   // Persistance : réécrit l'état complet à chaque changement pertinent.
   useEffect(() => {
-    const saved = savePersistedState({
-      version: STATE_VERSION,
+    const saved = persist({
       importedSongs,
       selectedSongId,
       speed,
@@ -723,6 +711,7 @@ function PianoInner() {
       quotaWarnedRef.current = false;
     }
   }, [
+    persist,
     importedSongs,
     selectedSongId,
     speed,
@@ -815,25 +804,7 @@ function PianoInner() {
     [setStatusMessageAuto]
   );
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
-  // B9 (audit) : l'état suit aussi les sorties natives (F11, Échap) —
-  // sinon le bouton s'inverse par rapport à la réalité.
-  useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, []);
-  const toggleFullscreen = async () => {
-    try {
-      const win = getCurrentWindow();
-      const next = !isFullscreen;
-      await win.setFullscreen(next);
-      setIsFullscreen(next);
-    } catch {
-      // API Tauri indisponible (ex: navigateur) : on ignore.
-    }
-  };
+  // Plein écran (Phase A4) : hook dédié (B9 : suit les sorties natives).
 
   // Vélocité au clic (roadmap #15) : plus le clic est bas sur la touche,
   // plus la note est forte — comme un vrai clavier (zone basse = frappe
