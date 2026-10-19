@@ -5,19 +5,15 @@ import {
   getWindowKeyMap,
   getWhitePositionOfNote,
   getOctaveShiftForNote,
-  noteToSolfege,
   KeyboardLayout,
   LabelMode,
-  OCTAVE_SHIFT_MIN,
-  OCTAVE_SHIFT_MAX,
 } from "./notes";
 import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
 import { useTrackPreview } from "./useTrackPreview";
-import { audioHealth, formatHealth } from "./audio-health";
 import { useRecorder } from "./useRecorder";
 import { downloadSongAsMidi } from "./midi-export";
-import { TRANSPOSE_MIN, TRANSPOSE_MAX, transposedSong } from "./transpose";
+import { transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
 import {
@@ -34,7 +30,6 @@ import {
   makeTickTrigger,
   startTransportForMetronome,
 } from "./useMetronome";
-import { METRONOME_MIN_BPM, METRONOME_MAX_BPM } from "./useMetronome";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
 import { useVisualizer } from "./useVisualizer";
@@ -46,53 +41,30 @@ import {
   removeStats,
   recordSession,
   sessionFrom,
-  summarize,
-  formatSessionDate,
-  buildSessionReport,
-  downloadSessionReport,
 } from "./practice-stats";
 import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
 import { useStatusMessage } from "./hooks/useStatusMessage";
 import { usePianoState } from "./hooks/usePianoState";
 import { useFullscreen } from "./hooks/useFullscreen";
+import PianoKeyboard from "./components/PianoKeyboard";
+import StatusOverlays from "./components/StatusOverlays";
+import TrackPicker from "./components/TrackPicker";
+import PracticePanel from "./components/PracticePanel";
+import EchoPanel from "./components/EchoPanel";
+import LoopControls from "./components/LoopControls";
+import SettingsMenu from "./components/SettingsMenu";
+import PlaybackControls from "./components/PlaybackControls";
+import SoundControls from "./components/SoundControls";
+import KeyboardControls from "./components/KeyboardControls";
 import {
   useFavorites,
   applyBuiltinFavorites,
   importedFavoriteIds,
 } from "./hooks/useFavorites";
 import {
-  SPEED_MIN_PERCENT,
-  SPEED_MAX_PERCENT,
-  SPEED_STEP_PERCENT,
-  VOLUME_MIN_PERCENT,
-  VOLUME_MAX_PERCENT,
-  REVERB_MIN_PERCENT,
-  REVERB_MAX_PERCENT,
-  EQ_MIN_DB,
-  EQ_MAX_DB,
-  DISPLAY_CHORD_RATIO_THRESHOLD,
   REFERENCE_BPM,
 } from "./constants";
-import {
-  PlayIcon,
-  StopIcon,
-  ImportIcon,
-  KeyboardIcon,
-  TagsIcon,
-  ExpandIcon,
-  CollapseIcon,
-  SustainIcon,
-  LoopIcon,
-  VolumeIcon,
-  StarIcon,
-  TrashIcon,
-  PracticeIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  SunIcon,
-  MoonIcon,
-  SettingsIcon,
-} from "./icons";
+import { SustainIcon } from "./icons";
 import "./Piano.css";
 
 /**
@@ -874,496 +846,135 @@ function PianoInner() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {status === "loading" && (
-        <div className="piano-loading" role="status" aria-live="polite">
-          Chargement des sons du piano… {loadedCount}/{SAMPLE_COUNT}
-          <progress
-            max={SAMPLE_COUNT}
-            value={loadedCount}
-            aria-label="Progression du chargement"
-          />
-        </div>
-      )}
-      {status === "error" && (
-        <div className="piano-loading" role="alert">
-          {t("loadError")}{" "}
-          <button className="import-btn" onClick={retryLoading}>
-            {t("retry")}
-          </button>
-          <span className="piano-error-hint">
-            Si le problème persiste, réinstalle l'application.
-          </span>
-        </div>
+      {(status === "loading" || status === "error") && (
+        <StatusOverlays
+          status={status}
+          loadedCount={loadedCount}
+          sampleCount={SAMPLE_COUNT}
+          loadErrorText={t("loadError")}
+          retryText={t("retry")}
+          onRetry={retryLoading}
+          statusMessage={statusMessage}
+          isDragOver={isDragOver}
+        />
       )}
 
       <div className="playback-controls" role="toolbar" aria-label="Contrôles du piano">
-        <div className="control-group" aria-label="Lecture">
-          <select
-            value={selectedSongId}
-            onChange={(e) => setSelectedSongId(e.target.value)}
-            disabled={isPlaying || isRecording}
-          >
-            {[...allSongs]
-              .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
-              // Imports récents en tête (roadmap #54) : les morceaux
-              // importés/enregistrés s'empilent au-dessus des intégrés,
-              // ordre d'ajout décroissant (le plus récent d'abord).
-              .sort(
-                (a, b) =>
-                  Number(b.source === "imported") - Number(a.source === "imported")
-              )
-              .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.favorite ? "★ " : ""}
-                  {s.source === "imported" ? `♪ ${s.title}` : s.title}
-                </option>
-              ))}
-          </select>
-
-          {selectedSong && (
-            <button
-              className="import-btn"
-              onClick={() => toggleFavorite(selectedSong.id)}
-              disabled={isPlaying}
-              aria-pressed={Boolean(selectedSong.favorite)}
-              title={
-                selectedSong.favorite
-                  ? "Retirer des favoris"
-                  : "Ajouter aux favoris (remonte en tête)"
-              }
-              aria-label="Basculer le favori de ce morceau"
-            >
-              <StarIcon />
-            </button>
-          )}
-          {selectedSong?.source === "imported" && (
-            <button
-              className="import-btn delete-song"
-              onClick={() => deleteImportedSong(selectedSong.id)}
-              disabled={isPlaying || isImporting || practice.state.active}
-              title="Supprimer ce morceau importé"
-              aria-label="Supprimer ce morceau importé"
-            >
-              <TrashIcon />
-            </button>
-          )}
-
-          {!isPlaying ? (
-            <button
-              className="play-btn"
-              onClick={playSongGuarded}
-              disabled={
-                status !== "ready" ||
-                Boolean(pendingImport) ||
-                practice.state.active ||
-                callResponse.state.active
-              }
-            >
-              <PlayIcon /> Lecture
-            </button>
-          ) : (
-            <button className="stop-btn" onClick={stopPlaybackAndClear}>
-              <StopIcon /> Arrêter
-            </button>
-          )}
-
-          <button
-            className="import-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isPlaying || isImporting}
-          >
-            {isImporting ? (
-              "Import…"
-            ) : (
-              <>
-                <ImportIcon /> Importer
-              </>
-            )}
-          </button>
-          <button
-            className={`import-btn ${isRecording ? "stop-btn" : ""}`}
-            onClick={toggleRecording}
-            disabled={isPlaying || isImporting}
-            aria-pressed={isRecording}
-            title={
-              isRecording
-                ? "Arrêter l'enregistrement et sauvegarder dans la bibliothèque"
-                : "Enregistrer ce que tu joues"
+        <PlaybackControls
+          songs={allSongs}
+          selectedSongId={selectedSongId}
+          selectedSong={selectedSong}
+          isPlaying={isPlaying}
+          isRecording={isRecording}
+          isImporting={isImporting}
+          statusReady={status === "ready"}
+          hasPendingImport={Boolean(pendingImport)}
+          practiceActive={practice.state.active}
+          echoActive={callResponse.state.active}
+          lastRecordingId={lastRecordingId}
+          fileInputRef={fileInputRef}
+          onSelectSong={setSelectedSongId}
+          onToggleFavorite={toggleFavorite}
+          onDeleteSong={deleteImportedSong}
+          onPlay={playSongGuarded}
+          onStop={stopPlaybackAndClear}
+          onImportFile={(file) => void importFile(file)}
+          onToggleRecording={toggleRecording}
+          onReplayLastRecording={() => {
+            if (!lastRecordingId) return;
+            setSelectedSongId(lastRecordingId);
+            setStatusMessageAuto(
+              "Dernier enregistrement sélectionné — ▶ pour le rejouer."
+            );
+          }}
+          onExportMidi={() => {
+            if (selectedSong)
+              void downloadSongAsMidi(selectedSong).then((ok) => {
+                if (!ok) setStatusMessageAuto("Échec de l'export MIDI.");
+              });
+          }}
+          onTogglePractice={() => {
+            if (practice.state.active) {
+              practice.stop();
+            } else {
+              if (isPlayingRef.current) stopPlaybackAndClear();
+              practice.start();
             }
-          >
-            {isRecording ? "■ Stopper" : "● Enregistrer"}
-          </button>
-          {lastRecordingId && (
-            <button
-              className="import-btn"
-              onClick={() => {
-                setSelectedSongId(lastRecordingId);
-                setStatusMessageAuto(
-                  "Dernier enregistrement sélectionné — ▶ pour le rejouer."
-                );
-              }}
-              title="Rejouer le dernier enregistrement (le sélectionne)"
-              aria-label="Rejouer le dernier enregistrement"
-            >
-              <PlayIcon /> Replay
-            </button>
-          )}
-          <button
-            className="import-btn"
-            onClick={() => {
-              if (selectedSong)
-                void downloadSongAsMidi(selectedSong).then((ok) => {
-                  if (!ok) setStatusMessageAuto("Échec de l'export MIDI.");
-                });
-            }}
-            disabled={isPlaying || !selectedSong}
-            title="Exporter le morceau sélectionné en fichier .mid"
-          >
-            <ExpandIcon /> .mid
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".mid,.midi"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) void importFile(file);
-            }}
-            style={{ display: "none" }}
-          />
+          }}
+          onToggleEcho={() => {
+            if (callResponse.state.active) {
+              callResponse.stop();
+            } else {
+              if (isPlayingRef.current) stopPlaybackAndClear();
+              if (practice.state.active) practice.stop();
+              callResponse.start();
+              callResponse.playPhrase(0);
+            }
+          }}
+        />
 
-          <button
-            className="import-btn"
-            onClick={() => {
-              if (practice.state.active) {
-                practice.stop();
-              } else {
-                if (isPlayingRef.current) stopPlaybackAndClear();
-                practice.start();
-              }
-            }}
-            disabled={status !== "ready" || isPlaying || Boolean(pendingImport)}
-            aria-pressed={practice.state.active}
-            title="Mode apprentissage : joue la note attendue pour avancer"
-          >
-            <PracticeIcon />
-            {practice.state.active ? "Quitter apprentissage" : "Apprentissage"}
-          </button>
-          <button
-            className="import-btn"
-            onClick={() => {
-              if (callResponse.state.active) {
-                callResponse.stop();
-              } else {
-                if (isPlayingRef.current) stopPlaybackAndClear();
-                if (practice.state.active) practice.stop();
-                callResponse.start();
-                callResponse.playPhrase(0);
-              }
-            }}
-            disabled={status !== "ready" || isPlaying || Boolean(pendingImport)}
-            aria-pressed={callResponse.state.active}
-            title="Mode echo : l'app joue une phrase, rejoue-la (roadmap #43)"
-          >
-            ♪ Echo
-          </button>
-        </div>
+        <SoundControls
+          speed={speed}
+          onSpeedChange={setSpeed}
+          metronomeEnabled={metronome.enabled}
+          metronomeBpm={metronome.bpm}
+          onToggleMetronome={toggleMetronome}
+          onMetronomeBpmChange={metronome.setBpm}
+          volume={volume}
+          onVolumeChange={setVolume}
+          reverb={reverb}
+          onReverbChange={setReverb}
+          eq={eq}
+          onEqChange={setEq}
+          transpose={transpose}
+          onTransposeChange={setTranspose}
+          isPlaying={isPlaying}
+        />
 
-        <div className="control-group" aria-label="Réglages">
-          <label className="speed-label">
-            Vitesse
-            <input
-              type="range"
-              min={SPEED_MIN_PERCENT}
-              max={SPEED_MAX_PERCENT}
-              step={SPEED_STEP_PERCENT}
-              value={speed}
-              onChange={(e) => setSpeed(Number(e.target.value))}
-              disabled={isPlaying}
-            />
-            <span>{speed}%</span>
-          </label>
-
-          <label className="speed-label" title="Métronome (BPM)">
-            <input
-              type="checkbox"
-              checked={metronome.enabled}
-              onChange={toggleMetronome}
-              disabled={false}
-            />
-            <input
-              type="range"
-              min={METRONOME_MIN_BPM}
-              max={METRONOME_MAX_BPM}
-              step={1}
-              value={metronome.bpm}
-              onChange={(e) => metronome.setBpm(Number(e.target.value))}
-            />
-            <span>{metronome.bpm} BPM</span>
-          </label>
-          <label className="speed-label volume">
-            <VolumeIcon />
-            <input
-              type="range"
-              min={VOLUME_MIN_PERCENT}
-              max={VOLUME_MAX_PERCENT}
-              step={5}
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-            />
-            <span>{volume}%</span>
-          </label>
-          <label className="speed-label volume" title="Profondeur de la réverbe">
-            <VolumeIcon />
-            <input
-              type="range"
-              min={REVERB_MIN_PERCENT}
-              max={REVERB_MAX_PERCENT}
-              step={5}
-              value={reverb}
-              onChange={(e) => setReverb(Number(e.target.value))}
-            />
-            <span>Réverbe {reverb}%</span>
-          </label>
-          <label className="speed-label eq-band" title="Égaliseur — graves">
-            <span aria-hidden="true">EQ</span>
-            <input
-              type="range"
-              min={EQ_MIN_DB}
-              max={EQ_MAX_DB}
-              step={1}
-              value={eq.low}
-              onChange={(e) =>
-                setEq((prev) => ({ ...prev, low: Number(e.target.value) }))
-              }
-              aria-label="Égaliseur — bandes graves"
-            />
-            <input
-              type="range"
-              min={EQ_MIN_DB}
-              max={EQ_MAX_DB}
-              step={1}
-              value={eq.mid}
-              onChange={(e) =>
-                setEq((prev) => ({ ...prev, mid: Number(e.target.value) }))
-              }
-              aria-label="Égaliseur — bandes médiums"
-            />
-            <input
-              type="range"
-              min={EQ_MIN_DB}
-              max={EQ_MAX_DB}
-              step={1}
-              value={eq.high}
-              onChange={(e) =>
-                setEq((prev) => ({ ...prev, high: Number(e.target.value) }))
-              }
-              aria-label="Égaliseur — bandes aigus"
-            />
-          </label>
-          <div
-            className="segmented"
-            role="group"
-            aria-label="Transposition en demi-tons"
-            title="Transposer la lecture (± demi-tons)"
-          >
-            <button
-              onClick={() => setTranspose((v) => Math.max(TRANSPOSE_MIN, v - 1))}
-              disabled={transpose <= TRANSPOSE_MIN || isPlaying}
-              aria-label="Transposer un demi-ton plus bas"
-            >
-              <ChevronLeftIcon />
-            </button>
-            <span className="octave-label" aria-live="polite">
-              {transpose > 0 ? `+${transpose}` : transpose} st
-            </span>
-            <button
-              onClick={() => setTranspose((v) => Math.min(TRANSPOSE_MAX, v + 1))}
-              disabled={transpose >= TRANSPOSE_MAX || isPlaying}
-              aria-label="Transposer un demi-ton plus haut"
-            >
-              <ChevronRightIcon />
-            </button>
-          </div>
-        </div>
-
-        <div className="control-group" aria-label="Disposition du clavier">
-          <div
-            className="segmented"
-            role="group"
-            aria-label="Octave de la fenêtre clavier PC"
-          >
-            <button
-              onClick={() => setOctaveShift((v) => Math.max(OCTAVE_SHIFT_MIN, v - 1))}
-              disabled={octaveShift <= OCTAVE_SHIFT_MIN || practice.state.active}
-              title="Fenêtre PC : octave précédente"
-              aria-label="Fenêtre clavier : octave précédente"
-            >
-              <ChevronLeftIcon />
-            </button>
-            <span className="octave-label" aria-live="polite">
-              C{3 + octaveShift}
-            </span>
-            <button
-              onClick={() => setOctaveShift((v) => Math.min(OCTAVE_SHIFT_MAX, v + 1))}
-              disabled={octaveShift >= OCTAVE_SHIFT_MAX || practice.state.active}
-              title="Fenêtre PC : octave suivante"
-              aria-label="Fenêtre clavier : octave suivante"
-            >
-              <ChevronRightIcon />
-            </button>
-          </div>
-
-          <div className="segmented" role="radiogroup" aria-label="AZERTY ou QWERTY">
-            {(["azerty", "qwerty"] as const).map((layout) => (
-              <button
-                key={layout}
-                role="radio"
-                aria-checked={keyboardLayout === layout}
-                className={keyboardLayout === layout ? "seg-active" : ""}
-                onClick={() => setKeyboardLayout(layout)}
-                title={`Disposition ${layout.toUpperCase()}`}
-              >
-                <KeyboardIcon />
-                {layout.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
+        <KeyboardControls
+          octaveShift={octaveShift}
+          onOctaveShiftChange={setOctaveShift}
+          keyboardLayout={keyboardLayout}
+          onLayoutChange={setKeyboardLayout}
+          practiceActive={practice.state.active}
+        />
 
         <div className="control-group" aria-label="Affichage">
-          <div className="settings-menu" ref={settingsRef}>
-            <button
-              className={`import-btn ${settingsOpen ? "seg-active" : ""}`}
-              onClick={() => setSettingsOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={settingsOpen}
-              aria-pressed={settingsOpen}
-              title="Paramètres"
-            >
-              <SettingsIcon />
-              Paramètres
-            </button>
-            {settingsOpen && (
-              <div className="settings-panel" role="menu" aria-label="Paramètres">
-                <h4>Affichage</h4>
-                <div
-                  className="segmented"
-                  role="radiogroup"
-                  aria-label="Étiquettes des touches"
-                >
-                  {(
-                    [
-                      ["lettres", "A B C"],
-                      ["solfege", "Do Ré"],
-                      ["both", "A B C + Do"],
-                      ["none", "Rien"],
-                    ] as const
-                  ).map(([mode, label]) => (
-                    <button
-                      key={mode}
-                      role="radio"
-                      aria-checked={labelMode === mode}
-                      className={labelMode === mode ? "seg-active" : ""}
-                      onClick={() => setLabelMode(mode)}
-                      title={`Étiquettes : ${label}`}
-                    >
-                      <TagsIcon />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="import-btn"
-                  onClick={() => setShowVisualizer((v) => !v)}
-                  aria-pressed={showVisualizer}
-                  title="Afficher la forme d'onde pendant le jeu"
-                >
-                  {showVisualizer ? "Masquer l'onde" : "Onde"}
-                </button>
-                <button
-                  className="import-btn"
-                  onClick={toggleFullscreen}
-                  aria-pressed={isFullscreen}
-                >
-                  {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
-                  {isFullscreen ? "Quitter" : "Plein écran"}
-                </button>
-                <h4>Langue</h4>
-                <button
-                  className="import-btn"
-                  onClick={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
-                  title="Interface language / Langue de l'interface"
-                  aria-label="Switch language (FR/EN)"
-                >
-                  {language === "fr" ? "FR" : "EN"}
-                </button>
-                <h4>Raccourcis</h4>
-                <button
-                  className="import-btn"
-                  onClick={() => {
-                    setStatusMessageAuto(
-                      "Appuie la touche à utiliser pour la pédale de sustain…"
-                    );
-                    setRemapCapture("sustain");
-                    setSettingsOpen(false);
-                  }}
-                  title="Personnaliser le raccourci de la pédale (roadmap #65)"
-                >
-                  Pédale : {shortcuts.sustain === "Space" ? "Espace" : shortcuts.sustain}
-                </button>
-                <button
-                  className="import-btn"
-                  onClick={() => {
-                    setStatusMessageAuto(
-                      "Appuie la touche à utiliser pour lecture/arrêt…"
-                    );
-                    setRemapCapture("togglePlayback");
-                    setSettingsOpen(false);
-                  }}
-                  title="Personnaliser le raccourci lecture/arrêt (roadmap #65)"
-                >
-                  Lecture :{" "}
-                  {shortcuts.togglePlayback === "Enter"
-                    ? "Entrée"
-                    : shortcuts.togglePlayback}
-                </button>
-                <h4>Configuration</h4>
-                <button
-                  className="import-btn"
-                  onClick={exportConfig}
-                  disabled={isPlaying}
-                  title="Exporter morceaux importés + préférences en JSON"
-                  aria-label="Exporter la configuration"
-                >
-                  <ExpandIcon />
-                  Exporter
-                </button>
-                <button
-                  className="import-btn"
-                  onClick={() => configInputRef.current?.click()}
-                  disabled={isPlaying}
-                  title="Importer un fichier de configuration Libre Piano"
-                  aria-label="Importer la configuration"
-                >
-                  <ImportIcon />
-                  Config
-                </button>
-                <input
-                  ref={configInputRef}
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (file) void importConfig(file);
-                  }}
-                  style={{ display: "none" }}
-                />
-              </div>
-            )}
-          </div>
+          <SettingsMenu
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            menuRef={settingsRef}
+            labelMode={labelMode}
+            onLabelModeChange={setLabelMode}
+            showVisualizer={showVisualizer}
+            onToggleVisualizer={() => setShowVisualizer((v) => !v)}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
+            language={language}
+            onToggleLanguage={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
+            shortcuts={shortcuts}
+            onRemapSustain={() => {
+              setStatusMessageAuto(
+                "Appuie la touche à utiliser pour la pédale de sustain…"
+              );
+              setRemapCapture("sustain");
+              setSettingsOpen(false);
+            }}
+            onRemapTogglePlayback={() => {
+              setStatusMessageAuto(
+                "Appuie la touche à utiliser pour lecture/arrêt…"
+              );
+              setRemapCapture("togglePlayback");
+              setSettingsOpen(false);
+            }}
+            isPlaying={isPlaying}
+            onExportConfig={exportConfig}
+            onImportConfig={() => configInputRef.current?.click()}
+            configInputRef={configInputRef}
+            onConfigFile={(file) => void importConfig(file)}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
           <span
             className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
             title="Maintenir la barre d'espace = pédale de sustain"
@@ -1373,237 +984,69 @@ function PianoInner() {
           </span>
         </div>
       </div>
-      <button
-        className="theme-toggle"
-        onClick={toggleTheme}
-        aria-pressed={theme === "light"}
-        title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
-        aria-label={
-          theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre"
-        }
-      >
-        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-      </button>
-      <div className="loop-controls">
-        <label className="loop-toggle">
-          <input
-            type="checkbox"
-            checked={loopEnabled}
-            onChange={(e) => setLoopEnabled(e.target.checked)}
-            disabled={isPlaying}
-          />
-          <LoopIcon /> Boucle A-B
-        </label>
-        <label className="loop-bound">
-          Début
-          <input
-            type="number"
-            min={0}
-            max={Math.max(0, loopEnd - 0.1)}
-            step={0.5}
-            value={loopStart.toFixed(1)}
-            onChange={(e) => setLoopStart(Number(e.target.value))}
-            disabled={isPlaying || !loopEnabled}
-          />
-          s
-        </label>
-        <label className="loop-bound">
-          Fin
-          <input
-            type="number"
-            min={loopStart + 0.1}
-            max={selectedSongDuration}
-            step={0.5}
-            value={loopEnd.toFixed(1)}
-            onChange={(e) => setLoopEnd(Number(e.target.value))}
-            disabled={isPlaying || !loopEnabled}
-          />
-          s
-        </label>
-        <span className="loop-total">/ {selectedSongDuration.toFixed(1)}s au total</span>
-      </div>
+
+      <LoopControls
+        loopEnabled={loopEnabled}
+        loopStart={loopStart}
+        loopEnd={loopEnd}
+        songDuration={selectedSongDuration}
+        isPlaying={isPlaying}
+        onToggle={setLoopEnabled}
+        onStartChange={setLoopStart}
+        onEndChange={setLoopEnd}
+      />
+
+
 
       {status === "ready" && (
-        <div className="audio-health" role="status" aria-label="Santé audio">
-          {formatHealth(audioHealth())}
-        </div>
+        <StatusOverlays
+          status={status}
+          loadedCount={loadedCount}
+          sampleCount={SAMPLE_COUNT}
+          loadErrorText={t("loadError")}
+          retryText={t("retry")}
+          onRetry={retryLoading}
+          statusMessage={statusMessage}
+          isDragOver={isDragOver}
+        />
       )}
-      {isDragOver && (
-        <div className="drop-overlay" role="status">
-          Dépose ton fichier .mid / .midi pour l'importer
-        </div>
-      )}
-      {statusMessage && <div className="status-message">{statusMessage}</div>}
 
       {practice.state.active && (
-        <div className="practice-panel" role="status">
-          {(() => {
-            const summary = summarize(stats[selectedSongId]);
-            return summary.sessionCount > 0 ? (
-              <span className="practice-stats">
-                Meilleur : <strong>{summary.bestScore}/100</strong> ·{" "}
-                {summary.sessionCount} session(s) · moyenne {summary.averageScore}% · le{" "}
-                {formatSessionDate(summary.lastSessionDate)}
-              </span>
-            ) : null;
-          })()}
-          {practice.state.done ? (
-            <>
-              <strong>Session terminée !</strong> {eventsCount} notes,{" "}
-              {practice.state.mistakes} faute(s), score {practice.state.score ?? 100}/100.
-              <button className="import-btn" onClick={practice.start}>
-                Recommencer
-              </button>
-              <button
-                className="import-btn"
-                onClick={() => {
-                  if (!selectedSong) return;
-                  // Rapport de session (roadmap #40) : export JSON.
-                  downloadSessionReport(
-                    selectedSong.title,
-                    buildSessionReport(selectedSong.title, stats, selectedSong.id)
-                  );
-                }}
-                title="Exporter le rapport de progression en JSON"
-              >
-                Rapport
-              </button>
-              <button className="import-btn" onClick={practice.stop}>
-                Fermer
-              </button>
-            </>
-          ) : (
-            <>
-              Note {practice.state.step + 1}/{eventsCount} —{" "}
-              {(() => {
-                const note = practice.state.expectedNote;
-                const key = note ? noteToKey.get(note) : undefined;
-                return key ? (
-                  <>
-                    appuie sur <kbd className="practice-key">{key}</kbd> ({note})
-                  </>
-                ) : (
-                  <>joue {note} à la souris</>
-                );
-              })()}{" "}
-              · {practice.state.mistakes} faute(s)
-            </>
-          )}
-        </div>
+        <PracticePanel
+          state={practice.state}
+          stats={stats[selectedSongId]}
+          eventsCount={eventsCount}
+          selectedSong={selectedSong}
+          noteToKey={noteToKey}
+          onStart={practice.start}
+          onStop={practice.stop}
+        />
       )}
-
       {callResponse.state.active && (
-        <div className="practice-panel" role="status">
-          {callResponse.state.done ? (
-            <>
-              <strong>Morceau rejoué en entier !</strong> {callResponse.state.phraseCount}{" "}
-              phrase(s), {callResponse.state.mistakes} faute(s).
-              <button
-                className="import-btn"
-                onClick={() => {
-                  callResponse.start();
-                  callResponse.playPhrase(0);
-                }}
-              >
-                Recommencer
-              </button>
-              <button className="import-btn" onClick={callResponse.stop}>
-                Fermer
-              </button>
-            </>
-          ) : callResponse.state.phase === "call" ? (
-            <>
-              <strong>Écoute…</strong> Phrase {callResponse.state.phraseIndex + 1}/
-              {callResponse.state.phraseCount}
-            </>
-          ) : (
-            <>
-              <strong>À toi !</strong> Phrase {callResponse.state.phraseIndex + 1}/
-              {callResponse.state.phraseCount} — note{" "}
-              {callResponse.state.responseStep + 1}/{callResponse.state.expected.length} ·{" "}
-              {callResponse.state.mistakes} faute(s)
-            </>
-          )}
-        </div>
+        <EchoPanel
+          state={callResponse.state}
+          onRestart={() => {
+            callResponse.start();
+            callResponse.playPhrase(0);
+          }}
+          onStop={callResponse.stop}
+        />
       )}
       {pendingImport && (
-        <div className="track-picker">
-          <h3>Pistes de "{pendingImport.title}"</h3>
-          <p className="track-picker-hint">
-            Choisis les pistes à importer (décoche l'accompagnement/basse pour n'entendre
-            que la mélodie, par exemple).
-          </p>
-          <ul className="track-list">
-            {pendingImport.tracks.map((t) => (
-              <li key={t.index}>
-                <label className={t.likelyMelody ? "likely-melody" : ""}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTrackIndices.has(t.index)}
-                    onChange={() => toggleTrack(t.index)}
-                  />
-                  <span className="track-info">
-                    <span className="track-title">
-                      {t.name} — {t.noteCount} notes
-                      {t.likelyMelody && (
-                        <span className="melody-tag">
-                          <StarIcon /> mélodie
-                        </span>
-                      )}
-                    </span>
-                    <span className="track-details">
-                      tessiture {t.pitchRange} ·{" "}
-                      {t.chordRatio > DISPLAY_CHORD_RATIO_THRESHOLD
-                        ? "accords/accompagnement"
-                        : "monophonique"}
-                      {t.percussion ? " · percussion" : ""}
-                      {t.instrumentName ? ` · ${t.instrumentName}` : ""}
-                      {t.handRole === "right"
-                        ? " · main droite"
-                        : t.handRole === "left"
-                          ? " · main gauche"
-                          : ""}
-                    </span>
-                  </span>
-                </label>
-                <button
-                  className="import-btn preview-btn"
-                  onClick={() => {
-                    if (trackPreview.previewingTrack === t.index) {
-                      trackPreview.stop();
-                      return;
-                    }
-                    const notes = pendingImport.midi.tracks[t.index]?.notes ?? [];
-                    trackPreview.preview(t.index, notes);
-                  }}
-                  aria-pressed={trackPreview.previewingTrack === t.index}
-                  title="Écouter un extrait de cette piste"
-                  aria-label={`Pré-écouter la piste ${t.name}`}
-                >
-                  {trackPreview.previewingTrack === t.index ? (
-                    <>
-                      <StopIcon /> Écoute…
-                    </>
-                  ) : (
-                    <>
-                      <PlayIcon /> Écouter
-                    </>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="track-picker-actions">
-            <button className="import-btn" onClick={cancelImport}>
-              Annuler
-            </button>
-            <button className="play-btn" onClick={confirmImport}>
-              Importer la sélection
-            </button>
-          </div>
-        </div>
+        <TrackPicker
+          pendingImport={pendingImport}
+          selectedTrackIndices={selectedTrackIndices}
+          previewingTrack={trackPreview.previewingTrack}
+          onToggleTrack={toggleTrack}
+          onPreview={(index) => {
+            const notes = pendingImport.midi.tracks[index]?.notes ?? [];
+            trackPreview.preview(index, notes);
+          }}
+          onStopPreview={trackPreview.stop}
+          onConfirm={confirmImport}
+          onCancel={cancelImport}
+        />
       )}
-
       {showVisualizer && (
         <canvas
           ref={visualizerCanvasRef}
@@ -1643,76 +1086,18 @@ function PianoInner() {
           )}
         </div>
       )}
-      <div
-        className="piano-scroll"
-        ref={pianoScrollRef}
-        role="group"
-        aria-label="Clavier de piano 88 touches — joué au clavier PC ou à la souris, hors navigation Tab"
-      >
-        <div
-          className={`piano ${isPlaying ? "piano-readonly" : ""}`}
-          style={{ ["--white-keys" as any]: whiteKeyCount }}
-        >
-          {ALL_KEYS.filter((k) => !k.isBlack).map((k) => (
-            <button
-              key={k.note}
-              className={`key white ${keyStateClass(k.note)}${
-                k.note.startsWith("C") ? " octave-marker" : ""
-              }`}
-              style={{ ["--index" as any]: k.whiteIndex }}
-              tabIndex={-1}
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture?.(e.pointerId);
-                handlePointerDown(k.note, e);
-              }}
-              onPointerUp={() => handlePointerUp(k.note)}
-              onPointerCancel={() => handlePointerUp(k.note)}
-              onPointerLeave={() => activeNotes.has(k.note) && handlePointerUp(k.note)}
-              title={`${noteToSolfege(k.note)} (${k.note})`}
-              aria-label={`Touche ${k.note}`}
-            >
-              {labelMode !== "none" && (
-                <span className="key-label">
-                  {(labelMode === "lettres" || labelMode === "both") &&
-                    windowKeys.get(k.note)}
-                  {labelMode === "solfege" && noteToSolfege(k.note)}
-                  {labelMode === "both" && (
-                    <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
-                  )}
-                </span>
-              )}
-            </button>
-          ))}
-          {ALL_KEYS.filter((k) => k.isBlack).map((k) => (
-            <button
-              key={k.note}
-              className={`key black ${keyStateClass(k.note)}`}
-              style={{ ["--index" as any]: k.whiteIndex }}
-              tabIndex={-1}
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture?.(e.pointerId);
-                handlePointerDown(k.note, e);
-              }}
-              onPointerUp={() => handlePointerUp(k.note)}
-              onPointerCancel={() => handlePointerUp(k.note)}
-              onPointerLeave={() => activeNotes.has(k.note) && handlePointerUp(k.note)}
-              title={`${noteToSolfege(k.note)} (${k.note})`}
-              aria-label={`Touche ${k.note}`}
-            >
-              {labelMode !== "none" && (
-                <span className="key-label">
-                  {(labelMode === "lettres" || labelMode === "both") &&
-                    windowKeys.get(k.note)}
-                  {labelMode === "solfege" && noteToSolfege(k.note)}
-                  {labelMode === "both" && (
-                    <span className="key-label-solfege">{noteToSolfege(k.note)}</span>
-                  )}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PianoKeyboard
+        allKeys={ALL_KEYS}
+        whiteKeyCount={whiteKeyCount}
+        windowKeys={windowKeys}
+        labelMode={labelMode}
+        isPlaying={isPlaying}
+        keyStateClass={keyStateClass}
+        activeNotes={activeNotes}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        scrollRef={pianoScrollRef}
+      />
     </div>
   );
 }
