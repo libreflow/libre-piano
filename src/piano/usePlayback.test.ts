@@ -30,6 +30,7 @@ vi.mock("./tone-gate", () => ({
   getTransport: () => ({
     stop: vi.fn(),
     cancel: vi.fn(),
+    clear: vi.fn(),
     start: vi.fn(),
     scheduleOnce: vi.fn(),
   }),
@@ -155,6 +156,18 @@ describe("usePlayback", () => {
       (hook.result.current as { stopPlayback: () => void }).stopPlayback();
     });
     expect((hook.result.current as { isPlaying: boolean }).isPlaying).toBe(false);
+  });
+
+  it("stop n'appelle pas transport.cancel() : le métronome survit à l'arrêt", async () => {
+    const { hook } = setup();
+    await play(hook);
+    act(() => {
+      (hook.result.current as { stopPlayback: () => void }).stopPlayback();
+    });
+    const transport = (await import("./tone-gate")).getTransport() as {
+      cancel: ReturnType<typeof vi.fn>;
+    };
+    expect(transport.cancel).not.toHaveBeenCalled();
   });
 
   it("expose la durée du morceau sélectionné", () => {
