@@ -15,6 +15,7 @@
 - **Timers orphelins du mode echo** : quitter l'echo au mauvais moment pouvait relancer une session toute seule (bascule de phase et avance de phrase maintenant annulées au stop)
 - **Lecture pendant une session echo** : le bouton Lecture est désormais désactivé pendant l'echo, comme pendant l'apprentissage
 - **Export de configuration incomplet** : réverbe, égaliseur, transposition, visualiseur, raccourcis et langue sont maintenant inclus (l'import savait les lire, l'export ne les écrivait pas)
+- **Fichiers .mid inaudibles (complément au fix 0.4.1)** : la normalisation de vélocité ne couvrait que la lecture — la **pré-écoute des pistes** passait la vélocité brute du fichier (ghost notes à 0.008 = silence), donnant l'impression que le fichier « ne marche pas » dès le sélecteur de pistes. Le plancher jouable s'applique désormais aussi à la pré-écoute et dans le worker (données jouables par construction)
 
 ### Refactorisation interne (aucun changement visible)
 
