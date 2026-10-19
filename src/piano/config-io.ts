@@ -4,43 +4,22 @@
 // par le même sanitize que le chargement — un fichier importé est donc
 // sûr par construction.
 
-import type { KeyboardLayout, LabelMode } from "./notes";
-import type { Song } from "./songs";
+import type { PersistedState } from "./storage";
 
 export interface ConfigFile {
   app: "libre-piano";
   version: number;
   exportedAt: string;
-  state: {
-    importedSongs: Song[];
-    selectedSongId: string | null;
-    speed: number;
-    volume: number;
-    showKeyLabels: boolean;
-    labelMode: LabelMode;
-    keyboardLayout: KeyboardLayout;
-    theme: "dark" | "light";
-  };
+  state: PersistedState;
 }
 
 /** Construit l'objet exportable depuis un PersistedState. */
-export function buildConfigFile(
-  state: Omit<ConfigFile["state"], never> & object
-): ConfigFile {
+export function buildConfigFile(state: PersistedState): ConfigFile {
   return {
     app: "libre-piano",
     version: 1,
     exportedAt: new Date().toISOString(),
-    state: {
-      importedSongs: state.importedSongs,
-      selectedSongId: state.selectedSongId,
-      speed: state.speed,
-      volume: state.volume,
-      showKeyLabels: state.showKeyLabels,
-      labelMode: state.labelMode,
-      keyboardLayout: state.keyboardLayout,
-      theme: state.theme,
-    },
+    state,
   };
 }
 
