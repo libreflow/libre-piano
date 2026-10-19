@@ -13,20 +13,12 @@ import {
   EQ_MIN_DB,
   EQ_MAX_DB,
 } from "../constants";
-import {
-  METRONOME_MIN_BPM,
-  METRONOME_MAX_BPM,
-} from "../useMetronome";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "../transpose";
 import type { EqSettings } from "../useAudioEngine";
 
 export interface SoundControlsProps {
   speed: number;
   onSpeedChange: (v: number) => void;
-  metronomeEnabled: boolean;
-  metronomeBpm: number;
-  onToggleMetronome: () => void;
-  onMetronomeBpmChange: (v: number) => void;
   volume: number;
   onVolumeChange: (v: number) => void;
   reverb: number;
@@ -41,10 +33,6 @@ export interface SoundControlsProps {
 export default function SoundControls({
   speed,
   onSpeedChange,
-  metronomeEnabled,
-  metronomeBpm,
-  onToggleMetronome,
-  onMetronomeBpmChange,
   volume,
   onVolumeChange,
   reverb,
@@ -71,23 +59,6 @@ export default function SoundControls({
         <span>{speed}%</span>
       </label>
 
-      <label className="speed-label" title="Métronome (BPM)">
-        <input
-          type="checkbox"
-          checked={metronomeEnabled}
-          onChange={onToggleMetronome}
-          disabled={false}
-        />
-        <input
-          type="range"
-          min={METRONOME_MIN_BPM}
-          max={METRONOME_MAX_BPM}
-          step={1}
-          value={metronomeBpm}
-          onChange={(e) => onMetronomeBpmChange(Number(e.target.value))}
-        />
-        <span>{metronomeBpm} BPM</span>
-      </label>
       <label className="speed-label volume">
         <VolumeIcon />
         <input

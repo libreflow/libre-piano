@@ -25,11 +25,6 @@ import {
 } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
-import {
-  useMetronome,
-  makeTickTrigger,
-  startTransportForMetronome,
-} from "./useMetronome";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
 import { useVisualizer } from "./useVisualizer";
@@ -464,23 +459,6 @@ function PianoInner() {
 
   // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
   const trackPreview = useTrackPreview(triggerAttackRelease);
-  // Métronome (roadmap #27) : tick de sampler sur le Transport.
-  // useCallback et pas useMemo : ne touche pas la ref pendant le render
-  // (la lisera seulement à l'intérieur du callback, au moment du tick).
-  const triggerTick = useCallback(() => {
-    makeTickTrigger(samplerRef)();
-  }, [samplerRef]);
-  const metronome = useMetronome(triggerTick);
-  const metronomeEnabledRef = useRef(false);
-  useEffect(() => {
-    metronomeEnabledRef.current = metronome.enabled;
-  }, [metronome.enabled]);
-  const toggleMetronome = useCallback(() => {
-    metronome.toggle();
-    // Le Transport doit tourner pour que le Loop du métronome tique :
-    // si on l'active pendant l'arrêt de la lecture, on le démarre.
-    if (!metronomeEnabledRef.current) startTransportForMetronome();
-  }, [metronome]);
   useKeyboardInput({
     layout: keyboardLayout,
     octaveShift,
@@ -916,10 +894,6 @@ function PianoInner() {
         <SoundControls
           speed={speed}
           onSpeedChange={setSpeed}
-          metronomeEnabled={metronome.enabled}
-          metronomeBpm={metronome.bpm}
-          onToggleMetronome={toggleMetronome}
-          onMetronomeBpmChange={metronome.setBpm}
           volume={volume}
           onVolumeChange={setVolume}
           reverb={reverb}
