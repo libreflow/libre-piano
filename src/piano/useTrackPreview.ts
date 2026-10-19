@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Part, getTransport } from "./tone-gate";
 import { clampMidiToKeyboard, midiToNoteName } from "./notes";
 import { MIN_IMPORTED_NOTE_DURATION_SEC } from "./constants";
+import { normalizeVelocity } from "./midi-import";
 import type { SongEvent } from "./songs";
 
 /** Durée de l'extrait de pré-écoute, en secondes. */
@@ -21,7 +22,10 @@ export function buildPreviewEvents(
       time: n.time,
       note: midiToNoteName(clampMidiToKeyboard(n.midi)),
       duration: Math.max(n.duration, MIN_IMPORTED_NOTE_DURATION_SEC),
-      velocity: n.velocity,
+      // Audit .mid inaudibles : la pré-écoute doit appliquer le même
+      // plancher de vélocité que la lecture, sinon une piste muette à
+      // la pré-écoute paraît « ne pas marcher » alors qu'elle jouera.
+      velocity: normalizeVelocity(n.velocity),
     }));
 }
 

@@ -33,6 +33,7 @@ export interface MidiWorkerResult {
 
 self.onmessage = async (e: MessageEvent<ArrayBuffer>) => {
   const { Midi } = await import("@tonejs/midi");
+  const { normalizeVelocity } = await import("./midi-import");
   let result: MidiWorkerResult;
   try {
     const midi = new Midi(e.data);
@@ -58,7 +59,10 @@ self.onmessage = async (e: MessageEvent<ArrayBuffer>) => {
           midi: n.midi,
           time: n.time,
           duration: n.duration,
-          velocity: n.velocity,
+          // Normalisation (audit .mid inaudibles) : les ghost notes à
+          // vélocité quasi nulle doivent être audibles partout, y compris
+          // dans la pré-écoute des pistes — pas seulement à la lecture.
+          velocity: normalizeVelocity(n.velocity),
         })),
       })),
     };
