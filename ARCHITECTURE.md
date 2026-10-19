@@ -10,22 +10,52 @@ tout le métier vit dans le frontend).
 ┌───────────────────────────────┐
 │  React (webview)              │
 │                               │
-│  Piano.tsx (composant racine) │
-│   ├── useAudioEngine          │  ← Sampler Tone.js + volume
-│   ├── usePlayback             │  ← Transport/Part, boucle A-B
-│   └── useKeyboardInput        │  ← clavier PC + pédale sustain
+│  Piano.tsx (orchestration)    │
+│   ├── hooks/ (état UI)        │
+│   │    usePianoState ·        │
+│   │    useStatusMessage ·     │
+│   │    useFavorites ·         │
+│   │    useFullscreen          │
+│   ├── hooks métier            │
+│   │    useAudioEngine ← Sampler Tone.js + volume
+│   │    usePlayback ← Transport/Part, boucle A-B
+│   │    useKeyboardInput ← clavier PC + pédale sustain
+│   │    useMetronome · useRecorder · usePractice ·
+│   │    useCallResponse · useVisualizer · …
+│   └── components/ (UI)       │
+│        PlaybackControls · SoundControls ·
+│        KeyboardControls · SettingsMenu ·
+│        PianoKeyboard · LoopControls ·
+│        TrackPicker · PracticePanel ·
+│        EchoPanel · StatusOverlays │
 │                               │
 │  Modules purs (testés) :      │
 │   notes.ts · songs.ts ·       │
 │   midi-import.ts · storage.ts │
-└───────────────┬───────────────┘
+└───────────────────────────────┬─┘
                 │ localStorage + fetch samples
-┌───────────────┴───────────────┐
+┌───────────────────────────────┴─┐
 │  Tauri (Rust)                  │
 │  lib.rs : fenêtre + plugin     │
 │  opener uniquement             │
 └───────────────────────────────┘
 ```
+
+### Découpage (refactor Piano.tsx)
+
+`Piano.tsx` orchestre : il câble les hooks entre eux et compose les
+composants. Règles pour le faire grandir proprement :
+
+- **Composants passifs** (`src/piano/components/`) : valeurs et callbacks
+  en props, pas d'état métier local — tout le métier vit dans les hooks.
+- **Hooks d'état UI** (`src/piano/hooks/`) : `usePianoState` (chargement
+  persisté + callback `persist` stable), `useStatusMessage` (message
+  auto-expirant), `useFavorites`, `useFullscreen`.
+- **Patterns « adjusting state during render »** (reset de session au
+  changement de morceau, octave auto en apprentissage) : ils restent
+  chez `Piano.tsx` — un hook déplacé dans un enfant s'exécuterait dans
+  un autre ordre d'effets.
+- Plan de référence : `docs/plan-refactor-piano.md`.
 
 ## Flux de données
 
