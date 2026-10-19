@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.0 — 2026-10-19
+
+### Refonte de l'interface
+
+- **Menu Paramètres** (icône engrenage) : les options secondaires — étiquettes des touches, forme d'onde, plein écran, langue FR/EN, remap des raccourcis, import/export de configuration — sont regroupées dans un menu déroulant ; la toolbar n'affiche plus que l'essentiel
+- **Bouton thème** : icône ronde flottante en haut à droite, toujours accessible
+- Fermeture du menu au clic extérieur et à Échap ; accessibilité (`aria-haspopup`, `aria-expanded`)
+
+### Corrections de bugs (audit approfondi)
+
+- **Métronome coupé par l'arrêt de lecture** : arrêter un morceau tuait le métronome (le `Transport.cancel()` vidait toute la timeline, Loop inclus) — l'événement de fin est maintenant retiré ciblé
+- **Arrêt de lecture prématuré** : l'arrêt automatique programmé d'un morceau précédent pouvait couper le morceau suivant plus court (ID non annulé)
+- **Timers orphelins du mode echo** : quitter l'echo au mauvais moment pouvait relancer une session toute seule (bascule de phase et avance de phrase maintenant annulées au stop)
+- **Lecture pendant une session echo** : le bouton Lecture est désormais désactivé pendant l'echo, comme pendant l'apprentissage
+- **Export de configuration incomplet** : réverbe, égaliseur, transposition, visualiseur, raccourcis et langue sont maintenant inclus (l'import savait les lire, l'export ne les écrivait pas)
+
+### Refactorisation interne (aucun changement visible)
+
+- `Piano.tsx` : 1722 → 1103 lignes d'orchestration pure ; extraction de 4 hooks d'état (`usePianoState`, `useStatusMessage`, `useFavorites`, `useFullscreen`) et 10 composants UI dans `src/piano/components/` (clavier, toolbar, menu, panneaux, sélecteur de pistes, overlays)
+- 12 nouveaux tests (hooks, non-régression DOM) : 192 au total
+- `ARCHITECTURE.md` mis à jour ; plan de refactor documenté (`docs/plan-refactor-piano.md`)
+
 ## 0.4.2 — 2026-10-18
 
 ### Corrections de bugs
