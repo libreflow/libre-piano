@@ -81,6 +81,19 @@ describe("useTrackPreview (roadmap #50)", () => {
     act(() => result.current.stop());
   });
 
+  it("audit .mid inaudibles : la pré-écoute normalise la vélocité (plancher 0.25)", () => {
+    // Ghost note à vélocité byte 1 (0.008 après parsing) : doit être
+    // ramenée au plancher jouable, pas passée telle quelle au sampler.
+    const events = buildPreviewEvents([
+      { midi: 60, time: 0, duration: 0.5, velocity: 0.008 },
+      { midi: 64, time: 0.5, duration: 0.5, velocity: 0.9 },
+      { midi: 67, time: 1, duration: 0.5, velocity: 0 },
+    ]);
+    expect(events[0].velocity).toBe(0.25);
+    expect(events[1].velocity).toBe(0.9);
+    expect(events[2].velocity).toBe(0.8);
+  });
+
   it("une piste sans notes avant 8 s ne démarre rien", () => {
     const trigger = vi.fn();
     const { result } = renderHook(() => useTrackPreview(trigger));
