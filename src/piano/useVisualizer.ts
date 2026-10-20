@@ -27,6 +27,18 @@ export function useVisualizer(enabled: boolean) {
   // Boucle de dessin.
   useEffect(() => {
     if (!enabled) return;
+    // B6 (audit) : la couleur est lue UNE SEULE fois (getComputedStyle force
+    // un reflow à chaque appel — 60 fps × reflow = CPU gaspillée).
+    const canvas = canvasRef.current;
+    const strokeColor =
+      (canvas &&
+        getComputedStyle(canvas).getPropertyValue("--accent")) ||
+      "#7c5cff";
+    // B10 (audit) : le canvas a une résolution interne × dpr (HiDPI).
+    // On met le contexte à l'échelle pour dessiner en coordonnées CSS.
+    const dpr = canvas
+      ? Number(canvas.getAttribute("data-dpr")) || 1
+      : 1;
     let raf = 0;
     const draw = () => {
       const canvas = canvasRef.current;
@@ -35,12 +47,12 @@ export function useVisualizer(enabled: boolean) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           const values = analyser.getValue() as Float32Array;
-          const w = canvas.width;
-          const h = canvas.height;
+          // Coordonnées CSS (le contexte est déjà mis à l'échelle dpr).
+          const w = canvas.width / dpr;
+          const h = canvas.height / dpr;
           ctx.clearRect(0, 0, w, h);
           ctx.lineWidth = 2;
-          ctx.strokeStyle =
-            getComputedStyle(canvas).getPropertyValue("--accent") || "#7c5cff";
+          ctx.strokeStyle = strokeColor;
           ctx.beginPath();
           const step = w / values.length;
           for (let i = 0; i < values.length; i++) {
@@ -54,6 +66,11 @@ export function useVisualizer(enabled: boolean) {
       }
       raf = requestAnimationFrame(draw);
     };
+    // Mise à l'échelle du contexte pour le HiDPI (une seule fois).
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.scale(dpr, dpr);
+    }
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [enabled]);

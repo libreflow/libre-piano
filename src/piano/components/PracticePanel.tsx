@@ -1,6 +1,7 @@
 // Panneau apprentissage (refactor Phase B4) : stats, session en cours,
 // fin de session avec rapport exportable.
 
+import { memo } from "react";
 import {
   summarize,
   formatSessionDate,
@@ -22,7 +23,8 @@ interface PracticePanelProps {
   onStop: () => void;
 }
 
-export default function PracticePanel({
+// B14 (audit) : React.memo — composant passif, props stables.
+const PracticePanel = memo(function PracticePanel({
   state,
   stats,
   eventsCount,
@@ -89,4 +91,6 @@ export default function PracticePanel({
       )}
     </div>
   );
-}
+});
+
+export default PracticePanel;

@@ -1,6 +1,7 @@
 // Dialogue de sélection des pistes MIDI (refactor Phase B3) :
 // choisis les pistes à importer, pré-écoute possible.
 
+import { memo } from "react";
 import { PlayIcon, StopIcon, StarIcon } from "../icons";
 import { DISPLAY_CHORD_RATIO_THRESHOLD } from "../constants";
 import type { PendingImport } from "../useMidiImport";
@@ -16,7 +17,8 @@ interface TrackPickerProps {
   onCancel: () => void;
 }
 
-export default function TrackPicker({
+// B14 (audit) : React.memo — composant passif, props stables.
+const TrackPicker = memo(function TrackPicker({
   pendingImport,
   selectedTrackIndices,
   previewingTrack,
@@ -102,4 +104,6 @@ export default function TrackPicker({
       </div>
     </div>
   );
-}
+});
+
+export default TrackPicker;

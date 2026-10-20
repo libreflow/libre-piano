@@ -1,6 +1,7 @@
 // Panneau echo / call & response (refactor Phase B4) : l'app joue une
 // phrase, l'utilisateur la rejoue — affichage de la progression.
 
+import { memo } from "react";
 import type { CallResponseState } from "../useCallResponse";
 
 interface EchoPanelProps {
@@ -9,7 +10,8 @@ interface EchoPanelProps {
   onStop: () => void;
 }
 
-export default function EchoPanel({ state, onRestart, onStop }: EchoPanelProps) {
+// B14 (audit) : React.memo — composant passif, props stables.
+const EchoPanel = memo(function EchoPanel({ state, onRestart, onStop }: EchoPanelProps) {
   return (
     <div className="practice-panel" role="status">
       {state.done ? (
@@ -38,4 +40,6 @@ export default function EchoPanel({ state, onRestart, onStop }: EchoPanelProps) 
       )}
     </div>
   );
-}
+});
+
+export default EchoPanel;

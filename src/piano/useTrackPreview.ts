@@ -35,6 +35,9 @@ export function useTrackPreview(
   const partRef = useRef<Part<SongEvent> | null>(null);
   const stopTimerRef = useRef<number | null>(null);
   const [previewingTrack, setPreviewingTrack] = useState<number | null>(null);
+  // B7 (audit) : mémorise si c'est NOUS qui avons démarré le Transport
+  // (pour ne l'arrêter que dans ce cas — la lecture principale gère le sien).
+  const startedTransportRef = useRef(false);
 
   const stop = useCallback(() => {
     if (stopTimerRef.current !== null) {
@@ -43,6 +46,13 @@ export function useTrackPreview(
     }
     partRef.current?.dispose();
     partRef.current = null;
+    // B7 (audit) : le Transport global était démarré pour la pré-écoute
+    // mais jamais arrêté — il tournait pour rien (scheduler actif sans
+    // événement). On ne l'arrête que si c'est la pré-écoute qui l'a lancé.
+    if (startedTransportRef.current) {
+      getTransport().stop();
+      startedTransportRef.current = false;
+    }
     setPreviewingTrack(null);
   }, []);
 
@@ -60,7 +70,10 @@ export function useTrackPreview(
       partRef.current = part;
       setPreviewingTrack(trackIndex);
       const transport = getTransport();
-      if (transport.state !== "started") transport.start();
+      if (transport.state !== "started") {
+        transport.start();
+        startedTransportRef.current = true;
+      }
       stopTimerRef.current = window.setTimeout(stop, PREVIEW_DURATION_SEC * 1000);
     },
     [stop, triggerNote]

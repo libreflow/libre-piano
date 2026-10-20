@@ -1,8 +1,10 @@
 // Groupe « Lecture » de la toolbar (refactor Phase B7) : sélection de
 // morceau, favoris, lecture/arrêt, import, enregistrement, modes.
 
+import { memo } from "react";
 import type { RefObject } from "react";
 import type { Song } from "../songs";
+import { sortLibrary } from "../hooks/useFavorites";
 import {
   PlayIcon,
   StopIcon,
@@ -39,7 +41,9 @@ export interface PlaybackControlsProps {
   onToggleEcho: () => void;
 }
 
-export default function PlaybackControls({
+// B14 (audit) : React.memo — évite les re-renders en cascade quand un état
+// voisin change (ex: playbackSeconds à chaque frame de lecture).
+const PlaybackControls = memo(function PlaybackControls({
   songs,
   selectedSongId,
   selectedSong,
@@ -69,17 +73,12 @@ export default function PlaybackControls({
       <select
         value={selectedSongId}
         onChange={(e) => onSelectSong(e.target.value)}
-        disabled={isPlaying || isRecording}
+        // B3 (audit) : désactiver aussi pendant l'echo — changer de morceau
+        // en cours de session echo la bloquerait dans un état incohérent.
+        disabled={isPlaying || isRecording || echoActive}
       >
-        {[...songs]
-          .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
-          // Imports récents en tête (roadmap #54) : les morceaux
-          // importés/enregistrés s'empilent au-dessus des intégrés,
-          // ordre d'ajout décroissant (le plus récent d'abord).
-          .sort(
-            (a, b) => Number(b.source === "imported") - Number(a.source === "imported")
-          )
-          .map((s) => (
+        {/* B8 (audit) : tri via sortLibrary (était dupliqué inline). */}
+        {sortLibrary(songs).map((s) => (
             <option key={s.id} value={s.id}>
               {s.favorite ? "★ " : ""}
               {s.source === "imported" ? `♪ ${s.title}` : s.title}
@@ -91,7 +90,7 @@ export default function PlaybackControls({
         <button
           className="import-btn"
           onClick={() => onToggleFavorite(selectedSong.id)}
-          disabled={isPlaying}
+          disabled={isPlaying || echoActive}
           aria-pressed={Boolean(selectedSong.favorite)}
           title={
             selectedSong.favorite
@@ -107,7 +106,8 @@ export default function PlaybackControls({
         <button
           className="import-btn delete-song"
           onClick={() => onDeleteSong(selectedSong.id)}
-          disabled={isPlaying || isImporting || practiceActive}
+          // B3 (audit) : aussi désactivé pendant l'echo.
+          disabled={isPlaying || isImporting || practiceActive || echoActive}
           title="Supprimer ce morceau importé"
           aria-label="Supprimer ce morceau importé"
         >
@@ -206,4 +206,6 @@ export default function PlaybackControls({
       </button>
     </div>
   );
-}
+});
+
+export default PlaybackControls;

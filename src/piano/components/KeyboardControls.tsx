@@ -1,6 +1,7 @@
 // Groupe « Disposition du clavier » de la toolbar (refactor Phase B7) :
 // fenêtre d'octave du clavier PC + AZERTY/QWERTY.
 
+import { memo } from "react";
 import type { KeyboardLayout } from "../notes";
 import { OCTAVE_SHIFT_MIN, OCTAVE_SHIFT_MAX } from "../notes";
 import { KeyboardIcon, ChevronLeftIcon, ChevronRightIcon } from "../icons";
@@ -13,7 +14,8 @@ export interface KeyboardControlsProps {
   practiceActive: boolean;
 }
 
-export default function KeyboardControls({
+// B14 (audit) : React.memo — composant passif, props stables.
+const KeyboardControls = memo(function KeyboardControls({
   octaveShift,
   onOctaveShiftChange,
   keyboardLayout,
@@ -65,4 +67,6 @@ export default function KeyboardControls({
       </div>
     </div>
   );
-}
+});
+
+export default KeyboardControls;

@@ -32,7 +32,12 @@ export async function songToMidiBytes(song: Song): Promise<Uint8Array> {
 export async function downloadSongAsMidi(song: Song): Promise<boolean> {
   try {
     const bytes = await songToMidiBytes(song);
-    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "audio/midi" });
+    // B9 (audit) : bytes peut être une sous-vue d'un buffer plus grand
+    // (byteOffset > 0) — bytes.buffer contiendrait alors des octets
+    // parasites. On copie la plage exacte dans un nouveau buffer.
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const blob = new Blob([copy.buffer], { type: "audio/midi" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

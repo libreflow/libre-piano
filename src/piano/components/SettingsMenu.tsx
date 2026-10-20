@@ -2,6 +2,7 @@
 // regroupe les options secondaires dans un menu déroulant ; le thème
 // vit en bouton flottant en haut à droite.
 
+import { memo } from "react";
 import type { RefObject } from "react";
 import type { LabelMode } from "../notes";
 import type { Language } from "../i18n";
@@ -42,7 +43,8 @@ export interface SettingsMenuProps {
   children?: React.ReactNode;
 }
 
-export default function SettingsMenu({
+// B14 (audit) : React.memo — composant passif, props stables.
+const SettingsMenu = memo(function SettingsMenu({
   open,
   onOpenChange,
   menuRef,
@@ -189,4 +191,6 @@ export default function SettingsMenu({
       </button>
     </>
   );
-}
+});
+
+export default SettingsMenu;
