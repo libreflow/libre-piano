@@ -2,7 +2,7 @@
 // morceau, favoris, lecture/arrêt, import, enregistrement, modes.
 // E1 (audit ergonomie) : tous les textes passent par useI18n.
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import type { RefObject } from "react";
 import type { Song } from "../songs";
 import { sortLibrary } from "../hooks/useFavorites";
@@ -74,6 +74,10 @@ const PlaybackControls = memo(function PlaybackControls({
   onToggleEcho,
 }: PlaybackControlsProps) {
   const { t } = useI18n(language);
+  // P3 (audit perf) : tri mémoïsé — sortLibrary était recalculé à chaque
+  // render (nouveau tableau à chaque fois, ce qui cassait aussi la
+  // mémoïsation des <option> enfants).
+  const sortedSongs = useMemo(() => sortLibrary(songs), [songs]);
   return (
     <div className="control-group" aria-label={t("groupPlayback")}>
       <select
@@ -84,7 +88,7 @@ const PlaybackControls = memo(function PlaybackControls({
         disabled={isPlaying || isRecording || echoActive}
       >
         {/* B8 (audit) : tri via sortLibrary (était dupliqué inline). */}
-        {sortLibrary(songs).map((s) => (
+        {sortedSongs.map((s) => (
             <option key={s.id} value={s.id}>
               {s.favorite ? "★ " : ""}
               {s.source === "imported" ? `♪ ${s.title}` : s.title}

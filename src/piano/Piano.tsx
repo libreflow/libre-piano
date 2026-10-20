@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureAudioStarted, getContext, getTransport } from "./tone-gate";
 import {
   getKeyboardLayout,
@@ -39,7 +39,7 @@ import {
 } from "./practice-stats";
 import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
 import { useStatusMessage } from "./hooks/useStatusMessage";
-import { usePianoState } from "./hooks/usePianoState";
+import { usePianoState, type PersistedSnapshot } from "./hooks/usePianoState";
 import { useFullscreen } from "./hooks/useFullscreen";
 import PianoKeyboard from "./components/PianoKeyboard";
 import StatusOverlays from "./components/StatusOverlays";
@@ -431,17 +431,17 @@ function PianoInner() {
     });
   }, [releaseSustainedNote]);
 
-  // Transposition (roadmap #53) : morceaux transposés au moment de la
-  // lecture (l'original importé reste intact dans le localStorage).
-  const playableSongs = useMemo(
-    () => allSongs.map((song) => transposedSong(song, transpose)),
-    [allSongs, transpose]
+  // P5 (audit perf) : seul le morceau sélectionné est transposé pour la
+  // lecture (avant : toute la bibliothèque était transposée à chaque
+  // changement de transposition, même les morceaux non sélectionnés).
+  const selectedPlayableForPlayback = useMemo(
+    () => (selectedSong ? transposedSong(selectedSong, transpose) : undefined),
+    [selectedSong, transpose]
   );
   const { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback } =
     usePlayback(
       status === "ready",
-      playableSongs,
-      selectedSongId,
+      selectedPlayableForPlayback,
       speed,
       { loopEnabled, loopStart, loopEnd },
       triggerAttackRelease,
@@ -480,25 +480,10 @@ function PianoInner() {
     return () => window.removeEventListener("keydown", onKey, { capture: true });
   }, [remapping, setRemapCapture]);
 
-  // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
-  // pendant la lecture, pour les marqueurs de mesures et les paroles.
-  const [playbackSeconds, setPlaybackSeconds] = useState(0);
-  useEffect(() => {
-    if (!isPlaying) return;
-    let raf = 0;
-    const tick = () => {
-      setPlaybackSeconds(getTransport().seconds);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [isPlaying]);
-
-  // Paroles synchronisées (roadmap #99) : ligne courante du morceau
-  // sélectionné, selon le temps de lecture.
-  const currentLyric = selectedSong?.lyrics
-    ?.filter((l) => l.time <= playbackSeconds)
-    .pop();
+  // P1 (audit perf) : le temps de lecture et l'overlay (paroles + mesures)
+  // vivent dans un composant isolé mémoïsé (PlaybackOverlay, en bas du
+  // fichier) — le RAF à 60 fps ne re-rend plus tout PianoInner à chaque
+  // frame, seulement cet overlay.
 
   // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
   const trackPreview = useTrackPreview(triggerAttackRelease);
@@ -688,9 +673,17 @@ function PianoInner() {
     );
   }, [deleteTarget]);
 
-  // Persistance : réécrit l'état complet à chaque changement pertinent.
+  // P4 (audit perf) : debounce de la persistance — les champs fréquemment
+  // modifiés (volume, EQ, vitesse, réverbe) déclenchent un changement à
+  // chaque mouvement de slider ; un JSON.stringify complet (~6 ms avec une
+  // grosse bibliothèque) à chaque frame bloque le thread principal.
+  // 300 ms après le dernier changement suffit (les données survivent à la
+  // fermeture tant qu'un changement récent a eu le temps d'être écrit).
+  const persistTimerRef = useRef<number | null>(null);
+  // Dernier snapshot connu, pour persister immédiatement au démontage.
+  const lastSnapshotRef = useRef<PersistedSnapshot | null>(null);
   useEffect(() => {
-    const saved = persist({
+    const snapshot: PersistedSnapshot = {
       importedSongs,
       selectedSongId,
       speed,
@@ -705,14 +698,22 @@ function PianoInner() {
       visualizer: showVisualizer,
       shortcuts,
       language,
-    });
-    // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
-    if (!saved && !quotaWarnedRef.current) {
-      quotaWarnedRef.current = true;
-      setStatusMessageAuto(t("quotaFull"));
-    } else if (saved) {
-      quotaWarnedRef.current = false;
+    };
+    lastSnapshotRef.current = snapshot;
+    if (persistTimerRef.current !== null) {
+      window.clearTimeout(persistTimerRef.current);
     }
+    persistTimerRef.current = window.setTimeout(() => {
+      persistTimerRef.current = null;
+      const saved = persist(snapshot);
+      // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
+      if (!saved && !quotaWarnedRef.current) {
+        quotaWarnedRef.current = true;
+        setStatusMessageAuto(t("quotaFull"));
+      } else if (saved) {
+        quotaWarnedRef.current = false;
+      }
+    }, 300);
   }, [
     persist,
     importedSongs,
@@ -731,6 +732,18 @@ function PianoInner() {
     setStatusMessageAuto,
     t,
   ]);
+  // Persiste le dernier état au démontage (changement de profil, fermeture)
+  // pour ne pas perdre un réglage modifié dans les 300 ms du debounce.
+  useEffect(() => {
+    return () => {
+      if (persistTimerRef.current !== null) {
+        window.clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+      const snapshot = lastSnapshotRef.current;
+      if (snapshot) persist(snapshot);
+    };
+  }, [persist]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -1126,43 +1139,11 @@ function PianoInner() {
       {/* B6 (audit) : les paroles ne s'affichent que pendant la lecture
           automatique — pendant l'echo ou l'apprentissage, le temps de
           lecture est périmé et la ligne serait fausse. */}
-      {isPlaying && (currentLyric || isPlaying) && (
-        <div className="playback-overlay" aria-live="off">
-          {selectedSong?.lyrics && selectedSong.lyrics.length > 0 ? (
-            <div className="lyrics-line" key={currentLyric?.text}>
-              {currentLyric?.text ?? "…"}
-            </div>
-          ) : null}
-          {isPlaying && (
-            <div className="measure-track" aria-hidden="true">
-              {/* B11 (audit) : le nombre de mesures est dérivé de la durée
-                  du morceau (avant : plafond fixe de 32 mesures = 76,8 s à
-                  100 BPM — les morceaux plus longs n'avaient plus de marqueurs). */}
-              {Array.from(
-                {
-                  length: Math.max(
-                    1,
-                    Math.ceil(selectedSongDuration / ((4 * 60) / REFERENCE_BPM))
-                  ),
-                },
-                (_, i) => {
-                  const measureSec = (i * 4 * 60) / REFERENCE_BPM;
-                  const active =
-                    playbackSeconds >= measureSec &&
-                    playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
-                  return (
-                    <span
-                      key={i}
-                      className={`measure-dot${active ? " active" : ""}${
-                        i % 4 === 0 ? " strong" : ""
-                      }`}
-                    />
-                  );
-                }
-              )}
-            </div>
-          )}
-        </div>
+      {isPlaying && (
+        <PlaybackOverlay
+          song={selectedSong}
+          songDuration={selectedSongDuration}
+        />
       )}
       <PianoKeyboard
         allKeys={ALL_KEYS}
@@ -1194,3 +1175,70 @@ function PianoInner() {
     </div>
   );
 }
+
+// P1 (audit perf) : overlay de lecture isolé et mémoïsé. Le RAF à 60 fps
+// met à jour playbackSeconds ici uniquement — PianoInner (88 touches,
+// contrôles, hooks audio) n'est plus re-rendu à chaque frame.
+interface PlaybackOverlayProps {
+  song: Song | undefined;
+  songDuration: number;
+}
+
+const PlaybackOverlay = memo(function PlaybackOverlay({
+  song,
+  songDuration,
+}: PlaybackOverlayProps) {
+  // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
+  // pendant la lecture, pour les marqueurs de mesures et les paroles.
+  const [playbackSeconds, setPlaybackSeconds] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      setPlaybackSeconds(getTransport().seconds);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  // Paroles synchronisées (roadmap #99) : ligne courante du morceau
+  // sélectionné, selon le temps de lecture.
+  const currentLyric = song?.lyrics
+    ?.filter((l) => l.time <= playbackSeconds)
+    .pop();
+  return (
+    <div className="playback-overlay" aria-live="off">
+      {song?.lyrics && song.lyrics.length > 0 ? (
+        <div className="lyrics-line" key={currentLyric?.text}>
+          {currentLyric?.text ?? "…"}
+        </div>
+      ) : null}
+      <div className="measure-track" aria-hidden="true">
+        {/* B11 (audit) : le nombre de mesures est dérivé de la durée
+            du morceau (avant : plafond fixe de 32 mesures = 76,8 s à
+            100 BPM — les morceaux plus longs n'avaient plus de marqueurs). */}
+        {Array.from(
+          {
+            length: Math.max(
+              1,
+              Math.ceil(songDuration / ((4 * 60) / REFERENCE_BPM))
+            ),
+          },
+          (_, i) => {
+            const measureSec = (i * 4 * 60) / REFERENCE_BPM;
+            const active =
+              playbackSeconds >= measureSec &&
+              playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
+            return (
+              <span
+                key={i}
+                className={`measure-dot${active ? " active" : ""}${
+                  i % 4 === 0 ? " strong" : ""
+                }`}
+              />
+            );
+          }
+        )}
+      </div>
+    </div>
+  );
+});

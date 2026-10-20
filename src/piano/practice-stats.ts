@@ -99,11 +99,19 @@ export function summarize(sessions: PracticeSession[] | undefined): SongStats {
   if (!sessions || sessions.length === 0) {
     return { bestScore: 0, sessionCount: 0, averageScore: 0, lastSessionDate: null };
   }
-  const scores = sessions.map((s) => s.score);
+  // P6 (audit perf) : boucle simple au lieu de Math.max(...scores) —
+  // même pattern spread (pas de crash ici car plafonné à 20 sessions,
+  // mais on reste cohérent et sans limite de paramètres d'appel).
+  let bestScore = 0;
+  let sumScore = 0;
+  for (const s of sessions) {
+    if (s.score > bestScore) bestScore = s.score;
+    sumScore += s.score;
+  }
   return {
-    bestScore: Math.max(...scores),
+    bestScore,
     sessionCount: sessions.length,
-    averageScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+    averageScore: Math.round(sumScore / sessions.length),
     lastSessionDate: sessions[sessions.length - 1].date,
   };
 }
