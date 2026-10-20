@@ -65,3 +65,23 @@ describe("dispose des nœuds audio (roadmap #77)", () => {
     expect(liveNodeCount()).toBeGreaterThanOrEqual(0);
   });
 });
+
+// P2 (audit perf) : garde-fou anti-régression du spread Math.min/max.
+// Un fichier MIDI avec >125k notes sur UNE piste faisait crasher
+// summarizeTracks (RangeError: Maximum call stack size exceeded).
+describe("performance : piste extrême (P2 audit perf)", () => {
+  it("summarizeTracks ne crash pas sur 150 000 notes sur une seule piste", () => {
+    // 150k > la limite de paramètres d'appel de V8 (~125k) : l'ancien
+    // Math.min(...pitches) plantait ici. La boucle simple tient.
+    // La construction du Midi + le tri O(n log n) de 150k notes prennent
+    // plusieurs secondes en jsdom : timeout explicite généreux.
+    const midi = buildBigMidi(1, 150_000);
+    const start = performance.now();
+    const summaries = summarizeTracks(midi);
+    const elapsed = performance.now() - start;
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].noteCount).toBe(150_000);
+    // Garde-fou large : O(n log n) à cause du tri interne.
+    expect(elapsed).toBeLessThan(5000);
+  }, 30_000);
+});
