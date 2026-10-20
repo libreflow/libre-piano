@@ -102,10 +102,18 @@ export function summarizeTracks(midi: MidiLike): TrackSummary[] {
     let chordRatio = 0;
 
     if (notes.length > 0) {
-      const pitches = notes.map((n) => n.midi);
-      minPitch = Math.min(...pitches);
-      maxPitch = Math.max(...pitches);
-      avgPitch = pitches.reduce((a, b) => a + b, 0) / pitches.length;
+      // P2 (audit perf) : boucle simple au lieu de Math.min(...pitches) —
+      // le spread dépasse la limite de paramètres d'appel (~125k) et
+      // crashe (RangeError) sur les très gros fichiers MIDI.
+      let sumPitch = 0;
+      minPitch = Infinity;
+      maxPitch = -Infinity;
+      for (const n of notes) {
+        if (n.midi < minPitch) minPitch = n.midi;
+        if (n.midi > maxPitch) maxPitch = n.midi;
+        sumPitch += n.midi;
+      }
+      avgPitch = sumPitch / notes.length;
 
       // Deux notes sont considérées "simultanées" (un accord) si elles
       // démarrent à moins de CHORD_SIMULTANEITY_THRESHOLD_SEC l'une de l'autre.
