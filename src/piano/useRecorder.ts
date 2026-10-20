@@ -49,10 +49,10 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
   const stop = useCallback((): Song | null => {
     // Notes restées ouvertes : durée jusqu'à l'arrêt, plafonnée.
     isRecordingRef.current = false;
-    const now = nowFnRef.current();
+    const elapsed = nowFnRef.current() - startRef.current;
     for (const [note, open] of openRef.current) {
       const duration = Math.min(
-        Math.max(now - open.time, MIN_CAPTURED_DURATION_SEC),
+        Math.max(elapsed - open.time, MIN_CAPTURED_DURATION_SEC),
         MAX_CAPTURED_DURATION_SEC
       );
       eventsRef.current.push({

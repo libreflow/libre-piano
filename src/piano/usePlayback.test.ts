@@ -176,3 +176,31 @@ describe("usePlayback", () => {
     ).toBe(2.5);
   });
 });
+
+describe("bug M2 : boucle activée avec bornes à 0", () => {
+  it("joue le morceau entier, pas une micro-boucle de 0.1 s", async () => {
+    const triggerNote = vi.fn();
+    const hook = renderHook(() =>
+      usePlayback(
+        true,
+        song,
+        100,
+        { loopEnabled: true, loopStart: 0, loopEnd: 0 },
+        triggerNote,
+        vi.fn(),
+        vi.fn()
+      )
+    );
+    await play(hook);
+    const part = MockPart.instances.at(-1) as unknown as {
+      events: { time: number }[];
+      loop: boolean;
+      loopEnd?: number;
+    };
+    // Tous les événements du morceau sont dans la boucle
+    expect(part.events).toHaveLength(3);
+    expect(part.loop).toBe(true);
+    const last = part.events.at(-1) as { time: number };
+    expect(last.time).toBeCloseTo(2);
+  });
+});

@@ -209,6 +209,10 @@ export function useCallResponse(
                 mistakes: total,
               };
             }
+            // Phrase validée : plus aucune note attendue pendant la
+            // fenêtre d'avance (600 ms) — sinon elles comptent comme
+            // des fautes fantômes dans le récap final.
+            phaseRef.current = "call";
             const advanceTimer = window.setTimeout(() => {
               playPhrase(nextPhrase);
             }, 600);

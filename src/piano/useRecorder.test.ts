@@ -105,3 +105,24 @@ describe("recordedSongTitle", () => {
     expect(t1).toMatch(/^Enregistrement \d{4}-\d{2}-\d{2} \d{2}h\d{2}$/);
   });
 });
+
+describe("bug M1 : durée des notes tenues à l'arrêt (temps relatif)", () => {
+  it("une note tenue jusqu'au stop a la durée réelle écoulée, pas un plafond artificiel", () => {
+    fakeNow = 0;
+    const { result } = renderHook(() => useRecorder());
+    act(() => result.current.start());
+    fakeNow = 5;
+    act(() => result.current.captureNoteOn("C4"));
+    fakeNow = 7.5;
+    let song: unknown = null;
+    act(() => {
+      song = result.current.stop();
+    });
+    const s = song as { events: { note: string; time: number; duration: number }[] } | null;
+    expect(s).not.toBeNull();
+    expect(s!.events).toHaveLength(1);
+    expect(s!.events[0].time).toBeCloseTo(5);
+    // durée = elapsed (7.5) - time relatif (5) = 2.5 s
+    expect(s!.events[0].duration).toBeCloseTo(2.5);
+  });
+});

@@ -155,7 +155,10 @@ const PlaybackControls = memo(function PlaybackControls({
       <button
         className={`import-btn ${isRecording ? "stop-btn" : ""}`}
         onClick={onToggleRecording}
-        disabled={isPlaying || isImporting}
+        // M6 (audit) : l'arrêt d'enregistrement reste possible pendant la
+        // lecture — sinon le démarrage de la lecture en plein enregistrement
+        // créait une impasse (impossible de sauvegarder le morceau).
+        disabled={isImporting || (!isRecording && isPlaying)}
         aria-pressed={isRecording}
         title={isRecording ? t("recordStopHint") : t("recordHint")}
       >

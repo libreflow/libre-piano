@@ -29,7 +29,10 @@ export async function parseMidiAsync(buffer: ArrayBuffer): Promise<MidiLike> {
           else reject(new Error("Réponse du worker MIDI invalide."));
         };
         worker.onerror = (e) => reject(new Error(e.message || "Erreur du worker MIDI."));
-        worker.postMessage(buffer, [buffer]);
+        // Copie avant transfert : le transfert détache le buffer de
+        // l'appelant — le repli synchrone catch ci-dessous doit pouvoir
+        // relire les mêmes données sur un buffer encore utilisable.
+        worker.postMessage(structuredClone(buffer), [buffer]);
       });
     } finally {
       worker.terminate();

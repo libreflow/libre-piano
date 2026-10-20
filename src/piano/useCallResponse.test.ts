@@ -162,3 +162,28 @@ describe("audit : régressions echo", () => {
     act(() => result.current.stop());
   });
 });
+
+describe("bug M3 : notes jouées entre deux phrases (fenêtre de 600 ms)", () => {
+  it("ne compte pas de fautes pendant la fenêtre d'avance", async () => {
+    const { result } = renderHook(() => useCallResponse(song, vi.fn()));
+    act(() => result.current.start());
+    act(() => result.current.playPhrase(0));
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(result.current.state.phase).toBe("response");
+    // jouer la phrase entière correctement
+    for (const n of ["C4", "D4", "E4", "F4", "G4", "A4"]) {
+      act(() => result.current.handlePlayedNote(n));
+    }
+    // Phrase validée : on est dans la fenêtre de 600 ms avant la
+    // phrase suivante — une note jouée ici n'est PAS une faute.
+    expect(result.current.state.mistakes).toBe(0);
+    act(() => result.current.handlePlayedNote("C4"));
+    expect(result.current.state.mistakes).toBe(0);
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+    act(() => result.current.stop());
+  });
+});
