@@ -79,6 +79,13 @@ vi.mock("@tauri-apps/api/window", () => ({
 describe("Piano (rendu)", () => {
   beforeEach(() => {
     localStorage.clear();
+    // E1 (audit ergonomie) : les composants sont traduits — on force FR pour
+    // que les assertions sur les libellés restent stables quelle que soit la
+    // langue du navigateur de test.
+    Object.defineProperty(window.navigator, "language", {
+      value: "fr-FR",
+      configurable: true,
+    });
   });
 
   it("affiche l'écran de chargement puis le clavier complet (88 touches)", async () => {

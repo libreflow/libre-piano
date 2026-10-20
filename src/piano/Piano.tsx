@@ -28,8 +28,8 @@ import { usePlayback } from "./usePlayback";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
 import { useVisualizer } from "./useVisualizer";
+import { detectLanguage, interpolate, type Language } from "./i18n";
 import { useI18n } from "./useI18n";
-import { detectLanguage, type Language } from "./i18n";
 import {
   loadStats,
   saveStats,
@@ -51,6 +51,7 @@ import SettingsMenu from "./components/SettingsMenu";
 import PlaybackControls from "./components/PlaybackControls";
 import SoundControls from "./components/SoundControls";
 import KeyboardControls from "./components/KeyboardControls";
+import ConfirmDialog from "./components/ConfirmDialog";
 import {
   useFavorites,
   applyBuiltinFavorites,
@@ -71,6 +72,16 @@ export default function Piano() {
   const [profile, setProfile] = useState(getActiveProfile);
   const [profiles, setProfiles] = useState(listProfiles);
   const [newProfile, setNewProfile] = useState("");
+  // E1 (audit ergonomie) : i18n pour la barre de profil. On lit la langue
+  // persistée du profil actif (avant le mount de PianoInner).
+  const lang = (() => {
+    try {
+      const raw = localStorage.getItem("libre-piano:profile");
+      void raw;
+    } catch { /* ignore */ }
+    return detectLanguage();
+  })();
+  const { t } = useI18n(lang);
 
   const switchProfile = (next: string) => {
     setActiveProfile(next);
@@ -82,33 +93,38 @@ export default function Piano() {
     <>
       <PianoInner key={profile} />
       <div className="profile-bar">
+        {/* E9 (audit ergonomie) : label visible pour le sélecteur de profil */}
         <label>
-          Profil :{" "}
+          <span className="profile-label-text">{t("profileLabel")}</span>{" "}
           <select
             value={profile}
             onChange={(e) => switchProfile(e.target.value)}
-            aria-label="Profil utilisateur"
+            aria-label={t("profileAria")}
           >
             {profiles.map((p) => (
               <option key={p} value={p}>
-                {p === DEFAULT_PROFILE ? "défaut" : p}
+                {p === DEFAULT_PROFILE ? t("profileDefault") : p}
               </option>
             ))}
           </select>
         </label>
-        <input
-          type="text"
-          value={newProfile}
-          onChange={(e) => setNewProfile(e.target.value)}
-          placeholder="nouveau profil"
-          aria-label="Nom du nouveau profil"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && newProfile.trim().length > 0) {
-              switchProfile(newProfile.trim());
-              setNewProfile("");
-            }
-          }}
-        />
+        {/* E9 : label visible pour le champ de création */}
+        <label>
+          <span className="profile-label-text">{t("profileNameAria")}</span>{" "}
+          <input
+            type="text"
+            value={newProfile}
+            onChange={(e) => setNewProfile(e.target.value)}
+            placeholder={t("profilePlaceholder")}
+            aria-label={t("profileNameAria")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newProfile.trim().length > 0) {
+                switchProfile(newProfile.trim());
+                setNewProfile("");
+              }
+            }}
+          />
+        </label>
         <button
           className="import-btn"
           onClick={() => {
@@ -118,7 +134,7 @@ export default function Piano() {
             }
           }}
         >
-          Créer
+          {t("profileCreate")}
         </button>
       </div>
     </>
@@ -160,7 +176,13 @@ function PianoInner() {
   const [language, setLanguage] = useState<Language>(
     initialState.language ?? detectLanguage()
   );
+  // E1 (audit ergonomie) : traductions pour les messages de statut et aria-labels.
   const { t } = useI18n(language);
+  // E8 (audit ergonomie) : l'attribut lang du document suit la langue active
+  // (index.html a un lang="fr" statique sinon).
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
@@ -209,6 +231,18 @@ function PianoInner() {
   }, [settingsOpen]);
   // N'avertir qu'une fois par "session de dépassement" du quota.
   const quotaWarnedRef = useRef(false);
+  // E13 (audit ergonomie) : flash visuel sur la barre de contrôles après un
+  // import de configuration réussi (le message de statut seul passe inaperçu).
+  const [configFlash, setConfigFlash] = useState(false);
+  const configFlashTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (configFlashTimerRef.current !== null) {
+        window.clearTimeout(configFlashTimerRef.current);
+      }
+    },
+    []
+  );
 
   // Boucle A-B. Les bornes sont clampées : Number("") ou une saisie
   // invalide dans les <input type="number"> donne NaN, qu'on ramène à 0.
@@ -228,7 +262,6 @@ function PianoInner() {
     samplerRef,
     status,
     loadedCount,
-    retryLoading,
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
     releaseSustainedNote,
@@ -560,7 +593,7 @@ function PianoInner() {
     toggleTrack,
     confirmImport,
     cancelImport,
-  } = useMidiImport(addImportedSong, setStatusMessageAuto);
+  } = useMidiImport(addImportedSong, setStatusMessageAuto, language);
 
   // Replay (roadmap #45) : dernier enregistrement sélectionnable en un
   // clic pour le rejouer.
@@ -576,10 +609,13 @@ function PianoInner() {
         setLastRecordingId(song.id);
         addImportedSong(song);
         setStatusMessageAuto(
-          `Enregistrement sauvegardé : « ${song.title} » (${song.events.length} notes).`
+          interpolate(t("recordSaved"), {
+            title: song.title,
+            count: song.events.length,
+          })
         );
       } else {
-        setStatusMessageAuto("Enregistrement vide : aucune note capturée.");
+        setStatusMessageAuto(t("recordEmpty"));
       }
     } else {
       if (isPlayingRef.current) stopPlaybackAndClear();
@@ -624,30 +660,33 @@ function PianoInner() {
     void playSong();
   }, [playSong]);
 
-  // Suppression d'un morceau importé (libère aussi le localStorage).
-  const deleteImportedSong = useCallback(
+  // E3 (audit ergonomie) : la suppression passe par une modale custom
+  // (ConfirmDialog) au lieu de window.confirm() — le morceau à supprimer est
+  // mémorisé dans deleteTarget, la suppression réelle a lieu à la confirmation.
+  const [deleteTarget, setDeleteTarget] = useState<Song | null>(null);
+  const requestDeleteSong = useCallback(
     (id: string) => {
-      // Le confirm est AVANT les setters : en StrictMode les updaters sont
-      // appelés deux fois, un side-effect dedans afficherait le confirm
-      // en double (et updater non pur).
       const song = importedSongs.find((s) => s.id === id);
-      if (!song) return;
-      if (!window.confirm(`Supprimer "${song.title}" ? Cette action est définitive.`)) {
-        return;
-      }
-      setImportedSongs((prev) => prev.filter((s) => s.id !== id));
-      // B10 (audit) : nettoyer les stats du morceau supprimé.
-      setStats((prev) => {
-        const next = removeStats(prev, id);
-        saveStats(next);
-        return next;
-      });
-      setSelectedSongId((current) =>
-        current === id ? (BUILTIN_SONGS[0]?.id ?? "") : current
-      );
+      if (song) setDeleteTarget(song);
     },
     [importedSongs]
   );
+  // Suppression d'un morceau importé (libère aussi le localStorage).
+  const confirmDeleteSong = useCallback(() => {
+    const song = deleteTarget;
+    setDeleteTarget(null);
+    if (!song) return;
+    setImportedSongs((prev) => prev.filter((s) => s.id !== song.id));
+    // B10 (audit) : nettoyer les stats du morceau supprimé.
+    setStats((prev) => {
+      const next = removeStats(prev, song.id);
+      saveStats(next);
+      return next;
+    });
+    setSelectedSongId((current) =>
+      current === song.id ? (BUILTIN_SONGS[0]?.id ?? "") : current
+    );
+  }, [deleteTarget]);
 
   // Persistance : réécrit l'état complet à chaque changement pertinent.
   useEffect(() => {
@@ -670,9 +709,7 @@ function PianoInner() {
     // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
     if (!saved && !quotaWarnedRef.current) {
       quotaWarnedRef.current = true;
-      setStatusMessageAuto(
-        "Stockage local plein : les derniers réglages ne sont pas sauvegardés. Supprime des morceaux importés pour libérer de l'espace."
-      );
+      setStatusMessageAuto(t("quotaFull"));
     } else if (saved) {
       quotaWarnedRef.current = false;
     }
@@ -692,6 +729,7 @@ function PianoInner() {
     shortcuts,
     language,
     setStatusMessageAuto,
+    t,
   ]);
 
   useEffect(() => {
@@ -748,9 +786,7 @@ function PianoInner() {
       try {
         const parsed = parseConfigFile(JSON.parse(await file.text()));
         if (!parsed) {
-          setStatusMessageAuto(
-            "Fichier de configuration invalide (pas un export Libre Piano)."
-          );
+          setStatusMessageAuto(t("configInvalid"));
           return;
         }
         const clean = sanitizeState(parsed.state);
@@ -769,13 +805,22 @@ function PianoInner() {
         setShortcuts(clean.shortcuts ?? DEFAULT_SHORTCUTS);
         setLanguage(clean.language ?? detectLanguage());
         setStatusMessageAuto(
-          `Configuration importée : ${clean.importedSongs.length} morceau(x), préférences restaurées.`
+          interpolate(t("configImported"), { count: clean.importedSongs.length })
+        );
+        // E13 : flash visuel bref pour signaler que les réglages ont changé.
+        if (configFlashTimerRef.current !== null) {
+          window.clearTimeout(configFlashTimerRef.current);
+        }
+        setConfigFlash(true);
+        configFlashTimerRef.current = window.setTimeout(
+          () => setConfigFlash(false),
+          1200
         );
       } catch {
-        setStatusMessageAuto("Impossible de lire ce fichier de configuration.");
+        setStatusMessageAuto(t("configReadError"));
       }
     },
-    [setStatusMessageAuto]
+    [setStatusMessageAuto, t]
   );
   // B14 (audit) : mémoïsé — lu par React Compiler, passé à PianoKeyboard.
   const toggleTheme = useCallback(
@@ -870,15 +915,17 @@ function PianoInner() {
           status={status}
           loadedCount={loadedCount}
           sampleCount={SAMPLE_COUNT}
-          loadErrorText={t("loadError")}
-          retryText={t("retry")}
-          onRetry={retryLoading}
           statusMessage={statusMessage}
           isDragOver={isDragOver}
+          language={language}
         />
       )}
 
-      <div className="playback-controls" role="toolbar" aria-label="Contrôles du piano">
+      <div
+        className={`playback-controls${configFlash ? " config-flash" : ""}`}
+        role="toolbar"
+        aria-label={t("controls")}
+      >
         <PlaybackControls
           songs={allSongs}
           selectedSongId={selectedSongId}
@@ -892,9 +939,10 @@ function PianoInner() {
           echoActive={callResponse.state.active}
           lastRecordingId={lastRecordingId}
           fileInputRef={fileInputRef}
+          language={language}
           onSelectSong={setSelectedSongId}
           onToggleFavorite={toggleFavorite}
-          onDeleteSong={deleteImportedSong}
+          onDeleteSong={requestDeleteSong}
           onPlay={playSongGuarded}
           onStop={stopPlaybackAndClear}
           onImportFile={(file) => void importFile(file)}
@@ -902,14 +950,12 @@ function PianoInner() {
           onReplayLastRecording={() => {
             if (!lastRecordingId) return;
             setSelectedSongId(lastRecordingId);
-            setStatusMessageAuto(
-              "Dernier enregistrement sélectionné — ▶ pour le rejouer."
-            );
+            setStatusMessageAuto(t("replaySelected"));
           }}
           onExportMidi={() => {
             if (selectedSong)
               void downloadSongAsMidi(selectedSong).then((ok) => {
-                if (!ok) setStatusMessageAuto("Échec de l'export MIDI.");
+                if (!ok) setStatusMessageAuto(t("exportFailed"));
               });
           }}
           onTogglePractice={() => {
@@ -945,6 +991,7 @@ function PianoInner() {
           transpose={transpose}
           onTransposeChange={setTranspose}
           isPlaying={isPlaying}
+          language={language}
         />
 
         <KeyboardControls
@@ -953,9 +1000,10 @@ function PianoInner() {
           keyboardLayout={keyboardLayout}
           onLayoutChange={setKeyboardLayout}
           practiceActive={practice.state.active}
+          language={language}
         />
 
-        <div className="control-group" aria-label="Affichage">
+        <div className="control-group" aria-label={t("groupDisplay")}>
           <SettingsMenu
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
@@ -970,16 +1018,12 @@ function PianoInner() {
             onToggleLanguage={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
             shortcuts={shortcuts}
             onRemapSustain={() => {
-              setStatusMessageAuto(
-                "Appuie la touche à utiliser pour la pédale de sustain…"
-              );
+              setStatusMessageAuto(t("remapSustainPrompt"));
               setRemapCapture("sustain");
               setSettingsOpen(false);
             }}
             onRemapTogglePlayback={() => {
-              setStatusMessageAuto(
-                "Appuie la touche à utiliser pour lecture/arrêt…"
-              );
+              setStatusMessageAuto(t("remapPlayPrompt"));
               setRemapCapture("togglePlayback");
               setSettingsOpen(false);
             }}
@@ -993,10 +1037,10 @@ function PianoInner() {
           />
           <span
             className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
-            title="Maintenir la barre d'espace = pédale de sustain"
+            title={t("sustainHint")}
           >
             <SustainIcon />
-            {sustainOn ? "Sustain" : "Espace"}
+            {sustainOn ? t("sustainOn") : t("sustainOff")}
           </span>
         </div>
       </div>
@@ -1007,6 +1051,7 @@ function PianoInner() {
         loopEnd={loopEnd}
         songDuration={selectedSongDuration}
         isPlaying={isPlaying}
+        language={language}
         onToggle={setLoopEnabled}
         onStartChange={setLoopStart}
         onEndChange={setLoopEnd}
@@ -1019,11 +1064,9 @@ function PianoInner() {
           status={status}
           loadedCount={loadedCount}
           sampleCount={SAMPLE_COUNT}
-          loadErrorText={t("loadError")}
-          retryText={t("retry")}
-          onRetry={retryLoading}
           statusMessage={statusMessage}
           isDragOver={isDragOver}
+          language={language}
         />
       )}
 
@@ -1034,6 +1077,7 @@ function PianoInner() {
           eventsCount={eventsCount}
           selectedSong={selectedSong}
           noteToKey={noteToKey}
+          language={language}
           onStart={practice.start}
           onStop={practice.stop}
         />
@@ -1041,6 +1085,7 @@ function PianoInner() {
       {callResponse.state.active && (
         <EchoPanel
           state={callResponse.state}
+          language={language}
           // B2 (audit) : start() délègue à playPhrase(0) — un seul appel.
           onRestart={callResponse.start}
           onStop={callResponse.stop}
@@ -1051,6 +1096,7 @@ function PianoInner() {
           pendingImport={pendingImport}
           selectedTrackIndices={selectedTrackIndices}
           previewingTrack={trackPreview.previewingTrack}
+          language={language}
           onToggleTrack={toggleTrack}
           onPreview={(index) => {
             const notes = pendingImport.midi.tracks[index]?.notes ?? [];
@@ -1073,7 +1119,7 @@ function PianoInner() {
             width={Math.round(480 * dpr)}
             height={Math.round(48 * dpr)}
             data-dpr={dpr}
-            aria-label="Forme d'onde du signal audio"
+            aria-label={t("lyricsWave")}
           />
         );
       })()}
@@ -1129,6 +1175,21 @@ function PianoInner() {
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         scrollRef={pianoScrollRef}
+        language={language}
+      />
+      {/* E3 (audit ergonomie) : modale de confirmation de suppression. */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("deleteConfirmTitle")}
+        message={
+          deleteTarget
+            ? interpolate(t("deleteConfirm"), { title: deleteTarget.title })
+            : ""
+        }
+        confirmLabel={t("deleteConfirmOk")}
+        cancelLabel={t("deleteConfirmCancel")}
+        onConfirm={confirmDeleteSong}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

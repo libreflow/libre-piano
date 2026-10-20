@@ -1,10 +1,13 @@
 // Groupe « Lecture » de la toolbar (refactor Phase B7) : sélection de
 // morceau, favoris, lecture/arrêt, import, enregistrement, modes.
+// E1 (audit ergonomie) : tous les textes passent par useI18n.
 
 import { memo } from "react";
 import type { RefObject } from "react";
 import type { Song } from "../songs";
 import { sortLibrary } from "../hooks/useFavorites";
+import { useI18n } from "../useI18n";
+import type { Language } from "../i18n";
 import {
   PlayIcon,
   StopIcon,
@@ -28,6 +31,7 @@ export interface PlaybackControlsProps {
   echoActive: boolean;
   lastRecordingId: string | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  language: Language;
   onSelectSong: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onDeleteSong: (id: string) => void;
@@ -56,6 +60,7 @@ const PlaybackControls = memo(function PlaybackControls({
   echoActive,
   lastRecordingId,
   fileInputRef,
+  language,
   onSelectSong,
   onToggleFavorite,
   onDeleteSong,
@@ -68,8 +73,9 @@ const PlaybackControls = memo(function PlaybackControls({
   onTogglePractice,
   onToggleEcho,
 }: PlaybackControlsProps) {
+  const { t } = useI18n(language);
   return (
-    <div className="control-group" aria-label="Lecture">
+    <div className="control-group" aria-label={t("groupPlayback")}>
       <select
         value={selectedSongId}
         onChange={(e) => onSelectSong(e.target.value)}
@@ -94,10 +100,10 @@ const PlaybackControls = memo(function PlaybackControls({
           aria-pressed={Boolean(selectedSong.favorite)}
           title={
             selectedSong.favorite
-              ? "Retirer des favoris"
-              : "Ajouter aux favoris (remonte en tête)"
+              ? t("removeFavorite")
+              : t("addFavorite")
           }
-          aria-label="Basculer le favori de ce morceau"
+          aria-label={t("toggleFavorite")}
         >
           <StarIcon />
         </button>
@@ -108,8 +114,8 @@ const PlaybackControls = memo(function PlaybackControls({
           onClick={() => onDeleteSong(selectedSong.id)}
           // B3 (audit) : aussi désactivé pendant l'echo.
           disabled={isPlaying || isImporting || practiceActive || echoActive}
-          title="Supprimer ce morceau importé"
-          aria-label="Supprimer ce morceau importé"
+          title={t("deleteSongHint")}
+          aria-label={t("deleteSongHint")}
         >
           <TrashIcon />
         </button>
@@ -121,11 +127,11 @@ const PlaybackControls = memo(function PlaybackControls({
           onClick={onPlay}
           disabled={!statusReady || hasPendingImport || practiceActive || echoActive}
         >
-          <PlayIcon /> Lecture
+          <PlayIcon /> {t("playSong")}
         </button>
       ) : (
         <button className="stop-btn" onClick={onStop}>
-          <StopIcon /> Arrêter
+          <StopIcon /> {t("stopSong")}
         </button>
       )}
 
@@ -135,10 +141,10 @@ const PlaybackControls = memo(function PlaybackControls({
         disabled={isPlaying || isImporting}
       >
         {isImporting ? (
-          "Import…"
+          t("importProgress")
         ) : (
           <>
-            <ImportIcon /> Importer
+            <ImportIcon /> {t("import")}
           </>
         )}
       </button>
@@ -147,31 +153,27 @@ const PlaybackControls = memo(function PlaybackControls({
         onClick={onToggleRecording}
         disabled={isPlaying || isImporting}
         aria-pressed={isRecording}
-        title={
-          isRecording
-            ? "Arrêter l'enregistrement et sauvegarder dans la bibliothèque"
-            : "Enregistrer ce que tu joues"
-        }
+        title={isRecording ? t("recordStopHint") : t("recordHint")}
       >
-        {isRecording ? "■ Stopper" : "● Enregistrer"}
+        {isRecording ? t("recordStopBtn") : t("recordStart")}
       </button>
-      {lastRecordingId && (
-        <button
-          className="import-btn"
-          onClick={onReplayLastRecording}
-          title="Rejouer le dernier enregistrement (le sélectionne)"
-          aria-label="Rejouer le dernier enregistrement"
-        >
-          <PlayIcon /> Replay
-        </button>
-      )}
+      {/* E10 (audit ergonomie) : toujours visible, désactivé si pas d'enregistrement */}
+      <button
+        className="import-btn"
+        onClick={onReplayLastRecording}
+        disabled={!lastRecordingId}
+        title={t("replayHint")}
+        aria-label={t("replayHint")}
+      >
+        <PlayIcon /> {t("replayLast")}
+      </button>
       <button
         className="import-btn"
         onClick={onExportMidi}
         disabled={isPlaying || !selectedSong}
-        title="Exporter le morceau sélectionné en fichier .mid"
+        title={t("exportMidHint")}
       >
-        <ExpandIcon /> .mid
+        <ExpandIcon /> {t("exportMid")}
       </button>
       <input
         ref={fileInputRef}
@@ -190,19 +192,19 @@ const PlaybackControls = memo(function PlaybackControls({
         onClick={onTogglePractice}
         disabled={!statusReady || isPlaying || hasPendingImport}
         aria-pressed={practiceActive}
-        title="Mode apprentissage : joue la note attendue pour avancer"
+        title={t("practiceHint")}
       >
         <PracticeIcon />
-        {practiceActive ? "Quitter apprentissage" : "Apprentissage"}
+        {practiceActive ? t("practiceQuitBtn") : t("practiceToggle")}
       </button>
       <button
         className="import-btn"
         onClick={onToggleEcho}
         disabled={!statusReady || isPlaying || hasPendingImport}
         aria-pressed={echoActive}
-        title="Mode echo : l'app joue une phrase, rejoue-la (roadmap #43)"
+        title={t("echoHint")}
       >
-        ♪ Echo
+        {t("echoToggle")}
       </button>
     </div>
   );

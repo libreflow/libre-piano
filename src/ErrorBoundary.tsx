@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { detectLanguage, translate } from "./piano/i18n";
 
 interface Props {
   children: ReactNode;
@@ -25,14 +26,15 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
+      // E1 (audit ergonomie) : l'écran de crash est traduit (langue détectée
+      // au rendu — le boundary est hors de l'arbre React traduit).
+      const lang = detectLanguage();
       return (
         <div className="app-crash" role="alert">
-          <h2>Une erreur est survenue</h2>
-          <p>L'application n'a pas pu démarrer correctement.</p>
+          <h2>{translate(lang, "crashTitle")}</h2>
+          <p>{translate(lang, "crashBody")}</p>
           <pre>{this.state.error.message}</pre>
-          <p className="app-crash-hint">
-            Redémarre l'application. Si le problème persiste, signale-le sur GitHub.
-          </p>
+          <p className="app-crash-hint">{translate(lang, "crashHint")}</p>
         </div>
       );
     }

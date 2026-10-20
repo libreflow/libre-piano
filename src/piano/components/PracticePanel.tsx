@@ -1,5 +1,6 @@
 // Panneau apprentissage (refactor Phase B4) : stats, session en cours,
 // fin de session avec rapport exportable.
+// E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
 import {
@@ -11,6 +12,9 @@ import {
 import type { PracticeSession } from "../practice-stats";
 import type { PracticeState } from "../usePractice";
 import type { Song } from "../songs";
+import { useI18n } from "../useI18n";
+import { interpolate } from "../i18n";
+import type { Language } from "../i18n";
 
 interface PracticePanelProps {
   state: PracticeState;
@@ -19,6 +23,7 @@ interface PracticePanelProps {
   eventsCount: number;
   selectedSong: Song | undefined;
   noteToKey: Map<string, string>;
+  language: Language;
   onStart: () => void;
   onStop: () => void;
 }
@@ -30,25 +35,32 @@ const PracticePanel = memo(function PracticePanel({
   eventsCount,
   selectedSong,
   noteToKey,
+  language,
   onStart,
   onStop,
 }: PracticePanelProps) {
+  const { t } = useI18n(language);
   const summary = summarize(stats);
   return (
     <div className="practice-panel" role="status">
       {summary.sessionCount > 0 ? (
         <span className="practice-stats">
-          Meilleur : <strong>{summary.bestScore}/100</strong> ·{" "}
-          {summary.sessionCount} session(s) · moyenne {summary.averageScore}% · le{" "}
-          {formatSessionDate(summary.lastSessionDate)}
+          {interpolate(t("practiceStatsBest"), { score: summary.bestScore })}{" "}
+          · {interpolate(t("practiceStatsSessions"), { count: summary.sessionCount })}{" "}
+          · {interpolate(t("practiceStatsAverage"), { avg: summary.averageScore })}{" "}
+          · {interpolate(t("practiceStatsLast"), { date: formatSessionDate(summary.lastSessionDate) })}
         </span>
       ) : null}
       {state.done ? (
         <>
-          <strong>Session terminée !</strong> {eventsCount} notes,{" "}
-          {state.mistakes} faute(s), score {state.score ?? 100}/100.
+          <strong>{t("practiceDone")}</strong>{" "}
+          {interpolate(t("practiceDoneDetail"), {
+            notes: eventsCount,
+            mistakes: state.mistakes,
+            score: state.score ?? 100,
+          })}
           <button className="import-btn" onClick={onStart}>
-            Recommencer
+            {t("practiceRestart")}
           </button>
           <button
             className="import-btn"
@@ -64,29 +76,29 @@ const PracticePanel = memo(function PracticePanel({
                 )
               );
             }}
-            title="Exporter le rapport de progression en JSON"
+            title={t("reportHint")}
           >
-            Rapport
+            {t("practiceReport")}
           </button>
           <button className="import-btn" onClick={onStop}>
-            Fermer
+            {t("practiceClose")}
           </button>
         </>
       ) : (
         <>
-          Note {state.step + 1}/{eventsCount} —{" "}
+          {interpolate(t("practiceStep"), { step: state.step + 1, total: eventsCount })}{" "}
           {(() => {
             const note = state.expectedNote;
             const key = note ? noteToKey.get(note) : undefined;
             return key ? (
               <>
-                appuie sur <kbd className="practice-key">{key}</kbd> ({note})
+                {t("practicePressKey")} <kbd className="practice-key">{key}</kbd> ({note})
               </>
             ) : (
-              <>joue {note} à la souris</>
+              <>{interpolate(t("practicePlayMouse"), { note: note ?? "" })}</>
             );
           })()}{" "}
-          · {state.mistakes} faute(s)
+          · {interpolate(t("practiceMistakes"), { count: state.mistakes })}
         </>
       )}
     </div>

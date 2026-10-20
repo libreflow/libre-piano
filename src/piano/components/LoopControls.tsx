@@ -1,7 +1,11 @@
 // Boucle A-B (refactor Phase B5) : activation + bornes début/fin.
+// E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
 import { LoopIcon } from "../icons";
+import { useI18n } from "../useI18n";
+import { interpolate } from "../i18n";
+import type { Language } from "../i18n";
 
 interface LoopControlsProps {
   loopEnabled: boolean;
@@ -9,6 +13,7 @@ interface LoopControlsProps {
   loopEnd: number;
   songDuration: number;
   isPlaying: boolean;
+  language: Language;
   onToggle: (enabled: boolean) => void;
   onStartChange: (v: number) => void;
   onEndChange: (v: number) => void;
@@ -21,10 +26,12 @@ const LoopControls = memo(function LoopControls({
   loopEnd,
   songDuration,
   isPlaying,
+  language,
   onToggle,
   onStartChange,
   onEndChange,
 }: LoopControlsProps) {
+  const { t } = useI18n(language);
   return (
     <div className="loop-controls">
       <label className="loop-toggle">
@@ -34,10 +41,10 @@ const LoopControls = memo(function LoopControls({
           onChange={(e) => onToggle(e.target.checked)}
           disabled={isPlaying}
         />
-        <LoopIcon /> Boucle A-B
+        <LoopIcon /> {t("loopToggle")}
       </label>
       <label className="loop-bound">
-        Début
+        {t("loopStartLabel")}
         <input
           type="number"
           min={0}
@@ -47,10 +54,10 @@ const LoopControls = memo(function LoopControls({
           onChange={(e) => onStartChange(Number(e.target.value))}
           disabled={isPlaying || !loopEnabled}
         />
-        s
+        {t("loopSeconds")}
       </label>
       <label className="loop-bound">
-        Fin
+        {t("loopEndLabel")}
         <input
           type="number"
           min={loopStart + 0.1}
@@ -60,9 +67,11 @@ const LoopControls = memo(function LoopControls({
           onChange={(e) => onEndChange(Number(e.target.value))}
           disabled={isPlaying || !loopEnabled}
         />
-        s
+        {t("loopSeconds")}
       </label>
-      <span className="loop-total">/ {songDuration.toFixed(1)}s au total</span>
+      <span className="loop-total">
+        {interpolate(t("loopTotalLabel"), { value: songDuration.toFixed(1) })}
+      </span>
     </div>
   );
 });

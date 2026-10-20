@@ -6,6 +6,9 @@ import { memo } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { PianoKey, LabelMode } from "../notes";
 import { noteToSolfege } from "../notes";
+import type { Language } from "../i18n";
+import { interpolate } from "../i18n";
+import { useI18n } from "../useI18n";
 
 interface PianoKeyboardProps {
   allKeys: PianoKey[];
@@ -20,6 +23,8 @@ interface PianoKeyboardProps {
   onPointerDown: (note: string, e: ReactPointerEvent<HTMLButtonElement>) => void;
   onPointerUp: (note: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  /** E1 (audit ergonomie) : langue pour les aria-labels des touches. */
+  language: Language;
 }
 
 const KeyLabel = memo(function KeyLabel({
@@ -56,13 +61,16 @@ const PianoKeyboard = memo(function PianoKeyboard({
   onPointerDown,
   onPointerUp,
   scrollRef,
+  language,
 }: PianoKeyboardProps) {
+  // E1 (audit ergonomie) : aria-labels traduits.
+  const { t } = useI18n(language);
   return (
     <div
       className="piano-scroll"
       ref={scrollRef}
       role="group"
-      aria-label="Clavier de piano 88 touches — joué au clavier PC ou à la souris, hors navigation Tab"
+      aria-label={t("pianoGroup")}
     >
       <div
         className={`piano ${isPlaying ? "piano-readonly" : ""}`}
@@ -86,7 +94,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
               onPointerCancel={() => onPointerUp(k.note)}
               onPointerLeave={() => activeNotes.has(k.note) && onPointerUp(k.note)}
               title={`${noteToSolfege(k.note)} (${k.note})`}
-              aria-label={`Touche ${k.note}`}
+              aria-label={interpolate(t("keyLabel"), { note: k.note })}
             >
               <KeyLabel note={k.note} labelMode={labelMode} windowKeys={windowKeys} />
             </button>
@@ -107,7 +115,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
               onPointerCancel={() => onPointerUp(k.note)}
               onPointerLeave={() => activeNotes.has(k.note) && onPointerUp(k.note)}
               title={`${noteToSolfege(k.note)} (${k.note})`}
-              aria-label={`Touche ${k.note}`}
+              aria-label={interpolate(t("keyLabel"), { note: k.note })}
             >
               <KeyLabel note={k.note} labelMode={labelMode} windowKeys={windowKeys} />
             </button>

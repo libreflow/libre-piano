@@ -85,6 +85,13 @@ vi.mock("@tauri-apps/api/window", () => ({
 describe("Piano : non-régression du DOM (rôles et labels)", () => {
   beforeEach(() => {
     localStorage.clear();
+    // E1 (audit ergonomie) : les composants sont traduits — on force FR pour
+    // que les assertions sur les libellés restent stables quelle que soit la
+    // langue du navigateur de test.
+    Object.defineProperty(window.navigator, "language", {
+      value: "fr-FR",
+      configurable: true,
+    });
   });
 
   it("la toolbar expose ses quatre groupes étiquetés", () => {
@@ -114,7 +121,7 @@ describe("Piano : non-régression du DOM (rôles et labels)", () => {
     fireEvent.click(settingsBtn);
     const menu = screen.getByRole("menu", { name: "Paramètres" });
     expect(within(menu).getByRole("radiogroup", { name: "Étiquettes des touches" })).toBeTruthy();
-    expect(within(menu).getByLabelText("Switch language (FR/EN)")).toBeTruthy();
+    expect(within(menu).getByLabelText("Changer la langue (FR/EN)")).toBeTruthy();
     expect(within(menu).getByLabelText("Exporter la configuration")).toBeTruthy();
     expect(within(menu).getByLabelText("Importer la configuration")).toBeTruthy();
   });
