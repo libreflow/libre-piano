@@ -1,6 +1,7 @@
 // Groupe « Réglages » de la toolbar (refactor Phase B7) : vitesse,
 // métronome, volume, réverbe, égaliseur, transposition.
 
+import { memo } from "react";
 import { VolumeIcon, ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import {
   SPEED_MIN_PERCENT,
@@ -30,7 +31,8 @@ export interface SoundControlsProps {
   isPlaying: boolean;
 }
 
-export default function SoundControls({
+// B14 (audit) : React.memo — composant passif, props stables.
+const SoundControls = memo(function SoundControls({
   speed,
   onSpeedChange,
   volume,
@@ -139,4 +141,6 @@ export default function SoundControls({
       </div>
     </div>
   );
-}
+});
+
+export default SoundControls;

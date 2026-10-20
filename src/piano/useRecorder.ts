@@ -74,11 +74,6 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
     };
   }, []);
 
-  const captureNoteOn = useCallback((note: string, velocity?: number) => {
-    if (!isRecordingRef.current) return;
-    openRef.current.set(note, { time: nowFnRef.current() - startRef.current, velocity });
-  }, []);
-
   const captureNoteOff = useCallback((note: string) => {
     if (!isRecordingRef.current) return;
     const open = openRef.current.get(note);
@@ -93,6 +88,18 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
     );
     eventsRef.current.push({ time: open.time, note, duration, velocity: open.velocity });
   }, []);
+
+  const captureNoteOn = useCallback(
+    (note: string, velocity?: number) => {
+      if (!isRecordingRef.current) return;
+      // B5 (audit) : double noteOn sur la même note (double-clic rapide
+      // sans noteOff intermédiaire) — fermer l'ancienne d'abord, sinon
+      // elle serait perdue (écrasée) et resterait ouverte jusqu'au stop().
+      captureNoteOff(note);
+      openRef.current.set(note, { time: nowFnRef.current() - startRef.current, velocity });
+    },
+    [captureNoteOff]
+  );
 
   // Sécurité : libérer les refs au démontage.
   useEffect(() => {

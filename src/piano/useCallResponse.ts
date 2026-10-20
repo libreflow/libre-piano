@@ -64,20 +64,40 @@ export function useCallResponse(
   const totalMistakesRef = useRef(0);
   const timersRef = useRef<number[]>([]);
 
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach((t) => window.clearTimeout(t));
+    timersRef.current = [];
+  }, []);
+
   useEffect(() => {
     phrasesRef.current = song ? splitPhrases(song.events) : [];
   }, [song]);
+
+  // B3 (audit) : un changement de morceau (ou sa suppression) pendant une
+  // session echo active la termine proprement — sinon les timers continuent
+  // sur un morceau qui n'existe plus et l'état reste bloqué.
+  // Pattern "adjusting state during render" (cf. React docs, cf. usePractice).
+  const [lastSong, setLastSong] = useState(song);
+  if (song !== lastSong) {
+    setLastSong(song);
+    if (state.active) setState(IDLE);
+  }
+  // Quand la session passe à inactive (reset ci-dessus ou stop()), annuler
+  // les timers encore en vol pour ne pas jouer des notes fantômes.
+  const wasActiveRef = useRef(state.active);
+  useEffect(() => {
+    if (wasActiveRef.current && !state.active) {
+      clearTimers();
+      phaseRef.current = "idle";
+    }
+    wasActiveRef.current = state.active;
+  }, [state.active, clearTimers]);
 
   // Ref miroir pour le trigger (joué par les timers de la phase call).
   const playDemoRef = useRef(playDemoNote);
   useEffect(() => {
     playDemoRef.current = playDemoNote;
   }, [playDemoNote]);
-
-  const clearTimers = useCallback(() => {
-    timersRef.current.forEach((t) => window.clearTimeout(t));
-    timersRef.current = [];
-  }, []);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 

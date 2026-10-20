@@ -1,5 +1,6 @@
 // Boucle A-B (refactor Phase B5) : activation + bornes début/fin.
 
+import { memo } from "react";
 import { LoopIcon } from "../icons";
 
 interface LoopControlsProps {
@@ -13,7 +14,8 @@ interface LoopControlsProps {
   onEndChange: (v: number) => void;
 }
 
-export default function LoopControls({
+// B14 (audit) : React.memo — composant passif, props stables.
+const LoopControls = memo(function LoopControls({
   loopEnabled,
   loopStart,
   loopEnd,
@@ -63,4 +65,6 @@ export default function LoopControls({
       <span className="loop-total">/ {songDuration.toFixed(1)}s au total</span>
     </div>
   );
-}
+});
+
+export default LoopControls;

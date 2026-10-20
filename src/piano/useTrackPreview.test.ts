@@ -22,7 +22,7 @@ const { MockPart } = vi.hoisted(() => {
 
 vi.mock("./tone-gate", () => ({
   Part: MockPart,
-  getTransport: () => ({ state: "stopped", start: vi.fn() }),
+  getTransport: () => ({ state: "stopped", start: vi.fn(), stop: vi.fn() }),
 }));
 
 const notes = [

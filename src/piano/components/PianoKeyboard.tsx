@@ -2,6 +2,7 @@
 // labels, surbrillance par état — composant purement passif, toutes
 // les valeurs et callbacks viennent des props.
 
+import { memo } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { PianoKey, LabelMode } from "../notes";
 import { noteToSolfege } from "../notes";
@@ -21,7 +22,7 @@ interface PianoKeyboardProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function KeyLabel({
+const KeyLabel = memo(function KeyLabel({
   note,
   labelMode,
   windowKeys,
@@ -40,9 +41,11 @@ function KeyLabel({
       )}
     </span>
   );
-}
+});
 
-export default function PianoKeyboard({
+// B14 (audit) : React.memo — évite de re-rendre les 88 boutons à chaque
+// frame de lecture (playbackSeconds change 60×/s en haut de l'arbre).
+const PianoKeyboard = memo(function PianoKeyboard({
   allKeys,
   whiteKeyCount,
   windowKeys,
@@ -112,4 +115,6 @@ export default function PianoKeyboard({
       </div>
     </div>
   );
-}
+});
+
+export default PianoKeyboard;

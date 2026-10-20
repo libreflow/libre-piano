@@ -1,6 +1,7 @@
 // Overlays de statut (refactor Phase B2) : chargement, erreur audio,
 // drag & drop, message de statut, santé audio — blocs passifs.
 
+import { memo } from "react";
 import { audioHealth, formatHealth } from "../audio-health";
 
 interface StatusOverlaysProps {
@@ -14,7 +15,8 @@ interface StatusOverlaysProps {
   isDragOver: boolean;
 }
 
-export default function StatusOverlays({
+// B14 (audit) : React.memo — composant passif, props stables.
+const StatusOverlays = memo(function StatusOverlays({
   status,
   loadedCount,
   sampleCount,
@@ -60,4 +62,6 @@ export default function StatusOverlays({
       {statusMessage && <div className="status-message">{statusMessage}</div>}
     </>
   );
-}
+});
+
+export default StatusOverlays;

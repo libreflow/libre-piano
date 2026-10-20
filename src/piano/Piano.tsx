@@ -428,7 +428,17 @@ function PianoInner() {
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault();
       const code = e.code;
-      if (code !== "Escape") {
+      // B12 (audit) : ignorer les modificateurs et touches système comme
+      // raccourci — sinon Ctrl/Alt/Shift deviendrait la pédale ou le play.
+      const MODIFIER_CODES = new Set([
+        "ControlLeft", "ControlRight",
+        "AltLeft", "AltRight",
+        "ShiftLeft", "ShiftRight",
+        "MetaLeft", "MetaRight",
+        "CapsLock", "NumLock", "ScrollLock",
+        "OSLeft", "OSRight",
+      ]);
+      if (code !== "Escape" && !MODIFIER_CODES.has(code)) {
         setShortcuts((prev) => ({ ...prev, [remapping]: code }));
       }
       setRemapCapture(null);
@@ -483,7 +493,10 @@ function PianoInner() {
     const piano = el?.querySelector(".piano");
     if (!el || !piano) return;
     const idx = getWhitePositionOfNote("C4");
-    const keyW = parseFloat(getComputedStyle(piano).getPropertyValue("--key-w"));
+    // B13 (audit) : valeur par défaut 60px (cf. --key-w dans Piano.css) si
+    // la variable CSS est absente — parseFloat("") = NaN casserait le scroll.
+    const keyW =
+      parseFloat(getComputedStyle(piano).getPropertyValue("--key-w")) || 60;
     el.scrollLeft = Math.max(0, idx * keyW - el.clientWidth / 2);
   }, []);
 
@@ -498,7 +511,9 @@ function PianoInner() {
     if (!el || !piano) return;
     const idx = getWhitePositionOfNote(noteToFollow);
     if (idx < 0) return;
-    const keyW = parseFloat(getComputedStyle(piano).getPropertyValue("--key-w"));
+    // B13 (audit) : valeur par défaut 60px (cf. --key-w dans Piano.css).
+    const keyW =
+      parseFloat(getComputedStyle(piano).getPropertyValue("--key-w")) || 60;
     const x = idx * keyW;
     const view = el.clientWidth;
     // scroller seulement si la touche n'est pas (totalement) visible
@@ -547,12 +562,13 @@ function PianoInner() {
     cancelImport,
   } = useMidiImport(addImportedSong, setStatusMessageAuto);
 
-  // Volontairement non mémoïsé (comme toggleTheme/handleMouseDown) : le
-  // Compiler ne peut pas préserver une mémoïsation lisant isPlayingRef,
-  // et ce handler UI n'a pas besoin d'identité stable.
   // Replay (roadmap #45) : dernier enregistrement sélectionnable en un
   // clic pour le rejouer.
   const [lastRecordingId, setLastRecordingId] = useState<string | null>(null);
+  // Volontairement NON mémoïsé : le Compiler ne peut pas préserver une
+  // mémoïsation lisant isPlayingRef (ref mutable), et ce handler UI n'a pas
+  // besoin d'identité stable — il est passé à un composant mémoïsé (B14)
+  // qui re-rendera de toute façon quand isRecording change.
   const toggleRecording = () => {
     if (isRecording) {
       const song = stopRecording();
@@ -744,6 +760,14 @@ function PianoInner() {
         setLabelMode(clean.labelMode);
         setKeyboardLayout(clean.keyboardLayout);
         setTheme(clean.theme);
+        // B1 (audit) : tous les champs exportés doivent être restaurés,
+        // pas seulement une partie (sinon l'import est asymétrique).
+        setReverb(clean.reverb);
+        setTranspose(clean.transpose);
+        setEq(clean.eq);
+        setShowVisualizer(clean.visualizer ?? false);
+        setShortcuts(clean.shortcuts ?? DEFAULT_SHORTCUTS);
+        setLanguage(clean.language ?? detectLanguage());
         setStatusMessageAuto(
           `Configuration importée : ${clean.importedSongs.length} morceau(x), préférences restaurées.`
         );
@@ -753,7 +777,11 @@ function PianoInner() {
     },
     [setStatusMessageAuto]
   );
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  // B14 (audit) : mémoïsé — lu par React Compiler, passé à PianoKeyboard.
+  const toggleTheme = useCallback(
+    () => setTheme((t) => (t === "dark" ? "light" : "dark")),
+    []
+  );
   // Plein écran (Phase A4) : hook dédié (B9 : suit les sorties natives).
 
   // Vélocité au clic (roadmap #15) : plus le clic est bas sur la touche,
@@ -769,32 +797,45 @@ function PianoInner() {
     },
     [status, samplerRef, rawNoteOn, markNoteOn, playedNoteHandler, captureNoteOn]
   );
-  const handlePointerDown = (note: string, e: React.PointerEvent<HTMLButtonElement>) => {
-    if (isPlayingRef.current) return;
-    if (getContext().state !== "running") void ensureAudioStarted();
-    // Position relative verticale : 0 (haut, doux) → 1 (bas, fort),
-    // mappée sur une plage jouable 0.35–1.
-    const rect = e.currentTarget.getBoundingClientRect();
-    const rel = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    noteOnWithVelocity(note, 0.35 + rel * 0.65);
-  };
-  const handlePointerUp = (note: string) => {
-    // Toujours relâcher une note active : si la lecture a démarré pendant
-    // le clic maintenu, la note sonnerait à l'infini après l'arrêt.
-    if (!activeNotes.has(note)) return;
-    noteOff(note);
-  };
+  // B14 (audit) : mémoïsés — recréés à chaque render sinon, ce qui fait
+  // re-rendre PianoKeyboard (88 boutons) à chaque frame de lecture.
+  const handlePointerDown = useCallback(
+    (note: string, e: React.PointerEvent<HTMLButtonElement>) => {
+      if (isPlayingRef.current) return;
+      if (getContext().state !== "running") void ensureAudioStarted();
+      // Position relative verticale : 0 (haut, doux) → 1 (bas, fort),
+      // mappée sur une plage jouable 0.35–1.
+      const rect = e.currentTarget.getBoundingClientRect();
+      const rel = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      noteOnWithVelocity(note, 0.35 + rel * 0.65);
+    },
+    // isPlayingRef est une ref — le Compiler accepte la mémoïsation car la
+    // ref n'est lue qu'à l'intérieur du callback (jamais pendant le render).
+    [noteOnWithVelocity, isPlayingRef]
+  );
+  const handlePointerUp = useCallback(
+    (note: string) => {
+      // Toujours relâcher une note active : si la lecture a démarré pendant
+      // le clic maintenu, la note sonnerait à l'infini après l'arrêt.
+      if (!activeNotes.has(note)) return;
+      noteOff(note);
+    },
+    [activeNotes, noteOff]
+  );
 
-  const keyStateClass = (note: string): string => {
-    if (practice.state.expectedNote === note) return "expected";
-    if (activeNotes.has(note)) return "active";
-    if (autoActiveNotes.has(note)) return "auto-active";
-    if (sustainedNotes.has(note)) return "sustained";
-    // Anticipation : la touche suivante, discrète tant qu'elle n'est pas
-    // attendue (pas de halo, juste un liseré).
-    if (practice.state.nextNote === note) return "next";
-    return "";
-  };
+  const keyStateClass = useCallback(
+    (note: string): string => {
+      if (practice.state.expectedNote === note) return "expected";
+      if (activeNotes.has(note)) return "active";
+      if (autoActiveNotes.has(note)) return "auto-active";
+      if (sustainedNotes.has(note)) return "sustained";
+      // Anticipation : la touche suivante, discrète tant qu'elle n'est pas
+      // attendue (pas de halo, juste un liseré).
+      if (practice.state.nextNote === note) return "next";
+      return "";
+    },
+    [practice.state.expectedNote, practice.state.nextNote, activeNotes, autoActiveNotes, sustainedNotes]
+  );
 
   // Glisser-déposer un fichier .mid/.midi n'importe où sur la fenêtre.
   const [isDragOver, setIsDragOver] = useState(false);
@@ -885,8 +926,9 @@ function PianoInner() {
             } else {
               if (isPlayingRef.current) stopPlaybackAndClear();
               if (practice.state.active) practice.stop();
+              // B2 (audit) : start() délègue déjà à playPhrase(0) via
+              // playPhraseRef — ne pas appeler playPhrase(0) en plus.
               callResponse.start();
-              callResponse.playPhrase(0);
             }
           }}
         />
@@ -999,10 +1041,8 @@ function PianoInner() {
       {callResponse.state.active && (
         <EchoPanel
           state={callResponse.state}
-          onRestart={() => {
-            callResponse.start();
-            callResponse.playPhrase(0);
-          }}
+          // B2 (audit) : start() délègue à playPhrase(0) — un seul appel.
+          onRestart={callResponse.start}
           onStop={callResponse.stop}
         />
       )}
@@ -1021,15 +1061,22 @@ function PianoInner() {
           onCancel={cancelImport}
         />
       )}
-      {showVisualizer && (
-        <canvas
-          ref={visualizerCanvasRef}
-          className="waveform-canvas"
-          width={480}
-          height={48}
-          aria-label="Forme d'onde du signal audio"
-        />
-      )}
+      {showVisualizer && (() => {
+        // B10 (audit) : support HiDPI — la résolution interne est multipliée
+        // par devicePixelRatio (sinon flou sur écrans Retina), la taille CSS
+        // reste 480×48. Le contexte est mis à l'échelle dans useVisualizer.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        return (
+          <canvas
+            ref={visualizerCanvasRef}
+            className="waveform-canvas"
+            width={Math.round(480 * dpr)}
+            height={Math.round(48 * dpr)}
+            data-dpr={dpr}
+            aria-label="Forme d'onde du signal audio"
+          />
+        );
+      })()}
       {/* B6 (audit) : les paroles ne s'affichent que pendant la lecture
           automatique — pendant l'echo ou l'apprentissage, le temps de
           lecture est périmé et la ligne serait fausse. */}
@@ -1042,20 +1089,31 @@ function PianoInner() {
           ) : null}
           {isPlaying && (
             <div className="measure-track" aria-hidden="true">
-              {Array.from({ length: 32 }, (_, i) => {
-                const measureSec = (i * 4 * 60) / REFERENCE_BPM;
-                const active =
-                  playbackSeconds >= measureSec &&
-                  playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
-                return (
-                  <span
-                    key={i}
-                    className={`measure-dot${active ? " active" : ""}${
-                      i % 4 === 0 ? " strong" : ""
-                    }`}
-                  />
-                );
-              })}
+              {/* B11 (audit) : le nombre de mesures est dérivé de la durée
+                  du morceau (avant : plafond fixe de 32 mesures = 76,8 s à
+                  100 BPM — les morceaux plus longs n'avaient plus de marqueurs). */}
+              {Array.from(
+                {
+                  length: Math.max(
+                    1,
+                    Math.ceil(selectedSongDuration / ((4 * 60) / REFERENCE_BPM))
+                  ),
+                },
+                (_, i) => {
+                  const measureSec = (i * 4 * 60) / REFERENCE_BPM;
+                  const active =
+                    playbackSeconds >= measureSec &&
+                    playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
+                  return (
+                    <span
+                      key={i}
+                      className={`measure-dot${active ? " active" : ""}${
+                        i % 4 === 0 ? " strong" : ""
+                      }`}
+                    />
+                  );
+                }
+              )}
             </div>
           )}
         </div>
