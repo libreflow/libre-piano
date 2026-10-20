@@ -12,6 +12,7 @@ export interface MidiLike {
     instrument?: { name?: string; percussion?: boolean };
   }[];
 }
+import { translate, interpolate, type Language } from "./i18n";
 import { clampMidiToKeyboard, midiToNoteName } from "./notes";
 import type { Song, SongEvent } from "./songs";
 import {
@@ -190,7 +191,9 @@ export function normalizeVelocity(velocity: number | undefined): number {
 export function buildSongFromTracks(
   midi: MidiLike,
   trackIndices: number[],
-  title: string
+  title: string,
+  // E1 (audit ergonomie) : langue des avertissements affichés à l'utilisateur.
+  language: Language = "fr"
 ): ParsedMidi {
   const warnings: string[] = [];
   const selected = new Set(trackIndices);
@@ -221,16 +224,21 @@ export function buildSongFromTracks(
   if (events.length > MAX_EVENTS) {
     events = events.slice(0, MAX_EVENTS);
     warnings.push(
-      `Fichier tronqué aux ${MAX_EVENTS} premières notes (${rawEvents.length} au total).`
+      interpolate(translate(language, "importTruncated"), {
+        max: MAX_EVENTS,
+        total: rawEvents.length,
+      })
     );
   }
   if (transposedCount > 0) {
     warnings.push(
-      `${transposedCount} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (A0–C8).`
+      interpolate(translate(language, "importTransposed"), {
+        count: transposedCount,
+      })
     );
   }
   if (events.length === 0) {
-    throw new Error("Aucune note exploitable dans la ou les piste(s) sélectionnée(s).");
+    throw new Error(translate(language, "importNoNotesSelected"));
   }
 
   return {

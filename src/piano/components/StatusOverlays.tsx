@@ -1,18 +1,20 @@
 // Overlays de statut (refactor Phase B2) : chargement, erreur audio,
 // drag & drop, message de statut, santé audio — blocs passifs.
+// E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
 import { audioHealth, formatHealth } from "../audio-health";
+import { useI18n } from "../useI18n";
+import { interpolate } from "../i18n";
+import type { Language } from "../i18n";
 
 interface StatusOverlaysProps {
   status: "loading" | "ready" | "error";
   loadedCount: number;
   sampleCount: number;
-  loadErrorText: string;
-  retryText: string;
-  onRetry: () => void;
   statusMessage: string | null;
   isDragOver: boolean;
+  language: Language;
 }
 
 // B14 (audit) : React.memo — composant passif, props stables.
@@ -20,43 +22,42 @@ const StatusOverlays = memo(function StatusOverlays({
   status,
   loadedCount,
   sampleCount,
-  loadErrorText,
-  retryText,
-  onRetry,
   statusMessage,
   isDragOver,
+  language,
 }: StatusOverlaysProps) {
+  const { t } = useI18n(language);
   return (
     <>
       {status === "loading" && (
         <div className="piano-loading" role="status" aria-live="polite">
-          Chargement des sons du piano… {loadedCount}/{sampleCount}
+          {interpolate(t("loadingText"), { loaded: loadedCount, total: sampleCount })}
           <progress
             max={sampleCount}
             value={loadedCount}
-            aria-label="Progression du chargement"
+            aria-label={t("loadingProgress")}
           />
         </div>
       )}
       {status === "error" && (
         <div className="piano-loading" role="alert">
-          {loadErrorText}{" "}
-          <button className="import-btn" onClick={onRetry}>
-            {retryText}
+          {t("loadError")}{" "}
+          <button className="import-btn" onClick={() => window.location.reload()}>
+            {t("retry")}
           </button>
           <span className="piano-error-hint">
-            Si le problème persiste, réinstalle l'application.
+            {t("errorHint")}
           </span>
         </div>
       )}
       {status === "ready" && (
-        <div className="audio-health" role="status" aria-label="Santé audio">
+        <div className="audio-health" role="status" aria-label={t("health")}>
           {formatHealth(audioHealth())}
         </div>
       )}
       {isDragOver && (
         <div className="drop-overlay" role="status">
-          Dépose ton fichier .mid / .midi pour l'importer
+          {t("dropOverlay")}
         </div>
       )}
       {statusMessage && <div className="status-message">{statusMessage}</div>}

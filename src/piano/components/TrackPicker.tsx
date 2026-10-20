@@ -1,15 +1,20 @@
 // Dialogue de sélection des pistes MIDI (refactor Phase B3) :
 // choisis les pistes à importer, pré-écoute possible.
+// E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
 import { PlayIcon, StopIcon, StarIcon } from "../icons";
 import { DISPLAY_CHORD_RATIO_THRESHOLD } from "../constants";
 import type { PendingImport } from "../useMidiImport";
+import { useI18n } from "../useI18n";
+import { interpolate } from "../i18n";
+import type { Language } from "../i18n";
 
 interface TrackPickerProps {
   pendingImport: PendingImport;
   selectedTrackIndices: ReadonlySet<number>;
   previewingTrack: number | null;
+  language: Language;
   onToggleTrack: (index: number) => void;
   onPreview: (index: number) => void;
   onStopPreview: () => void;
@@ -22,48 +27,49 @@ const TrackPicker = memo(function TrackPicker({
   pendingImport,
   selectedTrackIndices,
   previewingTrack,
+  language,
   onToggleTrack,
   onPreview,
   onStopPreview,
   onConfirm,
   onCancel,
 }: TrackPickerProps) {
+  const { t } = useI18n(language);
   return (
     <div className="track-picker">
-      <h3>Pistes de "{pendingImport.title}"</h3>
+      <h3>{interpolate(t("tracksTitle"), { title: pendingImport.title })}</h3>
       <p className="track-picker-hint">
-        Choisis les pistes à importer (décoche l'accompagnement/basse pour n'entendre
-        que la mélodie, par exemple).
+        {t("trackPickerHint")}
       </p>
       <ul className="track-list">
-        {pendingImport.tracks.map((t) => (
-          <li key={t.index}>
-            <label className={t.likelyMelody ? "likely-melody" : ""}>
+        {pendingImport.tracks.map((trk) => (
+          <li key={trk.index}>
+            <label className={trk.likelyMelody ? "likely-melody" : ""}>
               <input
                 type="checkbox"
-                checked={selectedTrackIndices.has(t.index)}
-                onChange={() => onToggleTrack(t.index)}
+                checked={selectedTrackIndices.has(trk.index)}
+                onChange={() => onToggleTrack(trk.index)}
               />
               <span className="track-info">
                 <span className="track-title">
-                  {t.name} — {t.noteCount} notes
-                  {t.likelyMelody && (
+                  {trk.name} — {interpolate(t("trackNotes"), { count: trk.noteCount })}
+                  {trk.likelyMelody && (
                     <span className="melody-tag">
-                      <StarIcon /> mélodie
+                      <StarIcon /> {t("melodyTag")}
                     </span>
                   )}
                 </span>
                 <span className="track-details">
-                  tessiture {t.pitchRange} ·{" "}
-                  {t.chordRatio > DISPLAY_CHORD_RATIO_THRESHOLD
-                    ? "accords/accompagnement"
-                    : "monophonique"}
-                  {t.percussion ? " · percussion" : ""}
-                  {t.instrumentName ? ` · ${t.instrumentName}` : ""}
-                  {t.handRole === "right"
-                    ? " · main droite"
-                    : t.handRole === "left"
-                      ? " · main gauche"
+                  {trk.pitchRange} ·{" "}
+                  {trk.chordRatio > DISPLAY_CHORD_RATIO_THRESHOLD
+                    ? t("chordsLabel")
+                    : t("monophonic")}
+                  {trk.percussion ? ` · ${t("percussion")}` : ""}
+                  {trk.instrumentName ? ` · ${trk.instrumentName}` : ""}
+                  {trk.handRole === "right"
+                    ? ` · ${t("handRight")}`
+                    : trk.handRole === "left"
+                      ? ` · ${t("handLeft")}`
                       : ""}
                 </span>
               </span>
@@ -71,23 +77,23 @@ const TrackPicker = memo(function TrackPicker({
             <button
               className="import-btn preview-btn"
               onClick={() => {
-                if (previewingTrack === t.index) {
+                if (previewingTrack === trk.index) {
                   onStopPreview();
                   return;
                 }
-                onPreview(t.index);
+                onPreview(trk.index);
               }}
-              aria-pressed={previewingTrack === t.index}
-              title="Écouter un extrait de cette piste"
-              aria-label={`Pré-écouter la piste ${t.name}`}
+              aria-pressed={previewingTrack === trk.index}
+              title={t("listenHint")}
+              aria-label={interpolate(t("previewTrack"), { name: trk.name })}
             >
-              {previewingTrack === t.index ? (
+              {previewingTrack === trk.index ? (
                 <>
-                  <StopIcon /> Écoute…
+                  <StopIcon /> {t("previewStop")}
                 </>
               ) : (
                 <>
-                  <PlayIcon /> Écouter
+                  <PlayIcon /> {t("previewStart")}
                 </>
               )}
             </button>
@@ -96,10 +102,10 @@ const TrackPicker = memo(function TrackPicker({
       </ul>
       <div className="track-picker-actions">
         <button className="import-btn" onClick={onCancel}>
-          Annuler
+          {t("cancelBtn")}
         </button>
         <button className="play-btn" onClick={onConfirm}>
-          Importer la sélection
+          {t("importSelectionBtn")}
         </button>
       </div>
     </div>

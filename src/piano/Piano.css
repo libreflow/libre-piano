@@ -302,6 +302,11 @@ button:active:not(:disabled) {
 .profile-bar input {
   width: 120px;
 }
+/* E9 (audit ergonomie) : label visible des champs de la barre de profil. */
+.profile-label-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
 
 /* Visualiseur audio (roadmap #30). */
 .waveform-canvas {
@@ -967,4 +972,69 @@ button:active:not(:disabled) {
 .theme-toggle:hover {
   border-color: var(--accent);
   transform: scale(1.06);
+}
+
+/* ---------- E3 (audit ergonomie) : modale de confirmation ---------- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-dialog {
+  min-width: 280px;
+  max-width: min(420px, 90vw);
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.confirm-dialog p {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* E13 (audit ergonomie) : flash bref sur la barre de contrôles après un
+   import de configuration réussi. */
+.playback-controls.config-flash {
+  animation: config-flash 1.2s ease-out;
+}
+@keyframes config-flash {
+  0% {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+  100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+}
+/* ---------- E5 (audit ergonomie) : prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

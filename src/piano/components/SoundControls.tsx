@@ -1,5 +1,7 @@
 // Groupe « Réglages » de la toolbar (refactor Phase B7) : vitesse,
 // métronome, volume, réverbe, égaliseur, transposition.
+// E1 (audit ergonomie) : textes traduits via useI18n.
+// E12 (audit ergonomie) : aria-valuetext sur les sliders.
 
 import { memo } from "react";
 import { VolumeIcon, ChevronLeftIcon, ChevronRightIcon } from "../icons";
@@ -16,6 +18,9 @@ import {
 } from "../constants";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "../transpose";
 import type { EqSettings } from "../useAudioEngine";
+import { useI18n } from "../useI18n";
+import { interpolate } from "../i18n";
+import type { Language } from "../i18n";
 
 export interface SoundControlsProps {
   speed: number;
@@ -29,6 +34,7 @@ export interface SoundControlsProps {
   transpose: number;
   onTransposeChange: (updater: (v: number) => number) => void;
   isPlaying: boolean;
+  language: Language;
 }
 
 // B14 (audit) : React.memo — composant passif, props stables.
@@ -44,11 +50,13 @@ const SoundControls = memo(function SoundControls({
   transpose,
   onTransposeChange,
   isPlaying,
+  language,
 }: SoundControlsProps) {
+  const { t } = useI18n(language);
   return (
-    <div className="control-group" aria-label="Réglages">
+    <div className="control-group" aria-label={t("groupSettings")}>
       <label className="speed-label">
-        Vitesse
+        {t("speedLabel")}
         <input
           type="range"
           min={SPEED_MIN_PERCENT}
@@ -57,6 +65,7 @@ const SoundControls = memo(function SoundControls({
           value={speed}
           onChange={(e) => onSpeedChange(Number(e.target.value))}
           disabled={isPlaying}
+          aria-valuetext={`${speed}%`}
         />
         <span>{speed}%</span>
       </label>
@@ -70,10 +79,12 @@ const SoundControls = memo(function SoundControls({
           step={5}
           value={volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
+          aria-label={t("volume")}
+          aria-valuetext={`${volume}%`}
         />
         <span>{volume}%</span>
       </label>
-      <label className="speed-label volume" title="Profondeur de la réverbe">
+      <label className="speed-label volume" title={t("reverb")}>
         <VolumeIcon />
         <input
           type="range"
@@ -82,11 +93,13 @@ const SoundControls = memo(function SoundControls({
           step={5}
           value={reverb}
           onChange={(e) => onReverbChange(Number(e.target.value))}
+          aria-label={t("reverb")}
+          aria-valuetext={interpolate(t("reverbLabel"), { value: reverb })}
         />
-        <span>Réverbe {reverb}%</span>
+        <span>{interpolate(t("reverbLabel"), { value: reverb })}</span>
       </label>
-      <label className="speed-label eq-band" title="Égaliseur — graves">
-        <span aria-hidden="true">EQ</span>
+      <label className="speed-label eq-band" title={t("eqHint")}>
+        <span aria-hidden="true">{t("eqLabel")}</span>
         <input
           type="range"
           min={EQ_MIN_DB}
@@ -94,7 +107,8 @@ const SoundControls = memo(function SoundControls({
           step={1}
           value={eq.low}
           onChange={(e) => onEqChange((prev) => ({ ...prev, low: Number(e.target.value) }))}
-          aria-label="Égaliseur — bandes graves"
+          aria-label={t("eqLow")}
+          aria-valuetext={`${eq.low} dB`}
         />
         <input
           type="range"
@@ -103,7 +117,8 @@ const SoundControls = memo(function SoundControls({
           step={1}
           value={eq.mid}
           onChange={(e) => onEqChange((prev) => ({ ...prev, mid: Number(e.target.value) }))}
-          aria-label="Égaliseur — bandes médiums"
+          aria-label={t("eqMid")}
+          aria-valuetext={`${eq.mid} dB`}
         />
         <input
           type="range"
@@ -112,29 +127,30 @@ const SoundControls = memo(function SoundControls({
           step={1}
           value={eq.high}
           onChange={(e) => onEqChange((prev) => ({ ...prev, high: Number(e.target.value) }))}
-          aria-label="Égaliseur — bandes aigus"
+          aria-label={t("eqHigh")}
+          aria-valuetext={`${eq.high} dB`}
         />
       </label>
       <div
         className="segmented"
         role="group"
-        aria-label="Transposition en demi-tons"
-        title="Transposer la lecture (± demi-tons)"
+        aria-label={t("transposeHint")}
+        title={t("transposeHint")}
       >
         <button
           onClick={() => onTransposeChange((v) => Math.max(TRANSPOSE_MIN, v - 1))}
           disabled={transpose <= TRANSPOSE_MIN || isPlaying}
-          aria-label="Transposer un demi-ton plus bas"
+          aria-label={t("transposeDown")}
         >
           <ChevronLeftIcon />
         </button>
         <span className="octave-label" aria-live="polite">
-          {transpose > 0 ? `+${transpose}` : transpose} st
+          {interpolate(t("transposeLabel"), { value: transpose > 0 ? `+${transpose}` : transpose })}
         </span>
         <button
           onClick={() => onTransposeChange((v) => Math.min(TRANSPOSE_MAX, v + 1))}
           disabled={transpose >= TRANSPOSE_MAX || isPlaying}
-          aria-label="Transposer un demi-ton plus haut"
+          aria-label={t("transposeUp")}
         >
           <ChevronRightIcon />
         </button>

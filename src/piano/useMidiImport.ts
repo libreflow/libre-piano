@@ -7,6 +7,8 @@ import {
   MidiLike,
 } from "./midi-import";
 import { parseMidiAsync } from "./parse-midi-async";
+import type { Language } from "./i18n";
+import { translate, interpolate } from "./i18n";
 
 // Gestion de l'import MIDI : parsing, sélection des pistes, confirmation.
 // Encapsule le dialogue "quelles pistes importer ?" et l'ajout au répertoire.
@@ -19,7 +21,9 @@ export interface PendingImport {
 
 export function useMidiImport(
   addImportedSong: (song: Song) => void,
-  setStatusMessage: (msg: string) => void
+  setStatusMessage: (msg: string) => void,
+  // E1 (audit ergonomie) : langue pour les messages de statut de l'import.
+  language: Language = "fr"
 ) {
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [selectedTrackIndices, setSelectedTrackIndices] = useState<Set<number>>(
@@ -41,7 +45,7 @@ export function useMidiImport(
         const midi = await parseMidiAsync(buffer);
         const tracks = summarizeTracks(midi).filter((t) => t.noteCount > 0);
         if (tracks.length === 0) {
-          throw new Error("Ce fichier ne contient aucune note exploitable.");
+          throw new Error(translate(language, "importNoTracks"));
         }
         // Par défaut : toutes les pistes mélodiques (percussion décochée).
         const defaultSelection = tracks.filter((t) => !t.percussion);
@@ -50,13 +54,15 @@ export function useMidiImport(
         setPendingImport({ midi, title, tracks });
       } catch (err) {
         setStatusMessage(
-          `Échec de l'import : ${err instanceof Error ? err.message : String(err)}`
+          interpolate(translate(language, "importFailed"), {
+            message: err instanceof Error ? err.message : String(err),
+          })
         );
       } finally {
         setIsImporting(false);
       }
     },
-    [setStatusMessage]
+    [setStatusMessage, language]
   );
 
   const toggleTrack = useCallback((index: number) => {
@@ -71,31 +77,40 @@ export function useMidiImport(
   const confirmImport = useCallback(() => {
     if (!pendingImport) return null;
     if (selectedTrackIndices.size === 0) {
-      setStatusMessage("Sélectionne au moins une piste à importer.");
+      setStatusMessage(translate(language, "importNoSelection"));
       return null;
     }
     try {
       const { song, warnings } = buildSongFromTracks(
         pendingImport.midi,
         [...selectedTrackIndices],
-        pendingImport.title
+        pendingImport.title,
+        language
       );
       addImportedSong(song);
       setStatusMessage(
         warnings.length > 0
-          ? `"${song.title}" importé — ${warnings.join(" ")}`
-          : `"${song.title}" importé avec succès (${song.events.length} notes).`
+          ? interpolate(translate(language, "importSuccessWarn"), {
+              title: song.title,
+              warnings: warnings.join(" "),
+            })
+          : interpolate(translate(language, "importSuccess"), {
+              title: song.title,
+              count: song.events.length,
+            })
       );
       return song;
     } catch (err) {
       setStatusMessage(
-        `Échec de l'import : ${err instanceof Error ? err.message : String(err)}`
+        interpolate(translate(language, "importFailed"), {
+          message: err instanceof Error ? err.message : String(err),
+        })
       );
       return null;
     } finally {
       setPendingImport(null);
     }
-  }, [addImportedSong, pendingImport, selectedTrackIndices, setStatusMessage]);
+  }, [addImportedSong, pendingImport, selectedTrackIndices, setStatusMessage, language]);
 
   const cancelImport = useCallback(() => setPendingImport(null), []);
 

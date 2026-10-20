@@ -11,8 +11,9 @@
   --text-faint: #8b90a3;
   --accent: #7c5cff;
   --accent-soft: rgba(124, 92, 255, 0.15);
-  --play: #34a853;
-  --stop: #d95555;
+  /* E4 (audit ergonomie) : contraste 4.5:1 minimum sur boutons (texte blanc) */
+  --play: #237a3c;
+  --stop: #b03030;
   --sustain: #9a6cff;
 
   font-family:
@@ -49,8 +50,8 @@
   --text-faint: #6a7089;
   --accent: #6244d8;
   --accent-soft: rgba(98, 68, 216, 0.1);
-  --play: #2b7a3f;
-  --stop: #b84040;
+  --play: #1e6b34;
+  --stop: #9c2828;
   --sustain: #7c5cff;
   background-image:
     radial-gradient(ellipse at 20% -10%, rgba(98, 68, 216, 0.06), transparent 50%),

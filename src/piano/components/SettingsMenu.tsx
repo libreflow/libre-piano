@@ -1,8 +1,10 @@
 // Menu Paramètres + bouton thème (refactor Phase B6) : la refonte UI
 // regroupe les options secondaires dans un menu déroulant ; le thème
 // vit en bouton flottant en haut à droite.
+// E1 (audit ergonomie) : textes traduits via useI18n.
+// E6 (audit ergonomie) : navigation clavier fléchée dans le menu.
 
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import type { LabelMode } from "../notes";
 import type { Language } from "../i18n";
@@ -16,6 +18,7 @@ import {
   SunIcon,
   MoonIcon,
 } from "../icons";
+import { useI18n } from "../useI18n";
 
 export interface SettingsMenuProps {
   open: boolean;
@@ -67,6 +70,35 @@ const SettingsMenu = memo(function SettingsMenu({
   theme,
   onToggleTheme,
 }: SettingsMenuProps) {
+  const { t } = useI18n(language);
+  // E6 (audit ergonomie) : navigation fléchée dans le menu — les boutons
+  // du panneau sont focusables et les flèches Haut/Bas déplacent le focus.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLButtonElement>(
+        "button:not(:disabled), [role='radio']:not(:disabled)"
+      );
+      if (focusable.length === 0) return;
+      const list = Array.from(focusable);
+      const currentIdx = list.indexOf(document.activeElement as HTMLButtonElement);
+      e.preventDefault();
+      let nextIdx: number;
+      if (e.key === "ArrowDown") {
+        nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % list.length;
+      } else {
+        nextIdx = currentIdx < 0 ? list.length - 1 : (currentIdx - 1 + list.length) % list.length;
+      }
+      list[nextIdx]?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       <div className="settings-menu" ref={menuRef}>
@@ -76,21 +108,26 @@ const SettingsMenu = memo(function SettingsMenu({
           aria-haspopup="menu"
           aria-expanded={open}
           aria-pressed={open}
-          title="Paramètres"
+          title={t("settings")}
         >
           <SettingsIcon />
-          Paramètres
+          {t("settings")}
         </button>
         {open && (
-          <div className="settings-panel" role="menu" aria-label="Paramètres">
-            <h4>Affichage</h4>
-            <div className="segmented" role="radiogroup" aria-label="Étiquettes des touches">
+          <div
+            ref={panelRef}
+            className="settings-panel"
+            role="menu"
+            aria-label={t("settingsMenu")}
+          >
+            <h4>{t("groupDisplay")}</h4>
+            <div className="segmented" role="radiogroup" aria-label={t("labels")}>
               {(
                 [
                   ["lettres", "A B C"],
                   ["solfege", "Do Ré"],
                   ["both", "A B C + Do"],
-                  ["none", "Rien"],
+                  ["none", t("labelNone")],
                 ] as const
               ).map(([mode, label]) => (
                 <button
@@ -99,7 +136,7 @@ const SettingsMenu = memo(function SettingsMenu({
                   aria-checked={labelMode === mode}
                   className={labelMode === mode ? "seg-active" : ""}
                   onClick={() => onLabelModeChange(mode)}
-                  title={`Étiquettes : ${label}`}
+                  title={`${t("labels")} : ${label}`}
                 >
                   <TagsIcon />
                   {label}
@@ -110,61 +147,61 @@ const SettingsMenu = memo(function SettingsMenu({
               className="import-btn"
               onClick={onToggleVisualizer}
               aria-pressed={showVisualizer}
-              title="Afficher la forme d'onde pendant le jeu"
+              title={t("waveHint")}
             >
-              {showVisualizer ? "Masquer l'onde" : "Onde"}
+              {showVisualizer ? t("waveToggleOn") : t("waveToggleOff")}
             </button>
             <button className="import-btn" onClick={onToggleFullscreen} aria-pressed={isFullscreen}>
               {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
-              {isFullscreen ? "Quitter" : "Plein écran"}
+              {isFullscreen ? t("fullscreenQuit") : t("fullscreen")}
             </button>
-            <h4>Langue</h4>
+            <h4>{t("groupLanguage")}</h4>
             <button
               className="import-btn"
               onClick={onToggleLanguage}
-              title="Interface language / Langue de l'interface"
-              aria-label="Switch language (FR/EN)"
+              title={t("switchLanguageHint")}
+              aria-label={t("switchLanguageAria")}
             >
               {language === "fr" ? "FR" : "EN"}
             </button>
-            <h4>Raccourcis</h4>
+            <h4>{t("groupShortcuts")}</h4>
             <button
               className="import-btn"
               onClick={onRemapSustain}
-              title="Personnaliser le raccourci de la pédale (roadmap #65)"
+              title={t("shortcutPedalHint")}
             >
-              Pédale : {shortcuts.sustain === "Space" ? "Espace" : shortcuts.sustain}
+              {t("shortcutPedal")} : {shortcuts.sustain === "Space" ? t("sustainOff") : shortcuts.sustain}
             </button>
             <button
               className="import-btn"
               onClick={onRemapTogglePlayback}
-              title="Personnaliser le raccourci lecture/arrêt (roadmap #65)"
+              title={t("shortcutPlayHint")}
             >
-              Lecture :{" "}
+              {t("shortcutPlay")} :{" "}
               {shortcuts.togglePlayback === "Enter"
-                ? "Entrée"
+                ? t("keyEnter")
                 : shortcuts.togglePlayback}
             </button>
-            <h4>Configuration</h4>
+            <h4>{t("groupConfig")}</h4>
             <button
               className="import-btn"
               onClick={onExportConfig}
               disabled={isPlaying}
-              title="Exporter morceaux importés + préférences en JSON"
-              aria-label="Exporter la configuration"
+              title={t("exportConfigHint")}
+              aria-label={t("exportConfig")}
             >
               <ExpandIcon />
-              Exporter
+              {t("exportConfig")}
             </button>
             <button
               className="import-btn"
               onClick={onImportConfig}
               disabled={isPlaying}
-              title="Importer un fichier de configuration Libre Piano"
-              aria-label="Importer la configuration"
+              title={t("importConfigHint")}
+              aria-label={t("importConfig")}
             >
               <ImportIcon />
-              Config
+              {t("importConfig")}
             </button>
             <input
               ref={configInputRef}
@@ -184,8 +221,8 @@ const SettingsMenu = memo(function SettingsMenu({
         className="theme-toggle"
         onClick={onToggleTheme}
         aria-pressed={theme === "light"}
-        title={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
-        aria-label={theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre"}
+        title={theme === "dark" ? t("themeLight") : t("themeDark")}
+        aria-label={theme === "dark" ? t("themeLightAction") : t("themeDarkAction")}
       >
         {theme === "dark" ? <SunIcon /> : <MoonIcon />}
       </button>
