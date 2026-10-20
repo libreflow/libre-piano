@@ -12,8 +12,9 @@ export interface LoopState {
 
 export function usePlayback(
   samplerReady: boolean,
-  allSongs: Song[],
-  selectedSongId: string,
+  // P5 (audit perf) : le morceau sélectionné transposé (pas toute la
+  // bibliothèque) — la transposition ne porte plus que sur un morceau.
+  selectedPlayableSong: Song | undefined,
   speed: number,
   loop: LoopState,
   triggerNote: (note: string, duration: number, time: number, velocity?: number) => void,
@@ -33,9 +34,8 @@ export function usePlayback(
   }, [isPlaying]);
 
   const selectedSongDuration = useMemo(() => {
-    const song = allSongs.find((s) => s.id === selectedSongId);
-    return song ? songDuration(song) : 0;
-  }, [allSongs, selectedSongId]);
+    return selectedPlayableSong ? songDuration(selectedPlayableSong) : 0;
+  }, [selectedPlayableSong]);
 
   const stopPlayback = useCallback(() => {
     const transport = getTransport();
@@ -54,7 +54,7 @@ export function usePlayback(
     await ensureAudioStarted();
     stopPlayback();
 
-    const song = allSongs.find((s) => s.id === selectedSongId) ?? allSongs[0];
+    const song = selectedPlayableSong;
     if (!song) return;
     const speedFactor = speed / 100;
     const fullDuration = songDuration(song);
@@ -122,14 +122,13 @@ export function usePlayback(
     transport.start();
     setIsPlaying(true);
   }, [
-    allSongs,
+    selectedPlayableSong,
     loop.loopEnabled,
     loop.loopEnd,
     loop.loopStart,
     onAutoNoteOff,
     onAutoNoteOn,
     samplerReady,
-    selectedSongId,
     speed,
     stopPlayback,
     triggerNote,

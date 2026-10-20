@@ -72,8 +72,7 @@ describe("usePlayback", () => {
     const hook = renderHook(() =>
       usePlayback(
         true,
-        [song],
-        song.id,
+        song,
         overrides?.speed ?? 100,
         overrides?.loop ?? noLoop,
         triggerNote,
@@ -87,7 +86,7 @@ describe("usePlayback", () => {
   it("ne joue pas si le sampler n'est pas prêt", async () => {
     const triggerNote = vi.fn();
     const hook = renderHook(() =>
-      usePlayback(false, [song], song.id, 100, noLoop, triggerNote, vi.fn(), vi.fn())
+      usePlayback(false, song, 100, noLoop, triggerNote, vi.fn(), vi.fn())
     );
     await act(async () => {
       await (hook.result.current as { playSong: () => Promise<void> }).playSong();
