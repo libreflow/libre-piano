@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.5.1 — 2026-10-20
+
+### Corrections de bugs (audit approfondi, 14 bugs)
+- **Import de configuration incomplet** : réverbe, égaliseur, transposition, visualiseur, raccourcis et langue sont maintenant exportés (l'import savait les lire, l'export ne les écrivait pas)
+- **Double lecture d'une phrase en echo** : `start()` programme la phrase une seule fois (timers doublés supprimés)
+- **Echo non arrêté au changement de morceau** : quitter l'echo au mauvais moment ne relance plus une session fantôme
+- **Timers orphelins** : tous les `setTimeout` du mode echo sont annulés au stop (fuites mémoire + callbacks sur composant démonté)
+- **Notes orphelines** : relâcher une touche maintenue pendant le démarrage de la lecture ne laisse plus la note sonner à l'infini
+- **`getComputedStyle` dans la boucle RAF** : la couleur du visualiseur est lue une seule fois (60 fps × reflow = CPU gaspillé)
+- **Transport jamais arrêté** : la pré-écoute de piste laissait le `Transport` tourner sans événement
+- **Tri de bibliothèque en double** : `sortLibrary` factorisé (était dupliqué inline)
+- **Export MIDI : buffer view** : copie de la plage exacte (évite les octets parasites si `byteOffset > 0`)
+- **Canvas flou sur écran HiDPI** : résolution interne × `devicePixelRatio`, contexte mis à l'échelle
+- **Plafond de 32 mesures** : le nombre de mesures est dérivé de la durée du morceau
+- **Modificateurs comme raccourci** : Ctrl/Alt/Shift/Meta ne peuvent plus devenir la pédale ou le play
+- **`parseFloat("")` = NaN** : valeur par défaut 60px si la variable CSS `--key-w` est absente
+- **Re-renders en cascade** : `React.memo` sur les 10 composants UI passifs
+
+### Ergonomie (audit complet, 14 problèmes)
+- **Internationalisation complète** : les ~120 chaînes françaises en dur sont traduites (FR/EN) — tous les composants, messages de statut, aria-labels, erreurs et avertissements MIDI
+- **`window.confirm()` remplacé** par une modale custom (`ConfirmDialog`) : focus auto, Échap, clic backdrop, `role="alertdialog"`, traduisible et stylisable
+- **Contraste WCAG AA** : boutons Lecture/Arrêt corrigés dans les deux thèmes (5.4:1 à 7.6:1 sur fond blanc)
+- **`prefers-reduced-motion`** : animations et transitions neutralisées si l'utilisateur le demande
+- **Navigation fléchée** dans le menu Paramètres (ArrowUp/ArrowDown cyclent le focus)
+- **`lang` du document** mis à jour au changement de langue (`<html lang>`)
+- **Labels visibles** sur le sélecteur de profil et le champ de création
+- **Bouton Replay stable** : toujours visible (désactivé sans enregistrement), plus de décalage de mise en page
+- **`aria-valuetext`** sur tous les sliders (vitesse, volume, réverbe, 3 bandes EQ)
+- **Flash visuel** après un import de configuration réussi
+
+### Performance (audit complet, 6 problèmes)
+- **RAF de lecture isolé** : le compteur à 60 fps ne re-rend plus tout l'arbre React — nouveau composant mémoïsé `PlaybackOverlay` (paroles + mesures uniquement)
+- **Crash sur gros fichiers MIDI** : `Math.min/max(...spread)` remplacé par une boucle O(n) — un fichier avec >125k notes sur une piste ne fait plus planter l'import (`RangeError`)
+- **`sortLibrary` mémoïsé** dans le sélecteur de morceau
+- **Persistance debouncée** (300 ms) : les sliders ne bloquent plus le thread principal avec une grosse bibliothèque
+- **Transposition ciblée** : seul le morceau sélectionné est transposé (plus toute la bibliothèque)
+
+### Tests
+- 188 tests (+1 test de non-régression perf : 150k notes sur une piste)
+
+
 ## 0.5.0 — 2026-10-19
 
 ### Refonte de l'interface
