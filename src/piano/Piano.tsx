@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ensureAudioStarted, getContext, getTransport } from "./tone-gate";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
   getKeyboardLayout,
   getWindowKeyMap,
@@ -16,13 +16,7 @@ import { downloadSongAsMidi } from "./midi-export";
 import { transposedSong } from "./transpose";
 import { buildConfigFile, parseConfigFile } from "./config-io";
 import { sanitizeState } from "./storage";
-import {
-  DEFAULT_STATE,
-  getActiveProfile,
-  setActiveProfile,
-  listProfiles,
-  DEFAULT_PROFILE,
-} from "./storage";
+import { DEFAULT_STATE, getActiveProfile } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import { usePractice } from "./usePractice";
@@ -52,84 +46,25 @@ import PlaybackControls from "./components/PlaybackControls";
 import SoundControls from "./components/SoundControls";
 import KeyboardControls from "./components/KeyboardControls";
 import ConfirmDialog from "./components/ConfirmDialog";
+import PlaybackOverlay from "./components/PlaybackOverlay";
+import ProfileBar from "./components/ProfileBar";
 import {
   useFavorites,
   applyBuiltinFavorites,
   importedFavoriteIds,
 } from "./hooks/useFavorites";
-import {
-  REFERENCE_BPM,
-} from "./constants";
 import { SustainIcon } from "./icons";
 import "./Piano.css";
 
-/**
- * Wrapper (roadmap #63) : le sélecteur de profil vit ici ; changer de
- * profil remonte le Piano interne (key) — tout l'état (morceaux,
- * préférences, stats) est relu depuis la clé du profil.
- */
 export default function Piano() {
+  // Wrapper (roadmap #63) : la barre de profils (extraite) pilote la clé
+  // du Piano interne — changer de profil le remonte et tout l'état est
+  // relu depuis la clé du profil.
   const [profile, setProfile] = useState(getActiveProfile);
-  const [profiles, setProfiles] = useState(listProfiles);
-  const [newProfile, setNewProfile] = useState("");
-  // E1 (audit ergonomie) : i18n pour la barre de profil. On lit la langue
-  // persistée du profil actif (avant le mount de PianoInner).
-  const { t } = useI18n(detectLanguage());
-
-  const switchProfile = (next: string) => {
-    setActiveProfile(next);
-    setProfile(next);
-    setProfiles(listProfiles());
-  };
-
   return (
     <>
       <PianoInner key={profile} />
-      <div className="profile-bar">
-        {/* E9 (audit ergonomie) : label visible pour le sélecteur de profil */}
-        <label>
-          <span className="profile-label-text">{t("profileLabel")}</span>{" "}
-          <select
-            value={profile}
-            onChange={(e) => switchProfile(e.target.value)}
-            aria-label={t("profileAria")}
-          >
-            {profiles.map((p) => (
-              <option key={p} value={p}>
-                {p === DEFAULT_PROFILE ? t("profileDefault") : p}
-              </option>
-            ))}
-          </select>
-        </label>
-        {/* E9 : label visible pour le champ de création */}
-        <label>
-          <span className="profile-label-text">{t("profileNameAria")}</span>{" "}
-          <input
-            type="text"
-            value={newProfile}
-            onChange={(e) => setNewProfile(e.target.value)}
-            placeholder={t("profilePlaceholder")}
-            aria-label={t("profileNameAria")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newProfile.trim().length > 0) {
-                switchProfile(newProfile.trim());
-                setNewProfile("");
-              }
-            }}
-          />
-        </label>
-        <button
-          className="import-btn"
-          onClick={() => {
-            if (newProfile.trim().length > 0) {
-              switchProfile(newProfile.trim());
-              setNewProfile("");
-            }
-          }}
-        >
-          {t("profileCreate")}
-        </button>
-      </div>
+      <ProfileBar onSwitch={setProfile} />
     </>
   );
 }
@@ -1176,77 +1111,3 @@ function PianoInner() {
     </div>
   );
 }
-
-// P1 (audit perf) : overlay de lecture isolé et mémoïsé. Le RAF à 60 fps
-// met à jour playbackSeconds ici uniquement — PianoInner (88 touches,
-// contrôles, hooks audio) n'est plus re-rendu à chaque frame.
-interface PlaybackOverlayProps {
-  song: Song | undefined;
-  songDuration: number;
-  speed: number;
-}
-
-const PlaybackOverlay = memo(function PlaybackOverlay({
-  song,
-  songDuration,
-  speed,
-}: PlaybackOverlayProps) {
-  // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
-  // pendant la lecture, pour les marqueurs de mesures et les paroles.
-  const [playbackSeconds, setPlaybackSeconds] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      setPlaybackSeconds(getTransport().seconds);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-  // M4 (audit) : les événements du morceau sont scalés par speedFactor,
-  // transport.seconds avance donc en temps « réduit » — on le ramène en
-  // temps x1 avant de comparer aux lyrics et marqueurs de mesures.
-  const speedFactor = Math.max(1, speed) / 100;
-  const songSeconds = playbackSeconds * speedFactor;
-  // Paroles synchronisées (roadmap #99) : ligne courante du morceau
-  // sélectionné, selon le temps de lecture.
-  const currentLyric = song?.lyrics
-    ?.filter((l) => l.time <= songSeconds)
-    .pop();
-  return (
-    <div className="playback-overlay" aria-live="off">
-      {song?.lyrics && song.lyrics.length > 0 ? (
-        <div className="lyrics-line" key={currentLyric?.text}>
-          {currentLyric?.text ?? "…"}
-        </div>
-      ) : null}
-      <div className="measure-track" aria-hidden="true">
-        {/* B11 (audit) : le nombre de mesures est dérivé de la durée
-            du morceau (avant : plafond fixe de 32 mesures = 76,8 s à
-            100 BPM — les morceaux plus longs n'avaient plus de marqueurs). */}
-        {Array.from(
-          {
-            length: Math.max(
-              1,
-              Math.ceil(songDuration / ((4 * 60) / REFERENCE_BPM))
-            ),
-          },
-          (_, i) => {
-            const measureSec = (i * 4 * 60) / REFERENCE_BPM;
-            const active =
-              songSeconds >= measureSec &&
-              songSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
-            return (
-              <span
-                key={i}
-                className={`measure-dot${active ? " active" : ""}${
-                  i % 4 === 0 ? " strong" : ""
-                }`}
-              />
-            );
-          }
-        )}
-      </div>
-    </div>
-  );
-});
