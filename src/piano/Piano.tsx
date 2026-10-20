@@ -74,14 +74,7 @@ export default function Piano() {
   const [newProfile, setNewProfile] = useState("");
   // E1 (audit ergonomie) : i18n pour la barre de profil. On lit la langue
   // persistée du profil actif (avant le mount de PianoInner).
-  const lang = (() => {
-    try {
-      const raw = localStorage.getItem("libre-piano:profile");
-      void raw;
-    } catch { /* ignore */ }
-    return detectLanguage();
-  })();
-  const { t } = useI18n(lang);
+  const { t } = useI18n(detectLanguage());
 
   const switchProfile = (next: string) => {
     setActiveProfile(next);
@@ -424,11 +417,18 @@ function PianoInner() {
   // Roadmap #28 : le relâchement de la pédale libère les notes tenues
   // avec un release réellement prolongé (elles s'éteignent doucement
   // au lieu d'être coupées net).
+  // Ref miroir de sustainedNotes : lire la liste courante hors updater
+  // (m8) — les updaters React sont purs, l'effet audio triggerRelease ne
+  // doit pas y vivre (StrictMode les rejoue et doublerait le release).
+  const sustainedNotesRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    sustainedNotesRef.current = sustainedNotes;
+  }, [sustainedNotes]);
   const releaseSustained = useCallback(() => {
-    setSustainedNotes((prev) => {
-      prev.forEach((note) => releaseSustainedNote(note));
-      return new Set();
-    });
+    const held = [...sustainedNotesRef.current];
+    if (held.length === 0) return;
+    setSustainedNotes(new Set());
+    held.forEach((note) => releaseSustainedNote(note));
   }, [releaseSustainedNote]);
 
   // P5 (audit perf) : seul le morceau sélectionné est transposé pour la
@@ -1143,6 +1143,7 @@ function PianoInner() {
         <PlaybackOverlay
           song={selectedSong}
           songDuration={selectedSongDuration}
+          speed={speed}
         />
       )}
       <PianoKeyboard
@@ -1182,11 +1183,13 @@ function PianoInner() {
 interface PlaybackOverlayProps {
   song: Song | undefined;
   songDuration: number;
+  speed: number;
 }
 
 const PlaybackOverlay = memo(function PlaybackOverlay({
   song,
   songDuration,
+  speed,
 }: PlaybackOverlayProps) {
   // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
   // pendant la lecture, pour les marqueurs de mesures et les paroles.
@@ -1200,10 +1203,15 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
+  // M4 (audit) : les événements du morceau sont scalés par speedFactor,
+  // transport.seconds avance donc en temps « réduit » — on le ramène en
+  // temps x1 avant de comparer aux lyrics et marqueurs de mesures.
+  const speedFactor = Math.max(1, speed) / 100;
+  const songSeconds = playbackSeconds * speedFactor;
   // Paroles synchronisées (roadmap #99) : ligne courante du morceau
   // sélectionné, selon le temps de lecture.
   const currentLyric = song?.lyrics
-    ?.filter((l) => l.time <= playbackSeconds)
+    ?.filter((l) => l.time <= songSeconds)
     .pop();
   return (
     <div className="playback-overlay" aria-live="off">
@@ -1226,8 +1234,8 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
           (_, i) => {
             const measureSec = (i * 4 * 60) / REFERENCE_BPM;
             const active =
-              playbackSeconds >= measureSec &&
-              playbackSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
+              songSeconds >= measureSec &&
+              songSeconds < measureSec + (4 * 60) / REFERENCE_BPM;
             return (
               <span
                 key={i}

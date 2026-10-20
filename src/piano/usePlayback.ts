@@ -78,6 +78,13 @@ export function usePlayback(
     if (loop.loopEnabled && sectionStart > sectionEnd) {
       [sectionStart, sectionEnd] = [sectionEnd, sectionStart];
     }
+    // Bornes jamais réglées (les champs sont désactivés avant activation
+    // et initialisent à 0) : jouer le morceau entier en boucle, pas une
+    // micro-boucle de 0.1 s.
+    if (loop.loopEnabled && sectionEnd <= 0) {
+      sectionStart = 0;
+      sectionEnd = fullDuration;
+    }
     if (loop.loopEnabled && sectionEnd - sectionStart < 0.1) {
       sectionEnd = sectionStart + 0.1;
     }

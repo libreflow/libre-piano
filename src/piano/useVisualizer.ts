@@ -66,10 +66,12 @@ export function useVisualizer(enabled: boolean) {
       }
       raf = requestAnimationFrame(draw);
     };
-    // Mise à l'échelle du contexte pour le HiDPI (une seule fois).
+    // Mise à l'échelle du contexte pour le HiDPI. setTransform (et non
+    // scale) : idempotent — en StrictMode l'effet remonte sur le même
+    // canvas et un scale cumulatif dessinerait la waveform 2x trop petite.
     if (canvas) {
       const ctx = canvas.getContext("2d");
-      if (ctx) ctx.scale(dpr, dpr);
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
