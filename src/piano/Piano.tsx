@@ -3,20 +3,16 @@ import { ensureAudioStarted, getContext } from "./tone-gate";
 import {
   getKeyboardLayout,
   getWindowKeyMap,
-  getWhitePositionOfNote,
   getOctaveShiftForNote,
   KeyboardLayout,
   LabelMode,
 } from "./notes";
-import { BUILTIN_SONGS, Song } from "./songs";
 import { useMidiImport } from "./useMidiImport";
 import { useTrackPreview } from "./useTrackPreview";
 import { useRecorder } from "./useRecorder";
 import { downloadSongAsMidi } from "./midi-export";
 import { transposedSong } from "./transpose";
-import { buildConfigFile, parseConfigFile } from "./config-io";
-import { sanitizeState } from "./storage";
-import { DEFAULT_STATE, getActiveProfile } from "./storage";
+import { getActiveProfile } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import { usePractice } from "./usePractice";
@@ -24,13 +20,6 @@ import { useCallResponse } from "./useCallResponse";
 import { useVisualizer } from "./useVisualizer";
 import { detectLanguage, interpolate, type Language } from "./i18n";
 import { useI18n } from "./useI18n";
-import {
-  loadStats,
-  saveStats,
-  removeStats,
-  recordSession,
-  sessionFrom,
-} from "./practice-stats";
 import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
 import { useStatusMessage } from "./hooks/useStatusMessage";
 import { usePianoState, type PersistedSnapshot } from "./hooks/usePianoState";
@@ -48,11 +37,12 @@ import KeyboardControls from "./components/KeyboardControls";
 import ConfirmDialog from "./components/ConfirmDialog";
 import PlaybackOverlay from "./components/PlaybackOverlay";
 import ProfileBar from "./components/ProfileBar";
-import {
-  useFavorites,
-  applyBuiltinFavorites,
-  importedFavoriteIds,
-} from "./hooks/useFavorites";
+import { useActiveNotes } from "./hooks/useActiveNotes";
+import { useSettingsMenuState } from "./hooks/useSettingsMenuState";
+import { useSongLibrary } from "./hooks/useSongLibrary";
+import { usePersistSnapshot } from "./hooks/usePersistSnapshot";
+import { usePracticeStats } from "./hooks/usePracticeStats";
+import { useConfigTransfer } from "./hooks/useConfigTransfer";
 import { SustainIcon } from "./icons";
 import "./Piano.css";
 
@@ -73,41 +63,38 @@ function PianoInner() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const configInputRef = useRef<HTMLInputElement | null>(null);
   const pianoScrollRef = useRef<HTMLDivElement | null>(null);
-  // Notes allumées par une action directe (souris / clavier PC).
-  const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
-  // Notes allumées par la lecture automatique (couleur distincte).
-  const [autoActiveNotes, setAutoActiveNotes] = useState<Set<string>>(new Set());
-  // Notes relâchées mais qui continuent de sonner (pédale de sustain).
-  const [sustainedNotes, setSustainedNotes] = useState<Set<string>>(new Set());
-  const [sustainOn, setSustainOn] = useState(false);
+  // Surbrillance des touches (hooks/useActiveNotes) : états active/auto/
+  // sustained + routage sustain + miroirs refs pour les callbacks stables.
+  const notes = useActiveNotes();
+  const {
+    activeNotes,
+    autoActiveNotes,
+    sustainedNotes,
+    sustainOn,
+    setSustainOn,
+    markNoteOn,
+    markAutoNoteOn,
+    markAutoNoteOff,
+    routeNoteOff,
+    clearAutoNotes,
+    sustainedNotesRef,
+  } = notes;
 
-  // État persisté (localStorage) : lu une seule fois à l'initialisation.
-  // État persisté (Phase A2) : chargement + callback de sauvegarde stable.
+  // État persisté (localStorage, Phase A2) : chargement + sauvegarde stable.
   const { initialState, persist } = usePianoState();
 
-  const [importedSongs, setImportedSongs] = useState<Song[]>(initialState.importedSongs);
-  const [selectedSongId, setSelectedSongId] = useState(
-    initialState.selectedSongId &&
-      [...BUILTIN_SONGS, ...initialState.importedSongs].some(
-        (s) => s.id === initialState.selectedSongId
-      )
-      ? initialState.selectedSongId
-      : (BUILTIN_SONGS[0]?.id ?? "")
-  );
   const [speed, setSpeed] = useState(initialState.speed);
   const [reverb, setReverb] = useState(initialState.reverb);
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
-  const [shortcuts, setShortcuts] = useState(initialState.shortcuts ?? DEFAULT_SHORTCUTS);
   // i18n (roadmap #82) : langue persistée, détection système au premier lancement.
   const [language, setLanguage] = useState<Language>(
     initialState.language ?? detectLanguage()
   );
-  // E1 (audit ergonomie) : traductions pour les messages de statut et aria-labels.
+  // E1 : traductions pour les messages de statut et aria-labels.
   const { t } = useI18n(language);
-  // E8 (audit ergonomie) : l'attribut lang du document suit la langue active
-  // (index.html a un lang="fr" statique sinon).
+  // E8 : l'attribut lang du document suit la langue active.
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
@@ -134,46 +121,22 @@ function PianoInner() {
   // Plein écran (Phase A4) : hook dédié.
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
-  // Message de statut auto-expirant (Phase A1) : hook dédié.
-  const { statusMessage, setStatusMessageAuto } =
-    useStatusMessage();
-  // Menu Paramètres (refonte UI) : les options secondaires y sont regroupées.
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!settingsOpen) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSettingsOpen(false);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [settingsOpen]);
-  // N'avertir qu'une fois par "session de dépassement" du quota.
-  const quotaWarnedRef = useRef(false);
-  // E13 (audit ergonomie) : flash visuel sur la barre de contrôles après un
-  // import de configuration réussi (le message de statut seul passe inaperçu).
-  const [configFlash, setConfigFlash] = useState(false);
-  const configFlashTimerRef = useRef<number | null>(null);
-  useEffect(
-    () => () => {
-      if (configFlashTimerRef.current !== null) {
-        window.clearTimeout(configFlashTimerRef.current);
-      }
-    },
-    []
-  );
+  // Message de statut auto-expirant (Phase A1).
+  const { statusMessage, setStatusMessageAuto } = useStatusMessage();
+
+  // Menu Paramètres + remap des raccourcis (hooks/useSettingsMenuState, B12).
+  const {
+    settingsOpen,
+    setSettingsOpen,
+    settingsRef,
+    shortcuts,
+    setShortcuts: setConfigShortcuts,
+    remapping,
+    startRemap,
+  } = useSettingsMenuState(initialState.shortcuts ?? DEFAULT_SHORTCUTS);
 
   // Boucle A-B. Les bornes sont clampées : Number("") ou une saisie
-  // invalide dans les <input type="number"> donne NaN, qu'on ramène à 0.
+  // invalide dans les <input type="number"> donne NaN, qu'on ramène \u00e0 0.
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [loopStart, setLoopStartRaw] = useState(0);
   const [loopEnd, setLoopEndRaw] = useState(0);
@@ -186,6 +149,25 @@ function PianoInner() {
     []
   );
 
+  // Bibliothèque de morceaux (hooks/useSongLibrary) : fusion builtin/importés,
+  // favoris (roadmap #60), sélection validée, suppression (E3).
+  const library = useSongLibrary(initialState.importedSongs, initialState.selectedSongId);
+  const { importedSongs } = library;
+  const {
+    allSongs,
+    selectedSong,
+    selectedSongId,
+    setSelectedSongId,
+    toggleFavorite,
+    deleteTarget,
+    requestDeleteSong,
+    confirmDeleteSong,
+    cancelDeleteSong,
+  } = library;
+
+  // Statistiques de progression (hooks/usePracticeStats, roadmap #38) :
+  // une session est enregistrée quand practice passe à done ; la purge
+  // d'un morceau supprimé (B10) est injectée à la confirmation.
   const {
     samplerRef,
     status,
@@ -195,56 +177,6 @@ function PianoInner() {
     releaseSustainedNote,
     triggerAttackRelease,
   } = useAudioEngine(volume, reverb, eq);
-
-  const markNoteOn = useCallback((note: string) => {
-    setActiveNotes((prev) => new Set(prev).add(note));
-  }, []);
-  const markNoteOff = useCallback((note: string) => {
-    setActiveNotes((prev) => {
-      const next = new Set(prev);
-      next.delete(note);
-      return next;
-    });
-  }, []);
-  const markAutoNoteOn = useCallback((note: string) => {
-    setAutoActiveNotes((prev) => new Set(prev).add(note));
-  }, []);
-  const markAutoNoteOff = useCallback((note: string) => {
-    setAutoActiveNotes((prev) => {
-      const next = new Set(prev);
-      next.delete(note);
-      return next;
-    });
-  }, []);
-
-  // Pédale de sustain : si enfoncée au relâchement, la note continue de sonner.
-  const sustainOnRef = useRef(false);
-  useEffect(() => {
-    sustainOnRef.current = sustainOn;
-  }, [sustainOn]);
-  // Favoris (roadmap #60, Phase A3) : hook dédié.
-  const { builtinFavorites, toggleFavorite: toggleBuiltinFavorite } = useFavorites(
-    importedFavoriteIds(initialState.importedSongs)
-  );
-  const allSongs = useMemo(
-    () =>
-      applyBuiltinFavorites([...BUILTIN_SONGS, ...importedSongs], builtinFavorites),
-    [importedSongs, builtinFavorites]
-  );
-  const toggleFavorite = useCallback(
-    (id: string) => {
-      setImportedSongs((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, favorite: !s.favorite } : s))
-      );
-      toggleBuiltinFavorite(id);
-    },
-    [toggleBuiltinFavorite]
-  );
-
-  const selectedSong = useMemo(
-    () => allSongs.find((s) => s.id === selectedSongId),
-    [allSongs, selectedSongId]
-  );
 
   // Mode apprentissage : la note attendue est surlignée, la session
   // avance quand l'utilisateur joue la bonne note.
@@ -256,30 +188,10 @@ function PianoInner() {
     [selectedSong, transpose]
   );
   const practice = usePractice(selectedPlayable);
-  // Statistiques de progression (roadmap #38) : persistées dans une clé
-  // localStorage dédiée, hors état principal.
-  const [stats, setStats] = useState(loadStats);
-  const doneRef = useRef(false);
-  useEffect(() => {
-    if (practice.state.done && !doneRef.current && selectedSong) {
-      doneRef.current = true;
-      const next = recordSession(
-        stats,
-        selectedSong.id,
-        sessionFrom(practice.state.score ?? 100, practice.state.mistakes, selectedSong)
-      );
-      setStats(next);
-      saveStats(next);
-    } else if (!practice.state.done) {
-      doneRef.current = false;
-    }
-  }, [
-    practice.state.done,
-    practice.state.score,
-    practice.state.mistakes,
+  const { stats, purgeSong } = usePracticeStats(
     selectedSong,
-    stats,
-  ]);
+    practice.state
+  );
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
   // Call & response (roadmap #43) : l'app joue une phrase, l'utilisateur
@@ -317,54 +229,26 @@ function PianoInner() {
     },
     [status, samplerRef, rawNoteOn, markNoteOn, playedNoteHandler, captureNoteOn]
   );
-  const clearSustainedNote = useCallback((note: string) => {
-    setSustainedNotes((prev) => {
-      if (!prev.has(note)) return prev;
-      const next = new Set(prev);
-      next.delete(note);
-      return next;
-    });
-  }, []);
   const noteOff = useCallback(
     (note: string) => {
       if (!samplerRef.current) return;
-      if (sustainOnRef.current) {
-        markNoteOff(note);
-        setSustainedNotes((prev) => new Set(prev).add(note));
-        return;
-      }
-      rawNoteOff(note);
-      markNoteOff(note);
-      // Retirer aussi un éventuel reste de sustain : sinon la touche
-      // resterait affichée « sustained » (muette) après re-jeu sans pédale.
-      clearSustainedNote(note);
-      captureNoteOff(note);
+      // Routage sustain (hooks/useActiveNotes) : pédale enfoncée -> la
+      // note rejoint les sustained ; sinon relâchée + reste nettoyé.
+      routeNoteOff(note, (n) => {
+        rawNoteOff(n);
+        captureNoteOff(n);
+      });
     },
-    [
-      samplerRef,
-      rawNoteOff,
-      markNoteOff,
-      sustainOnRef,
-      clearSustainedNote,
-      captureNoteOff,
-    ]
+    [samplerRef, routeNoteOff, rawNoteOff, captureNoteOff]
   );
   // Roadmap #28 : le relâchement de la pédale libère les notes tenues
-  // avec un release réellement prolongé (elles s'éteignent doucement
-  // au lieu d'être coupées net).
-  // Ref miroir de sustainedNotes : lire la liste courante hors updater
-  // (m8) — les updaters React sont purs, l'effet audio triggerRelease ne
-  // doit pas y vivre (StrictMode les rejoue et doublerait le release).
-  const sustainedNotesRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    sustainedNotesRef.current = sustainedNotes;
-  }, [sustainedNotes]);
+  // avec un release réellement prolongé (m8 : lecture hors updater).
   const releaseSustained = useCallback(() => {
     const held = [...sustainedNotesRef.current];
     if (held.length === 0) return;
-    setSustainedNotes(new Set());
+    notes.clearSustained();
     held.forEach((note) => releaseSustainedNote(note));
-  }, [releaseSustainedNote]);
+  }, [notes, sustainedNotesRef, releaseSustainedNote]);
 
   // P5 (audit perf) : seul le morceau sélectionné est transposé pour la
   // lecture (avant : toute la bibliothèque était transposée à chaque
@@ -383,42 +267,6 @@ function PianoInner() {
       markAutoNoteOn,
       markAutoNoteOff
     );
-
-  // Capture d'une touche pour remapper un raccourci (roadmap #65).
-  const remapCaptureRef = useRef<"sustain" | "togglePlayback" | null>(null);
-  const [remapping, setRemapping] = useState<"sustain" | "togglePlayback" | null>(null);
-  const setRemapCapture = useCallback((target: "sustain" | "togglePlayback" | null) => {
-    remapCaptureRef.current = target;
-    setRemapping(target);
-  }, []);
-  useEffect(() => {
-    if (!remapping) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault();
-      const code = e.code;
-      // B12 (audit) : ignorer les modificateurs et touches système comme
-      // raccourci — sinon Ctrl/Alt/Shift deviendrait la pédale ou le play.
-      const MODIFIER_CODES = new Set([
-        "ControlLeft", "ControlRight",
-        "AltLeft", "AltRight",
-        "ShiftLeft", "ShiftRight",
-        "MetaLeft", "MetaRight",
-        "CapsLock", "NumLock", "ScrollLock",
-        "OSLeft", "OSRight",
-      ]);
-      if (code !== "Escape" && !MODIFIER_CODES.has(code)) {
-        setShortcuts((prev) => ({ ...prev, [remapping]: code }));
-      }
-      setRemapCapture(null);
-    };
-    window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true });
-  }, [remapping, setRemapCapture]);
-
-  // P1 (audit perf) : le temps de lecture et l'overlay (paroles + mesures)
-  // vivent dans un composant isolé mémoïsé (PlaybackOverlay, en bas du
-  // fichier) — le RAF à 60 fps ne re-rend plus tout PianoInner à chaque
-  // frame, seulement cet overlay.
 
   // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
   const trackPreview = useTrackPreview(triggerAttackRelease);
@@ -439,71 +287,12 @@ function PianoInner() {
     },
   });
 
-  // Centrer le clavier sur la zone médiane (C4) au montage : le piano
-  // 88 touches est plus large que la fenêtre.
-  useEffect(() => {
-    const el = pianoScrollRef.current;
-    const piano = el?.querySelector(".piano");
-    if (!el || !piano) return;
-    const idx = getWhitePositionOfNote("C4");
-    // B13 (audit) : valeur par défaut 60px (cf. --key-w dans Piano.css) si
-    // la variable CSS est absente — parseFloat("") = NaN casserait le scroll.
-    const keyW =
-      parseFloat(getComputedStyle(piano).getPropertyValue("--key-w")) || 60;
-    el.scrollLeft = Math.max(0, idx * keyW - el.clientWidth / 2);
-  }, []);
-
-  // Auto-scroll : suivre la note attendue (apprentissage) ou la note en
-  // cours (lecture auto) si elle sort de la zone visible.
-  const noteToFollow =
-    practice.state.active && !practice.state.done ? practice.state.expectedNote : null;
-  useEffect(() => {
-    if (!noteToFollow) return;
-    const el = pianoScrollRef.current;
-    const piano = el?.querySelector(".piano");
-    if (!el || !piano) return;
-    const idx = getWhitePositionOfNote(noteToFollow);
-    if (idx < 0) return;
-    // B13 (audit) : valeur par défaut 60px (cf. --key-w dans Piano.css).
-    const keyW =
-      parseFloat(getComputedStyle(piano).getPropertyValue("--key-w")) || 60;
-    const x = idx * keyW;
-    const view = el.clientWidth;
-    // scroller seulement si la touche n'est pas (totalement) visible
-    if (x < el.scrollLeft + keyW) {
-      el.scrollTo({ left: Math.max(0, x - view / 3), behavior: "smooth" });
-    } else if (x + keyW > el.scrollLeft + view - keyW) {
-      el.scrollTo({
-        left: x - view * (2 / 3),
-        behavior: "smooth",
-      });
-    }
-  }, [noteToFollow]);
-
-  // Molette : la molette verticale fait défiler le clavier horizontalement.
-  useEffect(() => {
-    const el = pianoScrollRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        el.scrollLeft += e.deltaY;
-      }
-    };
-    el.addEventListener("wheel", onWheel, { passive: true });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
-
   // Arrêt de la lecture + nettoyage des touches en surbrillance
   // (hors effect : cf. règle set-state-in-effect).
   const stopPlaybackAndClear = useCallback(() => {
     stopPlayback();
-    setAutoActiveNotes(new Set());
-  }, [stopPlayback]);
-
-  const addImportedSong = useCallback((song: Song) => {
-    setImportedSongs((prev) => [...prev, song]);
-    setSelectedSongId(song.id);
-  }, []);
+    clearAutoNotes();
+  }, [stopPlayback, clearAutoNotes]);
 
   const {
     pendingImport,
@@ -513,7 +302,7 @@ function PianoInner() {
     toggleTrack,
     confirmImport,
     cancelImport,
-  } = useMidiImport(addImportedSong, setStatusMessageAuto, language);
+  } = useMidiImport(library.addImportedSong, setStatusMessageAuto, language);
 
   // Replay (roadmap #45) : dernier enregistrement sélectionnable en un
   // clic pour le rejouer.
@@ -527,7 +316,7 @@ function PianoInner() {
       const song = stopRecording();
       if (song) {
         setLastRecordingId(song.id);
-        addImportedSong(song);
+        library.addImportedSong(song);
         setStatusMessageAuto(
           interpolate(t("recordSaved"), {
             title: song.title,
@@ -580,45 +369,10 @@ function PianoInner() {
     void playSong();
   }, [playSong]);
 
-  // E3 (audit ergonomie) : la suppression passe par une modale custom
-  // (ConfirmDialog) au lieu de window.confirm() — le morceau à supprimer est
-  // mémorisé dans deleteTarget, la suppression réelle a lieu à la confirmation.
-  const [deleteTarget, setDeleteTarget] = useState<Song | null>(null);
-  const requestDeleteSong = useCallback(
-    (id: string) => {
-      const song = importedSongs.find((s) => s.id === id);
-      if (song) setDeleteTarget(song);
-    },
-    [importedSongs]
-  );
-  // Suppression d'un morceau importé (libère aussi le localStorage).
-  const confirmDeleteSong = useCallback(() => {
-    const song = deleteTarget;
-    setDeleteTarget(null);
-    if (!song) return;
-    setImportedSongs((prev) => prev.filter((s) => s.id !== song.id));
-    // B10 (audit) : nettoyer les stats du morceau supprimé.
-    setStats((prev) => {
-      const next = removeStats(prev, song.id);
-      saveStats(next);
-      return next;
-    });
-    setSelectedSongId((current) =>
-      current === song.id ? (BUILTIN_SONGS[0]?.id ?? "") : current
-    );
-  }, [deleteTarget]);
-
-  // P4 (audit perf) : debounce de la persistance — les champs fréquemment
-  // modifiés (volume, EQ, vitesse, réverbe) déclenchent un changement à
-  // chaque mouvement de slider ; un JSON.stringify complet (~6 ms avec une
-  // grosse bibliothèque) à chaque frame bloque le thread principal.
-  // 300 ms après le dernier changement suffit (les données survivent à la
-  // fermeture tant qu'un changement récent a eu le temps d'être écrit).
-  const persistTimerRef = useRef<number | null>(null);
-  // Dernier snapshot connu, pour persister immédiatement au démontage.
-  const lastSnapshotRef = useRef<PersistedSnapshot | null>(null);
-  useEffect(() => {
-    const snapshot: PersistedSnapshot = {
+  // Persistance debouncée (hooks/usePersistSnapshot, P4 audit perf) :
+  // 300 ms après le dernier changement, + flush au démontage.
+  const persistSnapshot = useMemo<PersistedSnapshot>(
+    () => ({
       importedSongs,
       selectedSongId,
       speed,
@@ -633,67 +387,65 @@ function PianoInner() {
       visualizer: showVisualizer,
       shortcuts,
       language,
-    };
-    lastSnapshotRef.current = snapshot;
-    if (persistTimerRef.current !== null) {
-      window.clearTimeout(persistTimerRef.current);
-    }
-    persistTimerRef.current = window.setTimeout(() => {
-      persistTimerRef.current = null;
-      const saved = persist(snapshot);
-      // Quota localStorage dépassé : avertir au lieu d'échouer en silence.
-      if (!saved && !quotaWarnedRef.current) {
-        quotaWarnedRef.current = true;
-        setStatusMessageAuto(t("quotaFull"));
-      } else if (saved) {
-        quotaWarnedRef.current = false;
-      }
-    }, 300);
-  }, [
-    persist,
-    importedSongs,
-    selectedSongId,
-    speed,
-    volume,
-    labelMode,
-    keyboardLayout,
-    theme,
-    reverb,
-    transpose,
-    eq,
-    showVisualizer,
-    shortcuts,
-    language,
-    setStatusMessageAuto,
-    t,
-  ]);
-  // Persiste le dernier état au démontage (changement de profil, fermeture)
-  // pour ne pas perdre un réglage modifié dans les 300 ms du debounce.
-  useEffect(() => {
-    return () => {
-      if (persistTimerRef.current !== null) {
-        window.clearTimeout(persistTimerRef.current);
-        persistTimerRef.current = null;
-      }
-      const snapshot = lastSnapshotRef.current;
-      if (snapshot) persist(snapshot);
-    };
-  }, [persist]);
+    }),
+    [
+      importedSongs,
+      selectedSongId,
+      speed,
+      volume,
+      labelMode,
+      keyboardLayout,
+      theme,
+      reverb,
+      transpose,
+      eq,
+      showVisualizer,
+      shortcuts,
+      language,
+    ]
+  );
+  const quotaWarnRef = useRef(false);
+  const handleQuotaFull = useCallback(() => {
+    if (quotaWarnRef.current) return;
+    quotaWarnRef.current = true;
+    setStatusMessageAuto(t("quotaFull"));
+  }, [setStatusMessageAuto, t]);
+  usePersistSnapshot(persistSnapshot, persist, handleQuotaFull);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  // Export de la configuration complète (roadmap #62) : télécharge un JSON
-  // avec morceaux importés + préférences, transférable vers une autre machine.
-  const exportConfig = useCallback(() => {
-    const cfg = buildConfigFile({
-      ...DEFAULT_STATE,
+  // B14 : mmémoïsé \u2014 lu par React Compiler, pass\u00e9 \u00e0 PianoKeyboard.
+  const toggleTheme = useCallback(
+    () => setTheme((t) => (t === "dark" ? "light" : "dark")),
+    []
+  );
+
+  // Export / import de la configuration (hooks/useConfigTransfer, roadmap #62).
+  const configSetters = useMemo(
+    () => ({
+      setSpeed,
+      setVolume,
+      setLabelMode,
+      setKeyboardLayout,
+      setTheme,
+      setReverb,
+      setTranspose,
+      setEq,
+      setShowVisualizer,
+      setShortcuts: setConfigShortcuts,
+      setLanguage,
+      setImportedSongs: library.setImportedSongs,
+    }),
+    [library, setConfigShortcuts]
+  );
+  const { exportConfig, importConfig, configFlash } = useConfigTransfer(
+    {
       importedSongs,
       selectedSongId,
       speed,
       volume,
-      showKeyLabels: labelMode !== "none",
       labelMode,
       keyboardLayout,
       theme,
@@ -703,79 +455,11 @@ function PianoInner() {
       visualizer: showVisualizer,
       shortcuts,
       language,
-    });
-    const blob = new Blob([JSON.stringify(cfg, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "libre-piano-config.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [
-    importedSongs,
-    selectedSongId,
-    speed,
-    volume,
-    labelMode,
-    keyboardLayout,
-    theme,
-    reverb,
-    transpose,
-    eq,
-    showVisualizer,
-    shortcuts,
-    language,
-  ]);
-
-  const importConfig = useCallback(
-    async (file: File) => {
-      try {
-        const parsed = parseConfigFile(JSON.parse(await file.text()));
-        if (!parsed) {
-          setStatusMessageAuto(t("configInvalid"));
-          return;
-        }
-        const clean = sanitizeState(parsed.state);
-        setImportedSongs(clean.importedSongs);
-        setSpeed(clean.speed);
-        setVolume(clean.volume);
-        setLabelMode(clean.labelMode);
-        setKeyboardLayout(clean.keyboardLayout);
-        setTheme(clean.theme);
-        // B1 (audit) : tous les champs exportés doivent être restaurés,
-        // pas seulement une partie (sinon l'import est asymétrique).
-        setReverb(clean.reverb);
-        setTranspose(clean.transpose);
-        setEq(clean.eq);
-        setShowVisualizer(clean.visualizer ?? false);
-        setShortcuts(clean.shortcuts ?? DEFAULT_SHORTCUTS);
-        setLanguage(clean.language ?? detectLanguage());
-        setStatusMessageAuto(
-          interpolate(t("configImported"), { count: clean.importedSongs.length })
-        );
-        // E13 : flash visuel bref pour signaler que les réglages ont changé.
-        if (configFlashTimerRef.current !== null) {
-          window.clearTimeout(configFlashTimerRef.current);
-        }
-        setConfigFlash(true);
-        configFlashTimerRef.current = window.setTimeout(
-          () => setConfigFlash(false),
-          1200
-        );
-      } catch {
-        setStatusMessageAuto(t("configReadError"));
-      }
     },
-    [setStatusMessageAuto, t]
+    configSetters,
+    setStatusMessageAuto,
+    t
   );
-  // B14 (audit) : mémoïsé — lu par React Compiler, passé à PianoKeyboard.
-  const toggleTheme = useCallback(
-    () => setTheme((t) => (t === "dark" ? "light" : "dark")),
-    []
-  );
-  // Plein écran (Phase A4) : hook dédié (B9 : suit les sorties natives).
 
   // Vélocité au clic (roadmap #15) : plus le clic est bas sur la touche,
   // plus la note est forte — comme un vrai clavier (zone basse = frappe
@@ -967,12 +651,12 @@ function PianoInner() {
             shortcuts={shortcuts}
             onRemapSustain={() => {
               setStatusMessageAuto(t("remapSustainPrompt"));
-              setRemapCapture("sustain");
+              startRemap("sustain");
               setSettingsOpen(false);
             }}
             onRemapTogglePlayback={() => {
               setStatusMessageAuto(t("remapPlayPrompt"));
-              setRemapCapture("togglePlayback");
+              startRemap("togglePlayback");
               setSettingsOpen(false);
             }}
             isPlaying={isPlaying}
@@ -1105,8 +789,8 @@ function PianoInner() {
         }
         confirmLabel={t("deleteConfirmOk")}
         cancelLabel={t("deleteConfirmCancel")}
-        onConfirm={confirmDeleteSong}
-        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => confirmDeleteSong(purgeSong)}
+        onCancel={cancelDeleteSong}
       />
     </div>
   );
