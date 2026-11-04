@@ -9,6 +9,13 @@ updates:
         dependency-type: "development"
       production-dependencies:
         dependency-type: "production"
+    # TypeScript est un dev-tool majeur (tsc && vite build, typescript-eslint) :
+    # une major (ex. 6 -> 7) casse la CI frontend et bloque tout le groupe.
+    # Les bumps majeurs de TS passent donc hors groupe / seront traités à la main
+    # dans une PR dédiée. Cf. issue #57.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "chore(deps)"
   - package-ecosystem: "cargo"
