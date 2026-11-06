@@ -53,18 +53,18 @@ describe("useActiveNotes (refactor Piano.tsx)", () => {
 
 describe("useSongLibrary (refactor Piano.tsx)", () => {
   it("sélectionne le premier morceau builtin par défaut", () => {
-    const { result } = renderHook(() => useSongLibrary([], null));
+    const { result } = renderHook(() => useSongLibrary([], null, []));
     expect(result.current.selectedSongId).toBeTruthy();
     expect(result.current.allSongs.length).toBeGreaterThan(0);
   });
 
   it("valide l'id sélectionné initial : id inconnu -> défaut", () => {
-    const { result } = renderHook(() => useSongLibrary([], "inexistant"));
+    const { result } = renderHook(() => useSongLibrary([], "inexistant", []));
     expect(result.current.selectedSongId).not.toBe("inexistant");
   });
 
   it("addImportedSong ajoute et sélectionne le morceau", () => {
-    const { result } = renderHook(() => useSongLibrary([], null));
+    const { result } = renderHook(() => useSongLibrary([], null, []));
     const s = song("imported-1", "Mon import");
     act(() => result.current.addImportedSong(s));
     expect(result.current.allSongs.some((x) => x.id === "imported-1")).toBe(true);
@@ -72,7 +72,7 @@ describe("useSongLibrary (refactor Piano.tsx)", () => {
   });
 
   it("suppression : la modale mémorise, la confirmation supprime + callback de purge", () => {
-    const { result } = renderHook(() => useSongLibrary([song("a", "A")], "a"));
+    const { result } = renderHook(() => useSongLibrary([song("a", "A")], "a", []));
     const purged: string[] = [];
     act(() => result.current.requestDeleteSong("a"));
     expect(result.current.deleteTarget?.id).toBe("a");
@@ -85,7 +85,7 @@ describe("useSongLibrary (refactor Piano.tsx)", () => {
   });
 
   it("annulation de la suppression : rien ne change", () => {
-    const { result } = renderHook(() => useSongLibrary([song("a", "A")], "a"));
+    const { result } = renderHook(() => useSongLibrary([song("a", "A")], "a", []));
     act(() => result.current.requestDeleteSong("a"));
     act(() => result.current.cancelDeleteSong());
     expect(result.current.deleteTarget).toBeNull();
@@ -132,6 +132,24 @@ describe("useSettingsMenuState (refactor Piano.tsx)", () => {
     expect(result.current.settingsOpen).toBe(false);
     expect(result.current.remapping).toBeNull();
     expect(result.current.shortcuts.sustain).toBe("Space");
+  });
+
+  it("P2 : remapper un raccourci sur la touche de l'autre les échange (pas de double)", () => {
+    const { result } = renderHook(() =>
+      useSettingsMenuState({ sustain: "Space", togglePlayback: "Enter" })
+    );
+    act(() => result.current.startRemap("sustain"));
+    expect(result.current.remapping).toBe("sustain");
+    // Capturer la touche « Enter » (déjà utilisée par togglePlayback).
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Enter", bubbles: true })
+      );
+    });
+    // Échange : sustain prend Enter, togglePlayback récupère Space.
+    expect(result.current.shortcuts.sustain).toBe("Enter");
+    expect(result.current.shortcuts.togglePlayback).toBe("Space");
+    expect(result.current.remapping).toBeNull();
   });
 });
 

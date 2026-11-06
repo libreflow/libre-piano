@@ -34,7 +34,7 @@ vi.mock("./tone-gate", () => ({
     start: vi.fn(),
     scheduleOnce: vi.fn(),
   }),
-  getDraw: () => ({ schedule: vi.fn() }),
+  getDraw: () => ({ schedule: vi.fn(), cancel: vi.fn() }),
 }));
 
 const song: Song = {

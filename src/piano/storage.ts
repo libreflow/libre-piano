@@ -78,8 +78,13 @@ export interface PersistedState {
   visualizer?: boolean;
   /** Raccourcis personnalisés (roadmap #65), codes physiques. */
   shortcuts?: { sustain: string; togglePlayback: string };
-  /** Langue de l'interface (roadmap #82). */
+  /** Langue de l'interface (roadmap #82). undefined = pas encore
+   * choisie : l'app détecte la langue du système au premier lancement. */
   language?: "fr" | "en";
+  /** Favoris des morceaux intégrés (roadmap #60) : identifiants
+   * persistés séparément des morceaux (les intégrés ne vivent pas
+   * dans importedSongs). */
+  builtinFavoriteIds: string[];
 }
 
 export const DEFAULT_STATE: PersistedState = {
@@ -96,6 +101,7 @@ export const DEFAULT_STATE: PersistedState = {
   transpose: 0,
   eq: { low: EQ_DEFAULT_DB, mid: EQ_DEFAULT_DB, high: EQ_DEFAULT_DB },
   shortcuts: { sustain: "Space", togglePlayback: "Enter" },
+  builtinFavoriteIds: [],
 };
 
 /** Validation d'un état chargé : sans ça, un localStorage corrompu
@@ -149,7 +155,11 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     transpose,
     eq,
     visualizer: raw.visualizer === true ? true : undefined,
-    language: raw.language === "en" ? "en" : "fr",
+    // m5 (audit) : langue absente du raw (états v1/v2 migrés, config d'une
+    // ancienne version) => undefined, pour laisser detectLanguage()
+    // faire la détection système (roadmap #82). Ne jamais forcer "fr".
+    language:
+      raw.language === "en" || raw.language === "fr" ? raw.language : undefined,
     shortcuts: {
       sustain:
         typeof (raw.shortcuts as { sustain?: unknown } | undefined)?.sustain ===
@@ -207,6 +217,12 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
           }))
           .filter((song) => song.events.length > 0)
       : [],
+    // Favoris intégrés (roadmap #60) : liste d'identifiants valides.
+    builtinFavoriteIds: Array.isArray(raw.builtinFavoriteIds)
+      ? raw.builtinFavoriteIds.filter(
+          (id): id is string => typeof id === "string" && id.length > 0
+        )
+      : [],
   };
 }
 
@@ -255,7 +271,9 @@ export function loadPersistedState(): PersistedState {
     const profileSuffix = profile === DEFAULT_PROFILE ? "" : `:${profile}`;
     // Clés de repli : l'état historique sans suffixe n'appartient qu'au
     // profil par défaut (l'utilisateur existant garde ses données) ; un
-    // profil nommé neuf part des défauts.
+    // profil nommé neuf part des défauts. Les clés v1/v2 sans suffixe
+    // sont celles du profil PAR DÉFAUT : ne jamais y replier pour un
+    // profil nommé, sinon il démarrait avec les données du défaut.
     const fallbacks =
       profile === DEFAULT_PROFILE
         ? [
@@ -263,7 +281,7 @@ export function loadPersistedState(): PersistedState {
             `libre-piano:state:v${STATE_VERSION - 1}`,
             "libre-piano:state:v1",
           ]
-        : [`libre-piano:state:v${STATE_VERSION - 1}`, "libre-piano:state:v1"];
+        : [];
     const raw =
       localStorage.getItem(`libre-piano:state:v${STATE_VERSION}${profileSuffix}`) ??
       fallbacks.map((k) => localStorage.getItem(k)).find((v) => v !== null) ??
@@ -279,10 +297,16 @@ export function loadPersistedState(): PersistedState {
 
 /** Sauvegarde l'état. Retourne false si le stockage a échoué
  * (quota dépassé, stockage désactivé) pour que l'app puisse avertir
- * l'utilisateur au lieu d'échouer silencieusement. */
-export function savePersistedState(state: PersistedState): boolean {
+ * l'utilisateur au lieu d'échouer silencieusement.
+ * M2 (audit) : `profile` explicite, capturé à l'initialisation du
+ * composant — jamais relu à chaud. Au changement de profil, la clé
+ * active change AVANT le flush de démontage : relire getActiveProfile()
+ * ici écraserait la clé du NOUVEAU profil avec l'état de l'ancien. */
+export function savePersistedState(
+  state: PersistedState,
+  profile: string = getActiveProfile()
+): boolean {
   try {
-    const profile = getActiveProfile();
     const profileSuffix = profile === DEFAULT_PROFILE ? "" : `:${profile}`;
     localStorage.setItem(
       `${STORAGE_KEY}:v${STATE_VERSION}${profileSuffix}`,

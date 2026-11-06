@@ -1,12 +1,17 @@
+import { useState } from "react";
 import "./App.css";
 import Piano from "./piano/Piano";
 import { useI18n } from "./piano/useI18n";
-import { detectLanguage } from "./piano/i18n";
+import { detectLanguage, type Language } from "./piano/i18n";
+import { loadPersistedState } from "./piano/storage";
 
 function App() {
-  // E1 (audit ergonomie) : hint traduit. La langue effective est celle de
-  // Piano (persistée) — on détecte ici pour le premier rendu avant le mount.
-  const { t } = useI18n(detectLanguage());
+  // E1 (audit ergonomie) : hint traduit. La langue effective est celle
+  // de Piano (persistée) — Piano la remonte via onLanguageChange.
+  const [language, setLanguage] = useState<Language>(
+    () => loadPersistedState().language ?? detectLanguage()
+  );
+  const { t } = useI18n(language);
   const hint = t("appHint");
   // Le hint contient "Espace" et "Entrée" à mettre en évidence (<strong>).
   const parts = hint.split(/(Espace|Entrée|Space|Enter)/);
@@ -25,7 +30,7 @@ function App() {
           )
         )}
       </p>
-      <Piano />
+      <Piano onLanguageChange={setLanguage} />
     </main>
   );
 }

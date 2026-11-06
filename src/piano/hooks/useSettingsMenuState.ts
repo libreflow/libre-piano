@@ -67,7 +67,17 @@ export function useSettingsMenuState(initialShortcuts: ShortcutConfig): Settings
         "OSLeft", "OSRight",
       ]);
       if (code !== "Escape" && !MODIFIER_CODES.has(code)) {
-        setShortcuts((prev) => ({ ...prev, [remapping]: code }));
+        setShortcuts((prev) => {
+          // P2 (audit) : collision avec l'autre raccourci : échanger
+          // les deux touches plutôt que de les faire doubler — deux
+          // raccourcis identiques rendaient l'autre action inerte (le
+          // sustain est testé en premier dans useKeyboardInput).
+          const other = remapping === "sustain" ? "togglePlayback" : "sustain";
+          if (prev[other] === code) {
+            return { ...prev, [remapping]: code, [other]: prev[remapping] };
+          }
+          return { ...prev, [remapping]: code };
+        });
       }
       setRemapCapture(null);
     };

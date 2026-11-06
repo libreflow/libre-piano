@@ -86,6 +86,10 @@ const PlaybackControls = memo(function PlaybackControls({
         // B3 (audit) : désactiver aussi pendant l'echo — changer de morceau
         // en cours de session echo la bloquerait dans un état incohérent.
         disabled={isPlaying || isRecording || echoActive}
+        aria-label={t("selectSongAria")}
+        title={
+          isPlaying || isRecording || echoActive ? t("selectSongDisabledHint") : ""
+        }
       >
         {/* B8 (audit) : tri via sortLibrary (était dupliqué inline). */}
         {sortedSongs.map((s) => (

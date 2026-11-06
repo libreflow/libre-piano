@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildConfigFile, parseConfigFile } from "../config-io";
 import { sanitizeState, DEFAULT_STATE } from "../storage";
+import { BUILTIN_SONGS } from "../songs";
 import { detectLanguage, interpolate, type Language } from "../i18n";
 import { DEFAULT_SHORTCUTS, type ShortcutConfig } from "../useKeyboardInput";
 import type { LabelMode } from "../notes";
@@ -15,6 +16,7 @@ import type { PersistedState } from "../storage";
 export interface ConfigPrefs {
   importedSongs: PersistedState["importedSongs"];
   selectedSongId: string;
+  builtinFavoriteIds: string[];
   speed: number;
   volume: number;
   labelMode: LabelMode;
@@ -50,6 +52,8 @@ export function useConfigTransfer(
     setShortcuts: (v: ShortcutConfig) => void;
     setLanguage: (v: Language) => void;
     setImportedSongs: (songs: PersistedState["importedSongs"]) => void;
+    setBuiltinFavoriteIds: (ids: string[]) => void;
+    setSelectedSongId: (id: string) => void;
   },
   statusMessage: (msg: string) => void,
   t: (key: string) => string
@@ -92,6 +96,16 @@ export function useConfigTransfer(
         }
         const clean = sanitizeState(parsed.state);
         setters.setImportedSongs(clean.importedSongs);
+        setters.setBuiltinFavoriteIds(clean.builtinFavoriteIds);
+        // B1 (audit P1) : la sélection est exportée, elle doit être
+        // restaurée — mais validée (builtin ou importé du fichier),
+        // sinon un id inconnu laisserait le <select> sans sélection.
+        const wantedId = clean.selectedSongId;
+        const validId =
+          wantedId &&
+          (BUILTIN_SONGS.some((s) => s.id === wantedId) ||
+            clean.importedSongs.some((s) => s.id === wantedId));
+        setters.setSelectedSongId(validId ? wantedId : (BUILTIN_SONGS[0]?.id ?? ""));
         setters.setSpeed(clean.speed);
         setters.setVolume(clean.volume);
         setters.setLabelMode(clean.labelMode);

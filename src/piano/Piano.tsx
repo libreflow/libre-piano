@@ -12,7 +12,7 @@ import { useTrackPreview } from "./useTrackPreview";
 import { useRecorder } from "./useRecorder";
 import { downloadSongAsMidi } from "./midi-export";
 import { transposedSong } from "./transpose";
-import { getActiveProfile } from "./storage";
+import { getActiveProfile, loadPersistedState } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
 import { usePlayback } from "./usePlayback";
 import { usePractice } from "./usePractice";
@@ -24,6 +24,7 @@ import { useKeyboardInput, DEFAULT_SHORTCUTS } from "./useKeyboardInput";
 import { useStatusMessage } from "./hooks/useStatusMessage";
 import { usePianoState, type PersistedSnapshot } from "./hooks/usePianoState";
 import { useFullscreen } from "./hooks/useFullscreen";
+import { usePianoScroll } from "./hooks/usePianoScroll";
 import PianoKeyboard from "./components/PianoKeyboard";
 import StatusOverlays from "./components/StatusOverlays";
 import TrackPicker from "./components/TrackPicker";
@@ -46,20 +47,50 @@ import { useConfigTransfer } from "./hooks/useConfigTransfer";
 import { SustainIcon } from "./icons";
 import "./Piano.css";
 
-export default function Piano() {
+export default function Piano({
+  onLanguageChange,
+}: {
+  /** Remonte la langue effective vers l'hôte (App affiche le hint). */
+  onLanguageChange?: (lang: Language) => void;
+} = {}) {
   // Wrapper (roadmap #63) : la barre de profils (extraite) pilote la clé
   // du Piano interne — changer de profil le remonte et tout l'état est
   // relu depuis la clé du profil.
   const [profile, setProfile] = useState(getActiveProfile);
+  // Langue portée par le wrapper (audit i18n) : la barre de profils et
+  // l'hôte suivent la langue choisie dans les paramètres, et elle est
+  // relue depuis le profil au changement de profil (persistée par profil).
+  const [language, setLanguageState] = useState<Language>(
+    () => loadPersistedState().language ?? detectLanguage()
+  );
+  const setLanguage = useCallback(
+    (lang: Language) => {
+      setLanguageState(lang);
+      onLanguageChange?.(lang);
+    },
+    [onLanguageChange]
+  );
+  const handleSwitchProfile = useCallback((next: string) => {
+    // Le profil actif a déjà été persisté par ProfileBar : relire la
+    // langue du nouveau profil pour le rendu suivant.
+    setProfile(next);
+    setLanguageState(loadPersistedState().language ?? detectLanguage());
+  }, []);
   return (
     <>
-      <PianoInner key={profile} />
-      <ProfileBar onSwitch={setProfile} />
+      <PianoInner key={profile} language={language} setLanguage={setLanguage} />
+      <ProfileBar language={language} onSwitch={handleSwitchProfile} />
     </>
   );
 }
 
-function PianoInner() {
+function PianoInner({
+  language,
+  setLanguage,
+}: {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const configInputRef = useRef<HTMLInputElement | null>(null);
   const pianoScrollRef = useRef<HTMLDivElement | null>(null);
@@ -88,17 +119,19 @@ function PianoInner() {
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
-  // i18n (roadmap #82) : langue persistée, détection système au premier lancement.
-  const [language, setLanguage] = useState<Language>(
-    initialState.language ?? detectLanguage()
-  );
+  // Thème clair/sombre (roadmap #64), persisté avec les préférences.
+  // Déclaré avant useVisualizer : la couleur d'accent du visualiseur
+  // se relit quand le thème change (P2).
+  const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
+  // i18n (roadmap #82) : la langue vit dans le wrapper (props) —
+  // persistée, détectée au premier lancement.
   // E1 : traductions pour les messages de statut et aria-labels.
   const { t } = useI18n(language);
   // E8 : l'attribut lang du document suit la langue active.
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
-  const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer);
+  const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer, theme);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -116,8 +149,6 @@ function PianoInner() {
     windowKeys.forEach((label, note) => map.set(note, label));
     return map;
   }, [windowKeys]);
-  // Thème clair/sombre (roadmap #64), persisté avec les préférences.
-  const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
   // Plein écran (Phase A4) : hook dédié.
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
@@ -151,13 +182,19 @@ function PianoInner() {
 
   // Bibliothèque de morceaux (hooks/useSongLibrary) : fusion builtin/importés,
   // favoris (roadmap #60), sélection validée, suppression (E3).
-  const library = useSongLibrary(initialState.importedSongs, initialState.selectedSongId);
+  const library = useSongLibrary(
+    initialState.importedSongs,
+    initialState.selectedSongId,
+    initialState.builtinFavoriteIds
+  );
   const { importedSongs } = library;
   const {
     allSongs,
     selectedSong,
     selectedSongId,
     setSelectedSongId,
+    builtinFavoriteIds,
+    setBuiltinFavoriteIds,
     toggleFavorite,
     deleteTarget,
     requestDeleteSong,
@@ -172,6 +209,7 @@ function PianoInner() {
     samplerRef,
     status,
     loadedCount,
+    retryLoading,
     noteOn: rawNoteOn,
     noteOff: rawNoteOff,
     releaseSustainedNote,
@@ -243,12 +281,18 @@ function PianoInner() {
   );
   // Roadmap #28 : le relâchement de la pédale libère les notes tenues
   // avec un release réellement prolongé (m8 : lecture hors updater).
+  // m2 (audit) : aussi clore la capture — la note avait échappé à
+  // captureNoteOff au keyup (routage sustain) ; sans ça, sa durée
+  // dans l'enregistrement courait jusqu'au stop (plafonnée à 12 s).
   const releaseSustained = useCallback(() => {
     const held = [...sustainedNotesRef.current];
     if (held.length === 0) return;
     notes.clearSustained();
-    held.forEach((note) => releaseSustainedNote(note));
-  }, [notes, sustainedNotesRef, releaseSustainedNote]);
+    held.forEach((note) => {
+      releaseSustainedNote(note);
+      captureNoteOff(note);
+    });
+  }, [notes, sustainedNotesRef, releaseSustainedNote, captureNoteOff]);
 
   // P5 (audit perf) : seul le morceau sélectionné est transposé pour la
   // lecture (avant : toute la bibliothèque était transposée à chaque
@@ -270,30 +314,9 @@ function PianoInner() {
 
   // Pré-écoute des pistes (roadmap #50) : dans le sélecteur d'import.
   const trackPreview = useTrackPreview(triggerAttackRelease);
-  useKeyboardInput({
-    layout: keyboardLayout,
-    octaveShift,
-    shortcuts,
-    // B12 : la capture de remap neutralise le clavier de jeu.
-    ignoreNotes: remapping !== null,
-    isPlayingRef,
-    noteOn,
-    noteOff,
-    onSustainChange: setSustainOn,
-    releaseSustained,
-    onTogglePlayback: () => {
-      if (isPlayingRef.current) stopPlaybackAndClear();
-      else if (!practiceRef.current) playSongGuarded();
-    },
-  });
 
-  // Arrêt de la lecture + nettoyage des touches en surbrillance
-  // (hors effect : cf. règle set-state-in-effect).
-  const stopPlaybackAndClear = useCallback(() => {
-    stopPlayback();
-    clearAutoNotes();
-  }, [stopPlayback, clearAutoNotes]);
-
+  // Import MIDI : déclaré avant le clavier — le handler de lecture a
+  // besoin de pendingImportRef (dialogue ouvert => pas de lecture).
   const {
     pendingImport,
     selectedTrackIndices,
@@ -303,6 +326,56 @@ function PianoInner() {
     confirmImport,
     cancelImport,
   } = useMidiImport(library.addImportedSong, setStatusMessageAuto, language);
+
+  // Lecture et apprentissage sont exclusifs : le raccourci Entrée ne doit
+  // pas lancer la lecture pendant une session (réf lue au moment de
+  // l'appui, le handler n'est pas re-créé à chaque render).
+  const practiceRef = useRef(false);
+  useEffect(() => {
+    practiceRef.current = practice.state.active;
+  }, [practice.state.active]);
+
+  // Arrêt de la lecture + nettoyage des touches en surbrillance
+  // (hors effect : cf. règle set-state-in-effect).
+  const stopPlaybackAndClear = useCallback(() => {
+    stopPlayback();
+    clearAutoNotes();
+  }, [stopPlayback, clearAutoNotes]);
+
+  // La lecture ne démarre pas tant que le dialogue de sélection de
+  // pistes est ouvert (sinon elle jouerait derrière le dialogue).
+  const pendingImportRef = useRef(false);
+  useEffect(() => {
+    pendingImportRef.current = Boolean(pendingImport);
+  }, [pendingImport]);
+
+  const playSongGuarded = useCallback(() => {
+    if (pendingImportRef.current) return;
+    void playSong();
+  }, [playSong]);
+
+  // Audit : mémoïsé — la version inline d'avant recréait le handler à
+  // chaque render, ce qui ré-attachait les listeners clavier du hook.
+  const onTogglePlayback = useCallback(() => {
+    if (isPlayingRef.current) stopPlaybackAndClear();
+    else if (!practiceRef.current) playSongGuarded();
+  }, [isPlayingRef, stopPlaybackAndClear, playSongGuarded]);
+
+  useKeyboardInput({
+    layout: keyboardLayout,
+    octaveShift,
+    shortcuts,
+    // B12 : la capture de remap neutralise le clavier de jeu.
+    // UX (audit) : le dialogue d'import aussi — les notes jouées
+    // derrière le sélecteur de pistes étaient des parasites.
+    ignoreNotes: remapping !== null || pendingImport !== null,
+    isPlayingRef,
+    noteOn,
+    noteOff,
+    onSustainChange: setSustainOn,
+    releaseSustained,
+    onTogglePlayback,
+  });
 
   // Replay (roadmap #45) : dernier enregistrement sélectionnable en un
   // clic pour le rejouer.
@@ -332,12 +405,6 @@ function PianoInner() {
     }
   };
 
-  // La lecture ne démarre pas tant que le dialogue de sélection de
-  // pistes est ouvert (sinon elle jouerait derrière le dialogue).
-  const pendingImportRef = useRef(false);
-  useEffect(() => {
-    pendingImportRef.current = Boolean(pendingImport);
-  }, [pendingImport]);
   // Fermeture du dialogue (import, annulation) : couper la pré-écoute
   // en cours pour ne pas continuer derrière l'UI.
   const { stop: stopTrackPreview } = trackPreview;
@@ -357,17 +424,16 @@ function PianoInner() {
     }
   }
 
-  // Lecture et apprentissage sont exclusifs : le raccourci Entrée ne doit
-  // pas lancer la lecture pendant une session (réf lue au moment de
-  // l'appui, le handler n'est pas re-créé à chaque render).
-  const practiceRef = useRef(false);
-  useEffect(() => {
-    practiceRef.current = practice.state.active;
-  }, [practice.state.active]);
-  const playSongGuarded = useCallback(() => {
-    if (pendingImportRef.current) return;
-    void playSong();
-  }, [playSong]);
+  // B13 (audit) : la géométrie du clavier (centrage initial sur C4,
+  // auto-scroll vers la note attendue en mode apprentissage, molette
+  // verticale convertie en scroll horizontal) vit dans usePianoScroll —
+  // M1 : le hook n'était pas branché après son extraction (#48).
+  usePianoScroll(
+    pianoScrollRef,
+    practice.state.active && !practice.state.done
+      ? practice.state.expectedNote
+      : null
+  );
 
   // Persistance debouncée (hooks/usePersistSnapshot, P4 audit perf) :
   // 300 ms après le dernier changement, + flush au démontage.
@@ -375,6 +441,7 @@ function PianoInner() {
     () => ({
       importedSongs,
       selectedSongId,
+      builtinFavoriteIds,
       speed,
       volume,
       showKeyLabels: labelMode !== "none",
@@ -391,6 +458,7 @@ function PianoInner() {
     [
       importedSongs,
       selectedSongId,
+      builtinFavoriteIds,
       speed,
       volume,
       labelMode,
@@ -436,14 +504,17 @@ function PianoInner() {
       setShowVisualizer,
       setShortcuts: setConfigShortcuts,
       setLanguage,
+      setSelectedSongId,
       setImportedSongs: library.setImportedSongs,
+      setBuiltinFavoriteIds,
     }),
-    [library, setConfigShortcuts]
+    [library, setConfigShortcuts, setLanguage, setBuiltinFavoriteIds, setSelectedSongId]
   );
   const { exportConfig, importConfig, configFlash } = useConfigTransfer(
     {
       importedSongs,
       selectedSongId,
+      builtinFavoriteIds,
       speed,
       volume,
       labelMode,
@@ -502,8 +573,10 @@ function PianoInner() {
 
   const keyStateClass = useCallback(
     (note: string): string => {
-      if (practice.state.expectedNote === note) return "expected";
+      // Audit : une touche réellement jouée doit s'afficher « active »,
+      // même si c'est la note attendue en mode apprentissage.
       if (activeNotes.has(note)) return "active";
+      if (practice.state.expectedNote === note) return "expected";
       if (autoActiveNotes.has(note)) return "auto-active";
       if (sustainedNotes.has(note)) return "sustained";
       // Anticipation : la touche suivante, discrète tant qu'elle n'est pas
@@ -528,11 +601,19 @@ function PianoInner() {
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
-      if (isPlayingRef.current || isImporting) return;
+      if (isPlayingRef.current) {
+        // UX (audit) : le refus silencieux laissait croire à un drop raté.
+        setStatusMessageAuto(t("dropBlockedPlaying"));
+        return;
+      }
+      if (isImporting) {
+        setStatusMessageAuto(t("dropBlockedImporting"));
+        return;
+      }
       const file = e.dataTransfer.files?.[0];
       if (file) void importFile(file);
     },
-    [importFile, isImporting, isPlayingRef]
+    [importFile, isImporting, isPlayingRef, setStatusMessageAuto, t]
   );
 
   return (
@@ -550,6 +631,7 @@ function PianoInner() {
           statusMessage={statusMessage}
           isDragOver={isDragOver}
           language={language}
+          onRetry={retryLoading}
         />
       )}
 
@@ -647,7 +729,7 @@ function PianoInner() {
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
             language={language}
-            onToggleLanguage={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
+            onToggleLanguage={() => setLanguage(language === "fr" ? "en" : "fr")}
             shortcuts={shortcuts}
             onRemapSustain={() => {
               setStatusMessageAuto(t("remapSustainPrompt"));
@@ -699,6 +781,7 @@ function PianoInner() {
           statusMessage={statusMessage}
           isDragOver={isDragOver}
           language={language}
+          onRetry={retryLoading}
         />
       )}
 

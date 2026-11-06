@@ -1,6 +1,15 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useKeyboardInput } from "./useKeyboardInput";
+import { useKeyboardInput, formatShortcutCode } from "./useKeyboardInput";
+
+describe("formatShortcutCode (UX : libellés de raccourcis)", () => {
+  it("rend les codes physiques lisibles", () => {
+    expect(formatShortcutCode("KeyA")).toBe("A");
+    expect(formatShortcutCode("Digit1")).toBe("1");
+    expect(formatShortcutCode("Space")).toBe("Space");
+    expect(formatShortcutCode("Enter")).toBe("Enter");
+  });
+});
 
 vi.mock("./notes", () => ({
   // Simule le décalage d'octave : +1 décale les notes d'une octave.

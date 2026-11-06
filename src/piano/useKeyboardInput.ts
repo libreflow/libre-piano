@@ -31,6 +31,15 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   togglePlayback: "Enter",
 };
 
+/** UX (audit) : rend un code de touche physique lisible dans l'UI —
+ * "KeyA" -> "A", "Digit1" -> "1", les autres restent tels quels
+ * ("Space", "Enter"...). */
+export function formatShortcutCode(code: string): string {
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  return code;
+}
+
 // + pédale de sustain sur la barre d'espace maintenue.
 export function useKeyboardInput({
   layout,

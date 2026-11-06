@@ -33,6 +33,13 @@ export function useMidiImport(
 
   const importFile = useCallback(
     async (file: File) => {
+      // Audit : le file input filtre déjà via accept=".mid,.midi", mais
+      // le drag & drop, lui, acceptait n'importe quoi => message générique
+      // de parsing. Rejeter avant le parsing avec un message clair.
+      if (!/\.(mid|midi)$/i.test(file.name)) {
+        setStatusMessage(translate(language, "importNotMidi"));
+        return;
+      }
       setIsImporting(true);
       setStatusMessage("");
       try {
