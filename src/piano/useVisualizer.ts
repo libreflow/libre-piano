@@ -8,7 +8,7 @@ import { Analyser, getDestination } from "./tone-gate";
 /** Taille de la fenêtre d'analyse (puissance de 2). */
 const WAVEFORM_SIZE = 256;
 
-export function useVisualizer(enabled: boolean) {
+export function useVisualizer(enabled: boolean, theme?: string) {
   const analyserRef = useRef<Analyser | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -29,6 +29,9 @@ export function useVisualizer(enabled: boolean) {
     if (!enabled) return;
     // B6 (audit) : la couleur est lue UNE SEULE fois (getComputedStyle force
     // un reflow à chaque appel — 60 fps × reflow = CPU gaspillée).
+    // P2 (audit) : relue quand le thème change — l'accent (couleur de
+    // trait) varie entre thèmes clair/sombre, sinon la waveform gardait
+    // la couleur du thème précédent jusqu'au prochain toggle.
     const canvas = canvasRef.current;
     const strokeColor =
       (canvas &&
@@ -75,7 +78,7 @@ export function useVisualizer(enabled: boolean) {
     }
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [enabled]);
+  }, [enabled, theme]);
 
   /** Extrait la valeur instantanée (pour tests). */
   const getLevels = useCallback(() => {

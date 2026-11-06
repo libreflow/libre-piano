@@ -119,6 +119,10 @@ function PianoInner({
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
+  // Thème clair/sombre (roadmap #64), persisté avec les préférences.
+  // Déclaré avant useVisualizer : la couleur d'accent du visualiseur
+  // se relit quand le thème change (P2).
+  const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
   // i18n (roadmap #82) : la langue vit dans le wrapper (props) —
   // persistée, détectée au premier lancement.
   // E1 : traductions pour les messages de statut et aria-labels.
@@ -127,7 +131,7 @@ function PianoInner({
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
-  const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer);
+  const { canvasRef: visualizerCanvasRef } = useVisualizer(showVisualizer, theme);
   const [volume, setVolume] = useState(initialState.volume);
   const [labelMode, setLabelMode] = useState<LabelMode>(initialState.labelMode);
   const [keyboardLayout, setKeyboardLayout] = useState<KeyboardLayout>(
@@ -145,8 +149,6 @@ function PianoInner({
     windowKeys.forEach((label, note) => map.set(note, label));
     return map;
   }, [windowKeys]);
-  // Thème clair/sombre (roadmap #64), persisté avec les préférences.
-  const [theme, setTheme] = useState<"dark" | "light">(initialState.theme);
   // Plein écran (Phase A4) : hook dédié.
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 

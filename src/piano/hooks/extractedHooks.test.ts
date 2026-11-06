@@ -133,6 +133,24 @@ describe("useSettingsMenuState (refactor Piano.tsx)", () => {
     expect(result.current.remapping).toBeNull();
     expect(result.current.shortcuts.sustain).toBe("Space");
   });
+
+  it("P2 : remapper un raccourci sur la touche de l'autre les échange (pas de double)", () => {
+    const { result } = renderHook(() =>
+      useSettingsMenuState({ sustain: "Space", togglePlayback: "Enter" })
+    );
+    act(() => result.current.startRemap("sustain"));
+    expect(result.current.remapping).toBe("sustain");
+    // Capturer la touche « Enter » (déjà utilisée par togglePlayback).
+    act(() => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Enter", bubbles: true })
+      );
+    });
+    // Échange : sustain prend Enter, togglePlayback récupère Space.
+    expect(result.current.shortcuts.sustain).toBe("Enter");
+    expect(result.current.shortcuts.togglePlayback).toBe("Space");
+    expect(result.current.remapping).toBeNull();
+  });
 });
 
 describe("usePersistSnapshot (refactor Piano.tsx)", () => {

@@ -59,7 +59,7 @@ const IDLE: CallResponseState = {
 export function useCallResponse(
   song: Song | undefined,
   /** Joue une note de démonstration (phase call). */
-  playDemoNote: (note: string, duration: number, time?: number) => void
+  playDemoNote: (note: string, duration: number, time?: number, velocity?: number) => void
 ) {
   const [state, setState] = useState<CallResponseState>(IDLE);
   const phrasesRef = useRef<Phrase[]>([]);
@@ -131,7 +131,6 @@ export function useCallResponse(
       if (!phrase) return;
       clearTimers();
       advanceKeyRef.current = null;
-      phraseRef.current = phrase;
       phaseRef.current = "call";
       setState((prev) => ({
         ...prev,
@@ -155,7 +154,9 @@ export function useCallResponse(
       phrase.events.forEach((ev, i) => {
         const delay = (ev.time - base) * 1000;
         const timer = window.setTimeout(() => {
-          playDemoRef.current(ev.note, ev.duration);
+          // P2 (audit) : la vélocité de la note importée (roadmap #51)
+          // était jetée ici — les démos echo jouaient tout à fond.
+          playDemoRef.current(ev.note, ev.duration, undefined, ev.velocity);
           // Dernière note écoulée : passer en phase réponse.
           if (i === phrase.events.length - 1) {
             const switchTimer = window.setTimeout(() => {
@@ -175,9 +176,6 @@ export function useCallResponse(
     },
     [clearTimers]
   );
-
-  // Phrase courante, accédée par playPhrase.
-  const phraseRef = useRef<Phrase | null>(null);
 
   // Alimente le ref de start (B2) : playPhrase est stable (refs internes).
   useEffect(() => {
