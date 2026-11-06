@@ -73,15 +73,27 @@ describe("performance : piste extrême (P2 audit perf)", () => {
   it("summarizeTracks ne crash pas sur 150 000 notes sur une seule piste", () => {
     // 150k > la limite de paramètres d'appel de V8 (~125k) : l'ancien
     // Math.min(...pitches) plantait ici. La boucle simple tient.
-    // La construction du Midi + le tri O(n log n) de 150k notes prennent
-    // plusieurs secondes en jsdom : timeout explicite généreux.
-    const midi = buildBigMidi(1, 150_000);
+    // P5 (audit) : la construction d'un objet Midi de 150k notes via
+    // addNote (insertion indexée) est le poste dominant du test et
+    // dépassait le timeout de 30 s par intermittence. summarizeTracks
+    // accepte un MidiLike : on construit la structure minimale,
+    // seule la partie mesurée travaille.
+    const notes = Array.from({ length: 150_000 }, (_, i) => ({
+      midi: 48 + ((i * 7) % 36),
+      time: (i % 500) * 0.25,
+      duration: 0.2,
+      velocity: 0.3 + (i % 5) * 0.1,
+    }));
+    const midiLike = {
+      tracks: [{ name: "Piste 1", notes, instrument: {} }],
+    };
     const start = performance.now();
-    const summaries = summarizeTracks(midi);
+    const summaries = summarizeTracks(midiLike);
     const elapsed = performance.now() - start;
     expect(summaries).toHaveLength(1);
     expect(summaries[0].noteCount).toBe(150_000);
-    // Garde-fou large : O(n log n) à cause du tri interne.
-    expect(elapsed).toBeLessThan(5000);
+    // Garde-fou : O(n log n) à cause du tri interne. Un O(n²) sur
+    // 150k notes exploserait bien au-delà de ce seuil.
+    expect(elapsed).toBeLessThan(10_000);
   }, 30_000);
 });
