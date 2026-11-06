@@ -271,7 +271,9 @@ export function loadPersistedState(): PersistedState {
     const profileSuffix = profile === DEFAULT_PROFILE ? "" : `:${profile}`;
     // Clés de repli : l'état historique sans suffixe n'appartient qu'au
     // profil par défaut (l'utilisateur existant garde ses données) ; un
-    // profil nommé neuf part des défauts.
+    // profil nommé neuf part des défauts. Les clés v1/v2 sans suffixe
+    // sont celles du profil PAR DÉFAUT : ne jamais y replier pour un
+    // profil nommé, sinon il démarrait avec les données du défaut.
     const fallbacks =
       profile === DEFAULT_PROFILE
         ? [
@@ -279,7 +281,7 @@ export function loadPersistedState(): PersistedState {
             `libre-piano:state:v${STATE_VERSION - 1}`,
             "libre-piano:state:v1",
           ]
-        : [`libre-piano:state:v${STATE_VERSION - 1}`, "libre-piano:state:v1"];
+        : [];
     const raw =
       localStorage.getItem(`libre-piano:state:v${STATE_VERSION}${profileSuffix}`) ??
       fallbacks.map((k) => localStorage.getItem(k)).find((v) => v !== null) ??

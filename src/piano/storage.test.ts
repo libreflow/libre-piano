@@ -343,4 +343,23 @@ describe("roadmap #63 : profils utilisateurs", () => {
     // alice apparaît dans la liste.
     expect(listProfiles()).toContain("alice");
   });
+
+  it("P1 : un profil nommé ne replie pas sur les clés historiques v1/v2 du profil par défaut", () => {
+    // Un état v1 global (utilisateur existant du profil PAR DÉFAUT) est
+    // présent : un profil nommé qui démarre doit partir des défauts,
+    // pas des données v1 du profil par défaut.
+    localStorage.setItem(
+      "libre-piano:state:v1",
+      JSON.stringify({ speed: 77 })
+    );
+    localStorage.setItem(
+      "libre-piano:state:v2",
+      JSON.stringify({ version: 2, speed: 88 })
+    );
+    setActiveProfile("bob");
+    expect(loadPersistedState()).toEqual(DEFAULT_STATE);
+    expect(loadPersistedState().speed).not.toBe(77);
+    setActiveProfile("default");
+    localStorage.clear();
+  });
 });

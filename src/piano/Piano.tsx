@@ -500,10 +500,11 @@ function PianoInner({
       setShowVisualizer,
       setShortcuts: setConfigShortcuts,
       setLanguage,
+      setSelectedSongId,
       setImportedSongs: library.setImportedSongs,
       setBuiltinFavoriteIds,
     }),
-    [library, setConfigShortcuts, setLanguage, setBuiltinFavoriteIds]
+    [library, setConfigShortcuts, setLanguage, setBuiltinFavoriteIds, setSelectedSongId]
   );
   const { exportConfig, importConfig, configFlash } = useConfigTransfer(
     {
