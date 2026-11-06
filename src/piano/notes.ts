@@ -141,10 +141,11 @@ function keyLabel(key: string): string {
 
 /** Bornes du décalage d'octave de la fenêtre PC : la fenêtre couvre 2
  * octaves (24 demi-tons) et doit rester dans A0-C8.
- * Base C3 (48) : min -3 (fenêtre C0-C2, couvre les graves A0-B0),
- * max +3 (fenêtre C6-C8). -3 ne descend pas sous A0 car la fenêtre
- * blanche la plus grave jouée est A1 (21+12=33 >= base 12 + 21). */
-export const OCTAVE_SHIFT_MIN = -3;
+ * Base C3 (48) : min -2 (fenêtre C1-C3), max +3 (fenêtre C6-C8).
+ * -3 est interdit : base 12 (C0), les offsets 0-10 donneraient des
+ * notes C0-B0 sous A0, hors du clavier 88 touches affiché — elles
+ * joueraient « à l'aveugle », sans touche ni surbrillance. */
+export const OCTAVE_SHIFT_MIN = -2;
 export const OCTAVE_SHIFT_MAX = 3;
 
 /** Map touche PC (e.key minuscule) -> note. La fenêtre de jeu est ancrée

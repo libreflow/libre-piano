@@ -210,6 +210,8 @@ const fr: Record<string, string> = {
   replaySelected: "Dernier enregistrement sélectionné — ▶ pour le rejouer.",
   exportFailed: "Échec de l'export MIDI.",
   importFailed: "Échec de l'import : {message}",
+  importNotMidi:
+    "Ce fichier n'est pas un fichier MIDI (.mid / .midi) — import annulé.",
   importNoTracks: "Ce fichier ne contient aucune note exploitable.",
   importNoNotesSelected: "Aucune note exploitable dans la ou les piste(s) sélectionnée(s).",
   importTruncated: "Fichier tronqué aux {max} premières notes ({total} au total).",
@@ -423,6 +425,7 @@ const en: Record<string, string> = {
   replaySelected: "Last recording selected \u2014 \u25b6 to play it.",
   exportFailed: "MIDI export failed.",
   importFailed: "Import failed: {message}",
+  importNotMidi: "This file is not a MIDI file (.mid / .midi) — import cancelled.",
   importNoTracks: "This file contains no playable notes.",
   importNoNotesSelected: "No playable notes in the selected track(s).",
   importTruncated: "File truncated to the first {max} notes ({total} total).",

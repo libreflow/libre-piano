@@ -18,6 +18,26 @@ describe("storage", () => {
     expect(loadPersistedState()).toEqual(DEFAULT_STATE);
   });
 
+  it("M2 : savePersistedState(state, profile) écrit dans la clé du profil donné, pas du profil actif", () => {
+    // Scénario du bug : le flush de démontage survient APRÈS le
+    // changement de profil actif. Le profil explicite capturé au
+    // montage doit gagner — sinon l'état du profil quitté écrase la
+    // clé du profil cible.
+    savePersistedState({ ...DEFAULT_STATE, speed: 99 }, "default");
+    setActiveProfile("invite");
+    // Sauvegarde "du composant démonté" : profil explicite = "default",
+    // profil actif = "invite". La clé écrite doit rester "default".
+    savePersistedState({ ...DEFAULT_STATE, speed: 99 }, "default");
+    expect(localStorage.getItem("libre-piano:state:v3:invite")).toBeNull();
+    expect(getActiveProfile()).toBe("invite");
+    // Retour au profil par défaut : l'état est intact.
+    setActiveProfile("default");
+    const reloaded = loadPersistedState();
+    expect(reloaded.speed).toBe(99);
+    // Remise à zéro pour les tests suivants.
+    localStorage.clear();
+  });
+
   it("sauvegarde et recharge un état complet", () => {
     const state: PersistedState = {
       ...DEFAULT_STATE,
@@ -29,12 +49,12 @@ describe("storage", () => {
     };
     expect(savePersistedState(state)).toBe(true);
     const loaded = loadPersistedState();
-    // language est déduit (non stocké dans l'objet de test) : comparer
-    // sans lui, puis vérifier sa présence.
+    // language n'est pas stocké dans l'objet de test : sanitize doit le
+    // laisser undefined pour que detectLanguage() s'applique (m5 audit).
     const { language: _lang, ...rest } = loaded;
     void _lang;
     expect(rest).toEqual(state);
-    expect(loaded.language).toBeDefined();
+    expect(loaded.language).toBeUndefined();
   });
 
   it("retourne false quand le quota est dépassé", () => {

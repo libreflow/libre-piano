@@ -15,6 +15,7 @@ import type { PersistedState } from "../storage";
 export interface ConfigPrefs {
   importedSongs: PersistedState["importedSongs"];
   selectedSongId: string;
+  builtinFavoriteIds: string[];
   speed: number;
   volume: number;
   labelMode: LabelMode;
@@ -50,6 +51,7 @@ export function useConfigTransfer(
     setShortcuts: (v: ShortcutConfig) => void;
     setLanguage: (v: Language) => void;
     setImportedSongs: (songs: PersistedState["importedSongs"]) => void;
+    setBuiltinFavoriteIds: (ids: string[]) => void;
   },
   statusMessage: (msg: string) => void,
   t: (key: string) => string
@@ -92,6 +94,7 @@ export function useConfigTransfer(
         }
         const clean = sanitizeState(parsed.state);
         setters.setImportedSongs(clean.importedSongs);
+        setters.setBuiltinFavoriteIds(clean.builtinFavoriteIds);
         setters.setSpeed(clean.speed);
         setters.setVolume(clean.volume);
         setters.setLabelMode(clean.labelMode);

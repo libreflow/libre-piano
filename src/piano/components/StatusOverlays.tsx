@@ -15,6 +15,9 @@ interface StatusOverlaysProps {
   statusMessage: string | null;
   isDragOver: boolean;
   language: Language;
+  /** Relance le chargement des échantillons (roadmap #73) — rechargée
+   * de la page AVANT (perte d'état/session), retryLoading était mort. */
+  onRetry?: () => void;
 }
 
 // B14 (audit) : React.memo — composant passif, props stables.
@@ -25,6 +28,7 @@ const StatusOverlays = memo(function StatusOverlays({
   statusMessage,
   isDragOver,
   language,
+  onRetry,
 }: StatusOverlaysProps) {
   const { t } = useI18n(language);
   return (
@@ -42,7 +46,7 @@ const StatusOverlays = memo(function StatusOverlays({
       {status === "error" && (
         <div className="piano-loading" role="alert">
           {t("loadError")}{" "}
-          <button className="import-btn" onClick={() => window.location.reload()}>
+          <button className="import-btn" onClick={onRetry ?? (() => window.location.reload())}>
             {t("retry")}
           </button>
           <span className="piano-error-hint">

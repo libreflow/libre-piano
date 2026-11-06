@@ -58,9 +58,11 @@ describe("useFavorites (Phase A3)", () => {
       { id: "2", title: "Imported", source: "imported", events: [] },
       { id: "3", title: "Fav builtin", source: "builtin", events: [], favorite: true },
     ];
-    // L'ordre du <select> d'origine : imports en tête, puis tri par
-    // favoris À L'INTÉRIEUR de chaque source (comportement préservé).
+    // m1 (audit) : favoris EN TETE (clé primaire), puis imports avant
+    // intégrés (clé secondaire) — comme l'annonce le tooltip i18n
+    // « remonte en tête ». Avant : deux .sort() chaînés rendaient la
+    // source clé primaire et le favori « 3 » passait après « 2 ».
     const out = sortLibrary(songs);
-    expect(out.map((s) => s.id)).toEqual(["2", "3", "1"]);
+    expect(out.map((s) => s.id)).toEqual(["3", "2", "1"]);
   });
 });

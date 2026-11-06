@@ -4,8 +4,18 @@
 // Stockées dans une clé localStorage dédiée, hors état principal.
 
 import type { Song } from "./songs";
+import { DEFAULT_PROFILE, getActiveProfile } from "./storage";
 
-const STATS_KEY = "libre-piano:practice-stats:v1";
+// Clé de base (le suffixe de profil est ajouté : les stats doivent être
+// cloisonnées par profil comme le reste — audit).
+const STATS_KEY_BASE = "libre-piano:practice-stats:v1";
+
+function statsKey(): string {
+  const profile = getActiveProfile();
+  return profile === DEFAULT_PROFILE
+    ? STATS_KEY_BASE
+    : `${STATS_KEY_BASE}:${profile}`;
+}
 
 export interface PracticeSession {
   /** Score de la session (0-100). */
@@ -48,7 +58,7 @@ function isValidSession(raw: unknown): raw is PracticeSession {
 
 export function loadStats(): StatsBySong {
   try {
-    const raw = localStorage.getItem(STATS_KEY);
+    const raw = localStorage.getItem(statsKey());
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
@@ -66,7 +76,7 @@ export function loadStats(): StatsBySong {
 
 export function saveStats(stats: StatsBySong): boolean {
   try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    localStorage.setItem(statsKey(), JSON.stringify(stats));
     return true;
   } catch {
     return false;

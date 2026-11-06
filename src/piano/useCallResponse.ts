@@ -23,6 +23,10 @@ export interface CallResponseState {
   responseStep: number;
   /** Fautes de la phrase courante. */
   mistakes: number;
+  /** Fautes cumulées sur toute la session (B8) — vit dans l'état :
+   * l'incrémenter dans un ref DEPUIS un updater setState n'est pas
+   * pur (double-invocation StrictMode => fautes comptées deux fois). */
+  totalMistakes: number;
   done: boolean;
 }
 
@@ -48,6 +52,7 @@ const IDLE: CallResponseState = {
   expected: [],
   responseStep: 0,
   mistakes: 0,
+  totalMistakes: 0,
   done: false,
 };
 
@@ -59,10 +64,11 @@ export function useCallResponse(
   const [state, setState] = useState<CallResponseState>(IDLE);
   const phrasesRef = useRef<Phrase[]>([]);
   const phaseRef = useRef<CallResponsePhase>("idle");
-  // B8 (audit) : fautes cumulées sur toute la session — l'état ne porte
-  // que les fautes de la phrase courante pour l'affichage.
-  const totalMistakesRef = useRef(0);
   const timersRef = useRef<number[]>([]);
+  // clé d'idempotence de l'avance de phrase : l'updater de
+  // handlePlayedNote peut être rejoué par React — un setTimeout posé
+  // dedans serait doublé. La clé rend la programmation idempotente.
+  const advanceKeyRef = useRef<string | null>(null);
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((t) => window.clearTimeout(t));
@@ -124,7 +130,7 @@ export function useCallResponse(
       const phrase = phrasesRef.current[index];
       if (!phrase) return;
       clearTimers();
-      if (index === 0) totalMistakesRef.current = 0;
+      advanceKeyRef.current = null;
       phraseRef.current = phrase;
       phaseRef.current = "call";
       setState((prev) => ({
@@ -138,6 +144,9 @@ export function useCallResponse(
         expected: [],
         responseStep: 0,
         mistakes: 0,
+        // Nouvelle session (redémarrage) : cumul remis à zéro ;
+        // entre deux phrases de la même session, il est conservé.
+        totalMistakes: index === 0 ? 0 : prev.totalMistakes,
       }));
       // Les notes sont jouées séquentiellement, à leur intervalle relatif.
       // Tous les timers (notes + bascule en phase réponse) sont suivis dans
@@ -175,56 +184,54 @@ export function useCallResponse(
     playPhraseRef.current = playPhrase;
   }, [playPhrase]);
 
-  /** À brancher sur les notes jouées : avance la réponse. */
+  /** À brancher sur les notes jouées : avance la réponse.
+   * L'updater reste PUR (dérivations uniquement) : les effets de bord
+   * y sont idempotents (clé d'avance) — un updater rejoué par React
+   * ne doit ni compter les fautes deux fois ni reprogrammer un timer. */
   const handlePlayedNote = useCallback(
     (note: string) => {
       if (phaseRef.current !== "response") return;
       setState((prev) => {
         if (!prev.active || prev.done) return prev;
         const expectedNote = prev.expected[prev.responseStep];
-        if (note === expectedNote) {
-          const nextStep = prev.responseStep + 1;
-          if (nextStep >= prev.expected.length) {
-            // Phrase rejouée : suivante ou fin.
-            const nextPhrase = prev.phraseIndex + 1;
-            if (nextPhrase >= prev.phraseCount) {
-              phaseRef.current = "call";
-              // B8 (audit) : récap de fin avec les fautes cumulées.
-              const total = totalMistakesRef.current;
-              window.setTimeout(() => {
-                setState((p) => ({
-                  ...p,
-                  phase: "call",
-                  done: true,
-                  expected: [],
-                  mistakes: total,
-                }));
-                phaseRef.current = "idle";
-              }, 0);
-              return {
-                ...prev,
-                responseStep: nextStep,
-                done: true,
-                expected: [],
-                mistakes: total,
-              };
-            }
-            // Phrase validée : plus aucune note attendue pendant la
-            // fenêtre d'avance (600 ms) — sinon elles comptent comme
-            // des fautes fantômes dans le récap final.
-            phaseRef.current = "call";
-            const advanceTimer = window.setTimeout(() => {
-              playPhrase(nextPhrase);
-            }, 600);
-            timersRef.current.push(advanceTimer);
-            return { ...prev, responseStep: nextStep };
-          }
+        if (note !== expectedNote) {
+          return {
+            ...prev,
+            mistakes: prev.mistakes + 1,
+            totalMistakes: prev.totalMistakes + 1,
+          };
+        }
+        const nextStep = prev.responseStep + 1;
+        if (nextStep < prev.expected.length) {
           return { ...prev, responseStep: nextStep };
         }
-        totalMistakesRef.current += 1;
-        return { ...prev, mistakes: prev.mistakes + 1 };
+        // Phrase rejouée : suivante ou fin.
+        const nextPhrase = prev.phraseIndex + 1;
+        if (nextPhrase >= prev.phraseCount) {
+          // B8 (audit) : récap de fin avec les fautes cumulées.
+          phaseRef.current = "idle";
+          return {
+            ...prev,
+            phase: "call",
+            done: true,
+            expected: [],
+            mistakes: prev.totalMistakes,
+          };
+        }
+        // Phrase validée : plus aucune note attendue pendant la
+        // fenêtre d'avance (600 ms) — sinon elles comptent comme des
+        // fautes fantômes dans le récap final.
+        phaseRef.current = "call";
+        const advanceKey = `${prev.phraseIndex}:${prev.responseStep}`;
+        if (advanceKeyRef.current !== advanceKey) {
+          advanceKeyRef.current = advanceKey;
+          const advanceTimer = window.setTimeout(() => {
+            playPhrase(nextPhrase);
+          }, 600);
+          timersRef.current.push(advanceTimer);
+        }
+        return { ...prev, responseStep: nextStep };
       });
-      // playPhrase est stable (refs internes uniquement).
     },
     [playPhrase]
   );

@@ -56,7 +56,7 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "dialog": true,
       "pubkey": "REMPLACER_PAR_LA_CLE_PUBLIQUE_UPDATER",
       "endpoints": [
