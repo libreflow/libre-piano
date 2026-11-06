@@ -64,7 +64,11 @@ const StatusOverlays = memo(function StatusOverlays({
           {t("dropOverlay")}
         </div>
       )}
-      {statusMessage && <div className="status-message">{statusMessage}</div>}
+      {statusMessage && (
+        <div className="status-message" role="status" aria-live="polite">
+          {statusMessage}
+        </div>
+      )}
     </>
   );
 });

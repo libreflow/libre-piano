@@ -146,6 +146,11 @@ const fr: Record<string, string> = {
   addFavorite: "Ajouter aux favoris (remonte en tête)",
   removeFavorite: "Retirer des favoris",
   toggleFavorite: "Basculer le favori de ce morceau",
+  selectSongAria: "Morceau à jouer",
+  selectSongDisabledHint:
+    "Sélection verrouillée pendant la lecture, l'enregistrement ou une session echo",
+  dropBlockedPlaying: "Arrête d'abord la lecture pour importer un fichier MIDI.",
+  dropBlockedImporting: "Un import est déjà en cours — réessaie dans un instant.",
   deleteConfirm: "Supprimer « {title} » ? Cette action est définitive.",
   deleteConfirmTitle: "Supprimer un morceau",
   deleteConfirmOk: "Supprimer",
@@ -361,6 +366,11 @@ const en: Record<string, string> = {
   addFavorite: "Add to favorites (moves to top)",
   removeFavorite: "Remove from favorites",
   toggleFavorite: "Toggle favorite for this song",
+  selectSongAria: "Song to play",
+  selectSongDisabledHint:
+    "Selection locked during playback, recording or an echo session",
+  dropBlockedPlaying: "Stop playback before importing a MIDI file.",
+  dropBlockedImporting: "An import is already running — try again in a moment.",
   deleteConfirm: "Delete \u00ab {title} \u00bb? This action is permanent.",
   deleteConfirmTitle: "Delete a song",
   deleteConfirmOk: "Delete",

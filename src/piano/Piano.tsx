@@ -366,7 +366,9 @@ function PianoInner({
     octaveShift,
     shortcuts,
     // B12 : la capture de remap neutralise le clavier de jeu.
-    ignoreNotes: remapping !== null,
+    // UX (audit) : le dialogue d'import aussi — les notes jouées
+    // derrière le sélecteur de pistes étaient des parasites.
+    ignoreNotes: remapping !== null || pendingImport !== null,
     isPlayingRef,
     noteOn,
     noteOff,
@@ -599,11 +601,19 @@ function PianoInner({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
-      if (isPlayingRef.current || isImporting) return;
+      if (isPlayingRef.current) {
+        // UX (audit) : le refus silencieux laissait croire à un drop raté.
+        setStatusMessageAuto(t("dropBlockedPlaying"));
+        return;
+      }
+      if (isImporting) {
+        setStatusMessageAuto(t("dropBlockedImporting"));
+        return;
+      }
       const file = e.dataTransfer.files?.[0];
       if (file) void importFile(file);
     },
-    [importFile, isImporting, isPlayingRef]
+    [importFile, isImporting, isPlayingRef, setStatusMessageAuto, t]
   );
 
   return (
