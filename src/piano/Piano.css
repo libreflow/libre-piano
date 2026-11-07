@@ -1116,6 +1116,113 @@ button:active:not(:disabled) {
   border-radius: 5px;
 }
 
+/* Refonte IA : panneau Studio (tiroir latéral, non modal — on peut
+   continuer à jouer en réglant le son). */
+.studio-drawer {
+  position: fixed;
+  top: 4.9rem;
+  right: 1rem;
+  bottom: 1rem;
+  width: min(23rem, 92vw);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem 1.2rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  animation: drawer-in 0.18s ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.studio-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Chaque section du Studio est une carte aérée. */
+.studio-drawer .control-group.labeled {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 0.85rem 0.85rem;
+  gap: 0.55rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.studio-drawer .control-group + .control-group {
+  border-left: none;
+}
+
+.studio-drawer .speed-label input[type="range"] {
+  width: 110px;
+}
+
+.studio-drawer .eq-band input[type="range"] {
+  width: 84px;
+}
+
+/* Sur mobile : le tiroir devient une feuille plein largeur. */
+@media (max-width: 700px) {
+  .studio-drawer {
+    top: auto;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: auto;
+    max-height: 72vh;
+  }
+}
+
+/* Rappel de boucle active dans le groupe Studio (la boucle se règle
+   dans le tiroir ; on veut la voir d'un coup d'œil depuis le jeu). */
+.loop-chip {
+  display: none;
+}
+
+.loop-chip.on {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  white-space: nowrap;
+  cursor: help;
+}
+
 /* ---------- Menu Paramètres ---------- */
 
 .settings-menu {

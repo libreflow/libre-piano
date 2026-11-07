@@ -126,8 +126,12 @@ describe("Piano (rendu)", () => {
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
   });
 
-  it("permet de basculer la disposition du clavier (segmented control)", () => {
+  it("permet de basculer la disposition du clavier (segmented control, dans le Studio)", () => {
     render(<Piano />);
+    // Refonte IA : les sections Son/Clavier/Boucle vivent dans le tiroir
+    // Studio — l'ouvrir d'abord.
+    fireEvent.click(screen.getByRole("button", { name: "Studio" }));
+    screen.getByRole("region", { name: "Réglages studio" });
     // AZERTY par défaut : C3 = Q
     expect(screen.getByLabelText("Touche C3")).toHaveTextContent("Q");
     const qwertyBtn = screen.getByRole("radio", { name: /QWERTY/i });

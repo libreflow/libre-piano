@@ -189,3 +189,30 @@ export function SettingsIcon(props: IconProps) {
     </svg>
   );
 }
+
+/** Console de mixage (réglages Son/Clavier/Boucle) — refonte IA. */
+export function MixerIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 4v9.2" />
+      <path d="M6 17.4V20" />
+      <circle cx="6" cy="15.3" r="2.1" />
+      <path d="M12 4v2.4" />
+      <path d="M12 10.6V20" />
+      <circle cx="12" cy="8.5" r="2.1" />
+      <path d="M18 4v9.2" />
+      <path d="M18 17.4V20" />
+      <circle cx="18" cy="15.3" r="2.1" />
+    </svg>
+  );
+}
+
+/** Croix de fermeture (drawer Studio). */
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </svg>
+  );
+}

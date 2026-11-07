@@ -31,6 +31,7 @@ import TrackPicker from "./components/TrackPicker";
 import PracticePanel from "./components/PracticePanel";
 import EchoPanel from "./components/EchoPanel";
 import LoopControls from "./components/LoopControls";
+import StudioDrawer from "./components/StudioDrawer";
 import SettingsMenu from "./components/SettingsMenu";
 import PlaybackControls from "./components/PlaybackControls";
 import SoundControls from "./components/SoundControls";
@@ -44,7 +45,7 @@ import { useSongLibrary } from "./hooks/useSongLibrary";
 import { usePersistSnapshot } from "./hooks/usePersistSnapshot";
 import { usePracticeStats } from "./hooks/usePracticeStats";
 import { useConfigTransfer } from "./hooks/useConfigTransfer";
-import { SustainIcon } from "./icons";
+import { SustainIcon, MixerIcon } from "./icons";
 import "./Piano.css";
 
 export default function Piano({
@@ -184,6 +185,9 @@ function PianoInner({
     (v: number) => setLoopEndRaw(Number.isFinite(v) ? Math.max(0, v) : 0),
     []
   );
+
+  // Refonte IA : tiroir latéral « Studio » (son / clavier / boucle).
+  const [studioOpen, setStudioOpen] = useState(false);
 
   // Bibliothèque de morceaux (hooks/useSongLibrary) : fusion builtin/importés,
   // favoris (roadmap #60), sélection validée, suppression (E3).
@@ -742,9 +746,41 @@ function PianoInner({
             {sustainOn ? t("sustainOn") : t("sustainOff")}
           </span>
         </div>
-        </div>
 
-        <div className="console-row">
+        {/* Refonte IA : Son / Clavier / Boucle vivent dans le panneau
+            Studio (tiroir latéral) — la surface principale reste épurée.
+            Un chip dans le rappel de transport montre la boucle active. */}
+        <div className="control-group labeled">
+          <span className="group-label">{t("studio")}</span>
+          <button
+            className={`import-btn${studioOpen ? " seg-active studio-btn-on" : ""}`}
+            onClick={() => setStudioOpen((o) => !o)}
+            aria-pressed={studioOpen}
+            aria-label={t("studio")}
+            title={t("studioHint")}
+          >
+            <MixerIcon />
+            {t("studio")}
+          </button>
+          {loopEnabled && (
+            <span
+              className="loop-chip on"
+              title={`${t("loopToggle")} — ${loopStart.toFixed(1)}s → ${loopEnd.toFixed(1)}s`}
+            >
+              ⟲ {loopStart.toFixed(1)}–{loopEnd.toFixed(1)}s
+            </span>
+          )}
+        </div>
+        </div>
+      </div>
+
+      {/* Refonte IA : tiroir Studio — Son, Clavier et Boucle regroupés
+          ici, la surface principale reste concentrée sur le jeu. */}
+      <StudioDrawer
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        language={language}
+      >
         <SoundControls
           speed={speed}
           onSpeedChange={setSpeed}
@@ -759,7 +795,6 @@ function PianoInner({
           isPlaying={isPlaying}
           language={language}
         />
-
         <KeyboardControls
           octaveShift={octaveShift}
           onOctaveShiftChange={setOctaveShift}
@@ -768,7 +803,6 @@ function PianoInner({
           practiceActive={practice.state.active}
           language={language}
         />
-
         <LoopControls
           loopEnabled={loopEnabled}
           loopStart={loopStart}
@@ -780,10 +814,7 @@ function PianoInner({
           onStartChange={setLoopStart}
           onEndChange={setLoopEnd}
         />
-        </div>
-      </div>
-
-
+      </StudioDrawer>
 
       {status === "ready" && (
         <StatusOverlays
