@@ -56,6 +56,9 @@
 /* ---------- Console (panneau de contrôles, refonte) ---------- */
 
 .playback-controls {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 35;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -1124,7 +1127,9 @@ button:active:not(:disabled) {
   right: 1rem;
   bottom: 1rem;
   width: min(23rem, 92vw);
-  z-index: 45;
+  /* Sous la console sticky (z-35) : le menu Paramètres qui s'ouvre
+     dedans sinon restait masqué par le tiroir (contexte d'empilement). */
+  z-index: 34;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -1181,6 +1186,16 @@ button:active:not(:disabled) {
   border-left: none;
 }
 
+/* Audit IA : la Boucle A-B est la troisième carte du tiroir — sa racine
+   (.loop-controls) n'est pas un .control-group, elle restait nue. */
+.studio-drawer .loop-controls {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem 0.85rem 0.85rem;
+  gap: 0.55rem;
+}
+
 .studio-drawer .speed-label input[type="range"] {
   width: 110px;
 }
@@ -1199,6 +1214,14 @@ button:active:not(:disabled) {
     width: auto;
     max-height: 72vh;
   }
+}
+
+/* Audit IA : l'état actif du bouton Studio n'était visible nulle part
+   (.seg-active ne stylait que les .segmented button). */
+.import-btn.studio-btn-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-primary);
 }
 
 /* Rappel de boucle active dans le groupe Studio (la boucle se règle
@@ -1233,7 +1256,7 @@ button:active:not(:disabled) {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  z-index: 40;
+  z-index: 60;
   display: flex;
   flex-direction: column;
   align-items: stretch;
