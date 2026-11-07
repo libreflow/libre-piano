@@ -3,7 +3,6 @@
 // E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
-import { audioHealth, formatHealth } from "../audio-health";
 import { useI18n } from "../useI18n";
 import { interpolate } from "../i18n";
 import type { Language } from "../i18n";
@@ -52,11 +51,6 @@ const StatusOverlays = memo(function StatusOverlays({
           <span className="piano-error-hint">
             {t("errorHint")}
           </span>
-        </div>
-      )}
-      {status === "ready" && (
-        <div className="audio-health" role="status" aria-label={t("health")}>
-          {formatHealth(audioHealth())}
         </div>
       )}
       {isDragOver && (

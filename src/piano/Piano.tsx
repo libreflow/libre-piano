@@ -41,6 +41,7 @@ import PlaybackOverlay from "./components/PlaybackOverlay";
 import ProfileBar from "./components/ProfileBar";
 import NoteRain from "./components/NoteRain";
 import { detectChord } from "./chords";
+import { audioHealth, formatHealth } from "./audio-health";
 import { useActiveNotes } from "./hooks/useActiveNotes";
 import { useSettingsMenuState } from "./hooks/useSettingsMenuState";
 import { useSongLibrary } from "./hooks/useSongLibrary";
@@ -900,7 +901,7 @@ function PianoInner({
           scrollbar verticale du document (clignotement avec la pluie
           de notes activée). */}
       <div className="playback-zone" aria-hidden={!isPlaying}>
-        {isPlaying && (
+        {isPlaying ? (
           <PlaybackOverlay
             song={selectedSong}
             songDuration={selectedSongDuration}
@@ -908,7 +909,13 @@ function PianoInner({
             language={language}
             loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
           />
-        )}
+        ) : status === "ready" ? (
+          /* Retravail UI : la zone n'est jamais vide — au repos elle
+             porte l'indicateur de santé audio (chip métrique). */
+          <div className="audio-health" role="status" aria-label={t("health")}>
+            {formatHealth(audioHealth())}
+          </div>
+        ) : null}
       </div>
       <PianoKeyboard
         allKeys={ALL_KEYS}
