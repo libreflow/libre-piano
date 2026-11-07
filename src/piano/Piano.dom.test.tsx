@@ -279,6 +279,16 @@ describe("Piano : non-régression du DOM (rôles et labels)", () => {
     expect(within(drawer).getByText("C3")).toBeInTheDocument();
   });
 
+  it("le tiroir Studio se ferme au clic sur le backdrop (audit UI)", () => {
+    const { container } = render(<Piano />);
+    fireEvent.click(screen.getByRole("button", { name: "Studio" }));
+    expect(screen.getByRole("region", { name: "Réglages studio" })).toBeTruthy();
+    // Le backdrop absorbe le clic hors du tiroir : aucun recouvrement
+    // sans issue de sortie (feuille centrée mobile comme sur desktop).
+    fireEvent.click(container.querySelector(".studio-backdrop")!);
+    expect(screen.queryByRole("region", { name: "Réglages studio" })).toBeNull();
+  });
+
   it("le tiroir Studio permet de changer le timbre (roadmap #21)", () => {
     render(<Piano />);
     fireEvent.click(screen.getByRole("button", { name: "Studio" }));

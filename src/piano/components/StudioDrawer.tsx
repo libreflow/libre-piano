@@ -41,27 +41,35 @@ const StudioDrawer = memo(function StudioDrawer({
   if (!open) return null;
 
   return (
-    <div
-      ref={panelRef}
-      tabIndex={-1}
-      role="region"
-      aria-label={t("studioTitle")}
-      className="studio-drawer"
-      style={{ outline: "none" }}
-    >
-      <header className="studio-header">
-        <h3>{t("studioTitle")}</h3>
-        <button
-          className="import-btn icon-btn"
-          onClick={onClose}
-          aria-label={t("close")}
-          title={t("close")}
-        >
-          <CloseIcon />
-        </button>
-      </header>
-      {children}
-    </div>
+    <>
+      {/* Audit UI : sur mobile (< 960px, cf. CSS) le tiroir devient une
+          feuille centrée AVEC backdrop absorbant le clic extérieur —
+          jamais de superposition sans issue de sortie. Sur desktop le
+          backdrop est masqué (display:none) : l'espace est réservé dans
+          le flux (.piano-wrap.studio-open) au lieu de recouvrir. */}
+      <div className="studio-backdrop" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="region"
+        aria-label={t("studioTitle")}
+        className="studio-drawer"
+        style={{ outline: "none" }}
+      >
+        <header className="studio-header">
+          <h3>{t("studioTitle")}</h3>
+          <button
+            className="import-btn icon-btn"
+            onClick={onClose}
+            aria-label={t("close")}
+            title={t("close")}
+          >
+            <CloseIcon />
+          </button>
+        </header>
+        {children}
+      </div>
+    </>
   );
 });
 

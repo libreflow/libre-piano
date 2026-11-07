@@ -16,6 +16,11 @@
 - **Worker MIDI** : les erreurs de fichier invalide ne désactivent plus le worker pour toute la session (seules les pannes d'infrastructure replient en synchrone)
 - **Stats de pratique** : `saveStats` sorti des updaters `setState` (pures)
 
+### UI — aucune superposition
+
+- **Message de statut** : le toast `position: fixed` qui recouvrait le bas du clavier et le chip d'accord vit désormais EN FLUX, dans une bande de statut réservée sous le clavier (`status-slot`/`chord-slot`, hauteur constante — zéro saut de mise en page)
+- **Tiroir Studio** : la zone principale réserve l'espace (`padding-right`) au lieu de se laisser recouvrir — le clavier reste entièrement visible et jouable ; sous 960px, feuille centrée sur backdrop qui se ferme au clic extérieur (et Échap)
+
 ### Nouvelle fonctionnalité — Timbres (route sonore)
 
 - **Sélecteur de timbre dans le tiroir Studio** : Grand piano (sampler Salamander), Piano électrique, Orgue et Cloches (voix de synthèse Tone.js, aucun asset supplémentaire), chaque voix avec un gain de normalisation

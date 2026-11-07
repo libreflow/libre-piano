@@ -1,6 +1,7 @@
 // Overlays de statut (refactor Phase B2) : chargement, erreur audio,
-// drag & drop, message de statut, santé audio — blocs passifs.
-// E1 (audit ergonomie) : textes traduits via useI18n.
+// drag & drop — blocs passifs. Le message de statut vit désormais dans
+// .status-strip (en flux, réservé) — plus aucune superposition avec le
+// clavier. E1 (audit ergonomie) : textes traduits via useI18n.
 
 import { memo } from "react";
 import { useI18n } from "../useI18n";
@@ -11,7 +12,6 @@ interface StatusOverlaysProps {
   status: "loading" | "ready" | "error";
   loadedCount: number;
   sampleCount: number;
-  statusMessage: string | null;
   isDragOver: boolean;
   language: Language;
   /** Relance le chargement des échantillons (roadmap #73) — rechargée
@@ -24,7 +24,6 @@ const StatusOverlays = memo(function StatusOverlays({
   status,
   loadedCount,
   sampleCount,
-  statusMessage,
   isDragOver,
   language,
   onRetry,
@@ -45,22 +44,18 @@ const StatusOverlays = memo(function StatusOverlays({
       {status === "error" && (
         <div className="piano-loading" role="alert">
           {t("loadError")}{" "}
-          <button className="import-btn" onClick={onRetry ?? (() => window.location.reload())}>
+          <button
+            className="import-btn"
+            onClick={onRetry ?? (() => window.location.reload())}
+          >
             {t("retry")}
           </button>
-          <span className="piano-error-hint">
-            {t("errorHint")}
-          </span>
+          <span className="piano-error-hint">{t("errorHint")}</span>
         </div>
       )}
       {isDragOver && (
         <div className="drop-overlay" role="status">
           {t("dropOverlay")}
-        </div>
-      )}
-      {statusMessage && (
-        <div className="status-message" role="status" aria-live="polite">
-          {statusMessage}
         </div>
       )}
     </>

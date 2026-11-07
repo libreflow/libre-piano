@@ -164,7 +164,9 @@
   font-size: var(--font-base);
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .playback-controls select:hover:not(:disabled) {
@@ -362,7 +364,10 @@ button:active:not(:disabled) {
   min-height: var(--control-h-sm);
   white-space: nowrap;
   box-shadow: none;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .pedal-badge.pedal-on {
@@ -638,25 +643,41 @@ button:active:not(:disabled) {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* ---------- Toast flottant (n'impacte pas la hauteur du document) ---------- */
+/* ---------- Bande de statut bas de page (audit UI : aucune
+   superposition) ---------- */
+
+/* La bande vit en flux SOUS le clavier : le message remplace le toast
+   fixed qui recouvrait le bas du clavier et le chip d'accord. Chaque
+   slot réserve sa hauteur (status-slot / chord-slot) : aucun saut de
+   mise en page à l'affichage/disparition du message. */
+.status-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+  width: 100%;
+}
+
+.status-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--control-h-sm) + var(--sp-2));
+  width: 100%;
+}
 
 .status-message {
-  position: fixed;
-  bottom: var(--sp-4);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 70;
   max-width: min(560px, 90vw);
-  padding: var(--sp-2) var(--sp-4);
+  padding: var(--sp-1) var(--sp-4);
   font-size: var(--font-small);
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-panel) 88%, var(--accent) 12%);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   text-align: center;
   animation: lyrics-in 0.2s ease-out;
-  pointer-events: none;
 }
 
 /* ---------- Sélecteur de pistes ---------- */
@@ -723,7 +744,9 @@ button:active:not(:disabled) {
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 
 .track-list label:hover {
@@ -863,7 +886,10 @@ button:active:not(:disabled) {
   padding-left: 2px;
   padding-right: 2px;
   font-family: inherit;
-  transition: box-shadow 0.08s, transform 0.06s, background 0.08s;
+  transition:
+    box-shadow 0.08s,
+    transform 0.06s,
+    background 0.08s;
   /* Empêche le scroll/zoom natif de voler les événements sur tactile. */
   touch-action: none;
 }
@@ -1140,6 +1166,25 @@ button:active:not(:disabled) {
 
 /* ---------- Tiroir Studio ---------- */
 
+/* Audit UI : quand le tiroir est ouvert, la zone principale RÉSERVE
+   l'espace (padding droit) au lieu de se laisser recouvrir — le clavier
+   reste entièrement visible et jouable. Sous 960px, l'écran est trop
+   étroit : le tiroir devient feuille centrée sur backdrop (fermeture au
+   clic extérieur, cf. StudioDrawer). */
+.piano-wrap.studio-open {
+  padding-right: min(26rem, 34vw);
+  transition: padding-right 0.18s ease-out;
+}
+.piano-wrap {
+  transition: padding-right 0.18s ease-out;
+}
+
+/* Backdrop mobile : absorbe le clic extérieur (desktop : masqué, l'espace
+   est déjà réservé dans le flux). */
+.studio-backdrop {
+  display: none;
+}
+
 .studio-drawer {
   position: fixed;
   top: 4.9rem;
@@ -1302,7 +1347,10 @@ button:active:not(:disabled) {
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    transform 0.15s,
+    background 0.15s;
 }
 
 .theme-toggle:hover {
@@ -1371,7 +1419,9 @@ button:active:not(:disabled) {
 
 @keyframes config-flash {
   0% {
-    box-shadow: 0 0 0 3px var(--accent), var(--shadow-md);
+    box-shadow:
+      0 0 0 3px var(--accent),
+      var(--shadow-md);
   }
   100% {
     box-shadow: var(--shadow-md);
@@ -1419,6 +1469,33 @@ button:active:not(:disabled) {
   }
   .speed-label input[type="range"] {
     width: 5.625rem;
+  }
+}
+
+/* ---------- Tiroir Studio sur petit écran (audit UI) ----------
+   Trop étroit pour réserver 26 rem : le tiroir devient une feuille
+   centrée sur un backdrop (clic extérieur = fermeture) — jamais de
+   recouvrement sans issue de sortie. */
+@media (max-width: 960px) {
+  .piano-wrap.studio-open {
+    padding-right: 0;
+  }
+  .studio-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 33;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(1px);
+  }
+  .studio-drawer {
+    top: 50%;
+    right: 50%;
+    bottom: auto;
+    left: auto;
+    transform: translate(50%, -50%);
+    width: min(30rem, 94vw);
+    max-height: min(80vh, 100%);
   }
 }
 

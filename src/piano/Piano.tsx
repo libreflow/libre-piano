@@ -668,7 +668,7 @@ function PianoInner({
 
   return (
     <div
-      className="piano-wrap"
+      className={`piano-wrap${studioOpen ? " studio-open" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -678,7 +678,6 @@ function PianoInner({
           status={status}
           loadedCount={loadedCount}
           sampleCount={SAMPLE_COUNT}
-          statusMessage={statusMessage}
           isDragOver={isDragOver}
           language={language}
           onRetry={retryLoading}
@@ -868,7 +867,6 @@ function PianoInner({
           status={status}
           loadedCount={loadedCount}
           sampleCount={SAMPLE_COUNT}
-          statusMessage={statusMessage}
           isDragOver={isDragOver}
           language={language}
           onRetry={retryLoading}
@@ -978,23 +976,33 @@ function PianoInner({
         scrollRef={pianoScrollRef}
         language={language}
       />
-      {/* Détection d'accords (hors-piste) : ce qui est joué — par
-          l'utilisateur (active + sustained) ou la lecture (auto). */}
-      <div className="chord-slot" aria-hidden="true">
-        {(() => {
-          const sounding = new Set<string>([
-            ...activeNotes,
-            ...sustainedNotes,
-            ...autoActiveNotes,
-          ]);
-          const chord = sounding.size >= 3 ? detectChord(sounding) : null;
-          if (!chord) return null;
-          return (
-            <span className="chord-chip" title={t("chordDetected")}>
-              {chord}
-            </span>
-          );
-        })()}
+      {/* Bande de statut bas de page (audit UI : plus aucune
+          superposition) : le message vit EN FLUX dans une zone réservée
+          (status-slot, hauteur fixe => zéro saut de mise en page), pas
+          en toast fixed qui recouvrait le bas du clavier. L'accord
+          détecté reste dans son slot dédié sous le message. */}
+      <div className="status-strip">
+        <div className="status-slot" role="status" aria-live="polite">
+          {statusMessage && <div className="status-message">{statusMessage}</div>}
+        </div>
+        {/* Détection d'accords (hors-piste) : ce qui est joué — par
+            l'utilisateur (active + sustained) ou la lecture (auto). */}
+        <div className="chord-slot" aria-hidden="true">
+          {(() => {
+            const sounding = new Set<string>([
+              ...activeNotes,
+              ...sustainedNotes,
+              ...autoActiveNotes,
+            ]);
+            const chord = sounding.size >= 3 ? detectChord(sounding) : null;
+            if (!chord) return null;
+            return (
+              <span className="chord-chip" title={t("chordDetected")}>
+                {chord}
+              </span>
+            );
+          })()}
+        </div>
       </div>
       {/* E3 (audit ergonomie) : modale de confirmation de suppression. */}
       <ConfirmDialog
