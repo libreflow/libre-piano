@@ -16,6 +16,7 @@ import {
   StarIcon,
   TrashIcon,
   PracticeIcon,
+  NoteIcon,
 } from "../icons";
 
 export interface PlaybackControlsProps {
@@ -228,7 +229,7 @@ const PlaybackControls = memo(function PlaybackControls({
         aria-pressed={echoActive}
         title={t("echoHint")}
       >
-        {t("echoToggle")}
+        <NoteIcon /> {t("echoToggle")}
       </button>
       </div>
     </div>

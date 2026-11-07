@@ -17,19 +17,23 @@ function App() {
   const parts = hint.split(/(Espace|Entrée|Space|Enter)/);
   return (
     <main className="container">
+      {/* Refonte chrome : brand + hint sur UNE rangée — le hint ne
+          méritait pas une ligne entière à lui seul. */}
       <header className="app-header">
-        <img src="logo.svg" alt="Logo Libre Piano" width={44} height={44} />
-        <h1>Libre Piano</h1>
+        <div className="brand">
+          <img src="logo.svg" alt="Logo Libre Piano" width={44} height={44} />
+          <h1>Libre Piano</h1>
+        </div>
+        <p className="hint">
+          {parts.map((part, i) =>
+            part === "Espace" || part === "Entrée" || part === "Space" || part === "Enter" ? (
+              <strong key={i}>{part}</strong>
+            ) : (
+              part
+            )
+          )}
+        </p>
       </header>
-      <p className="hint">
-        {parts.map((part, i) =>
-          part === "Espace" || part === "Entrée" || part === "Space" || part === "Enter" ? (
-            <strong key={i}>{part}</strong>
-          ) : (
-            part
-          )
-        )}
-      </p>
       <Piano onLanguageChange={setLanguage} />
     </main>
   );

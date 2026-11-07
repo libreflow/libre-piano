@@ -478,16 +478,18 @@ button:active:not(:disabled) {
   white-space: nowrap;
 }
 
-/* Visualiseur audio (roadmap #30). */
+/* Visualiseur audio (roadmap #30) : même largeur que le bandeau de
+   lecture — la refonte l'alignait sur un vieux 480px d'un autre âge. */
 .waveform-canvas {
   display: block;
-  max-width: 480px;
+  max-width: 520px;
   width: 100%;
-  height: 48px;
+  height: 56px;
   margin: 0 auto;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ---------- Bandeau de lecture (timecode + paroles + mesures) ---------- */
@@ -583,12 +585,21 @@ button:active:not(:disabled) {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* Indicateur de santé audio (roadmap #76) : discret, sous les contrôles. */
+/* Indicateur de santé audio (roadmap #76) : chip métrique discret,
+   style matériel (typedef chiffres tabulaires). */
 .audio-health {
-  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  line-height: 1;
   color: var(--text-faint);
-  text-align: center;
   font-variant-numeric: tabular-nums;
+  padding: 0.35rem 0.8rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ---------- Messages & sélecteur de pistes ---------- */
