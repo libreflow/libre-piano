@@ -731,16 +731,14 @@ button:active:not(:disabled) {
   padding: 0.25rem 0 0.6rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
 }
 
-/* Pluie de notes : même largeur que le clavier, défile avec lui. */
+/* Pluie de notes : même largeur que le clavier, défile avec lui.
+   Toujours montée quand activée — la bande garde sa hauteur même
+   arrêtée, sinon le clavier saute de 150 px au démarrage. */
 .piano-overlay {
   width: max-content;
-  display: block;
+  margin-bottom: 0.3rem;
 }
 
 .note-rain-canvas {

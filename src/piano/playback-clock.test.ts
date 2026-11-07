@@ -14,13 +14,17 @@ describe("playbackSeconds", () => {
     expect(playbackSeconds(6, 100, full, 30)).toBe(6);
   });
 
-  it("défile DANS la section en boucle A-B et boucle", () => {
+  it("défile DANS la section en boucle A-B et CYCLE à chaque tour", () => {
+    // Transport avance indéfiniment (Tone rejoue le Part en boucle) :
+    // la position doit replier dans [10, 20], pas rester plafonnée à 20.
     expect(playbackSeconds(0, 100, ab, 60)).toBe(10);
     expect(playbackSeconds(5, 100, ab, 60)).toBe(15);
-    // 11 s de transport = fin de section (10 s) -> reste à la borne 20.
-    expect(playbackSeconds(11, 100, ab, 60)).toBe(20);
-    // La vraie boucle est faite par Tone (part.loop) : côté horloge on
-    // reçoit le temps transport replié, la position se mappe dedans.
+    expect(playbackSeconds(9.5, 100, ab, 60)).toBe(19.5);
+    // Frontière exacte (t = sectionLength) : repli au début de section.
+    expect(playbackSeconds(10, 100, ab, 60)).toBe(10);
+    // Tour bouclé : 12 s de transport = 10 s de section + repli de 2 s.
+    expect(playbackSeconds(12, 100, ab, 60)).toBe(12);
+    expect(playbackSeconds(22, 100, ab, 60)).toBe(12);
   });
 
   it("borne la position à la durée du morceau", () => {

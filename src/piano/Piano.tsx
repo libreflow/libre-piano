@@ -913,8 +913,9 @@ function PianoInner({
         keyStateClass={keyStateClass}
         activeNotes={activeNotes}
         overlay={
-          showNoteRain && isPlaying && selectedPlayableForPlayback ? (
+          showNoteRain && selectedPlayableForPlayback ? (
             <NoteRain
+              active={isPlaying}
               events={selectedPlayableForPlayback.events}
               songDuration={selectedSongDuration}
               speed={speed}

@@ -13,11 +13,12 @@ describe("noteLane", () => {
   });
 
   it("une noire est plus étroite, chevauchant la frontière des blanches", () => {
-    // C#4 suit C4 (index de blanche 23) : centre à 23.69 clés.
+    // C#4 suit C4 (index de blanche 23) : bord gauche à 23.69 clés,
+    // comme .key.black { left: calc((index + 1) * keyW - 0.31 * keyW) }.
     const lane = noteLane("C#4", 60);
-    const expectedW = 60 * 0.62;
-    expect(lane?.width).toBeCloseTo(expectedW, 5);
-    expect(lane?.x).toBeCloseTo((23 + 0.69) * 60 - expectedW / 2, 3);
+    const expectedLeft = (23 + 0.69) * 60;
+    expect(lane?.width).toBeCloseTo(60 * 0.62, 5);
+    expect(lane?.x).toBeCloseTo(expectedLeft, 3);
   });
 
   it("retourne null pour une note inconnue", () => {

@@ -20,6 +20,9 @@ import {
 } from "../note-rain";
 
 interface NoteRainProps {
+  /** Lecture en cours : la pluie dessine. Sinon, la bande reste
+   * montée (aucun saut de mise en page au démarrage) mais vide. */
+  active: boolean;
   events: SongEvent[];
   songDuration: number;
   speed: number;
@@ -29,6 +32,7 @@ interface NoteRainProps {
 const RAIN_HEIGHT = 150;
 
 const NoteRain = memo(function NoteRain({
+  active,
   events,
   songDuration,
   speed,
@@ -37,8 +41,8 @@ const NoteRain = memo(function NoteRain({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Miroir refs : Piano re-render à chaque note pendant la lecture — un
   // seul effet [] doit suffire, l'état se lit à chaud dans la boucle.
-  const stateRef = useRef({ events, songDuration, speed, loop });
-  stateRef.current = { events, songDuration, speed, loop };
+  const stateRef = useRef({ active, events, songDuration, speed, loop });
+  stateRef.current = { active, events, songDuration, speed, loop };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,7 +75,15 @@ const NoteRain = memo(function NoteRain({
     let raf = 0;
     const pxPerSec = H / NOTE_RAIN_LOOKAHEAD_SEC;
     const draw = () => {
-      const { events, songDuration, speed, loop } = stateRef.current;
+      const { active, events, songDuration, speed, loop } = stateRef.current;
+      const W = rainCanvasWidth(keyW);
+      // Hors lecture : la bande reste montée (zéro saut de mise en
+      // page) mais ne dessine rien.
+      if (!active) {
+        ctx.clearRect(0, 0, W, H);
+        raf = requestAnimationFrame(draw);
+        return;
+      }
       const { start, end } = playbackSection(loop, songDuration);
       const now = playbackSeconds(
         getTransport().seconds,
@@ -79,7 +91,6 @@ const NoteRain = memo(function NoteRain({
         loop,
         songDuration
       );
-      const W = rainCanvasWidth(keyW);
       ctx.clearRect(0, 0, W, H);
 
       for (const { event, startDelta } of visibleRainEvents(events, now)) {

@@ -11,8 +11,9 @@ export interface PlaybackWindow {
 }
 
 /** Position (secondes, temps x1 du morceau) pendant la lecture.
- * En boucle A-B, la position défile DANS la section jouée et
- * revient au début de section à chaque tour. */
+ * En boucle A-B, la lecture tourne sur la section : le Transport,
+ * lui, avance indéfiniment (Tone.js rejoue le Part en boucle), donc la
+ * position CYCLE dans la section au lieu d'être plafonnée. */
 export function playbackSeconds(
   transportSeconds: number,
   speedPercent: number,
@@ -20,15 +21,15 @@ export function playbackSeconds(
   songDuration: number
 ): number {
   const speedFactor = speedPercent / 100;
+  const t = Math.max(0, transportSeconds * speedFactor);
   const clampedStart = Math.max(0, Math.min(loop.start, songDuration));
   const clampedEnd = Math.max(clampedStart, Math.min(loop.end, songDuration));
-  const sectionStart = loop.enabled ? clampedStart : 0;
-  const sectionEnd = loop.enabled ? clampedEnd : songDuration;
-  const inSection = Math.min(
-    Math.max(transportSeconds * speedFactor, 0),
-    Math.max(0, sectionEnd - sectionStart)
-  );
-  return Math.min(inSection + sectionStart, songDuration);
+  if (!loop.enabled) {
+    return Math.min(t, songDuration);
+  }
+  const sectionLength = Math.max(0, clampedEnd - clampedStart);
+  const songRel = sectionLength > 0 ? t % sectionLength : 0;
+  return Math.min(clampedStart + songRel, songDuration);
 }
 
 /** Bornes de la section jouée (utile pour filtrer les événements

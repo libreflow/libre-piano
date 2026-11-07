@@ -26,11 +26,11 @@ export function noteLane(note: string, keyW: number): NoteLane | null {
   const key = keys.find((k) => k.note === note);
   if (!key) return null;
   if (key.isBlack) {
-    // Le couloir noir chevauche la frontière entre les deux blanches
-    // voisines, comme la touche elle-même (cf. .key.black left).
-    const center = getWhitePositionOfNote(note); // blanche précédente + 0.69
-    const w = keyW * 0.62;
-    return { x: center * keyW - w / 2, width: w };
+    // getWhitePositionOfNote(noire) = blanche précédente + 0.69 :
+    // c'est le BORD GAUCHE de la touche (cf. .key.black left en CSS,
+    // calc((index + 1) * keyW - 0.31*keyW)), pas son centre.
+    const left = getWhitePositionOfNote(note) * keyW;
+    return { x: left, width: keyW * 0.62 };
   }
   return { x: key.whiteIndex * keyW, width: keyW };
 }
