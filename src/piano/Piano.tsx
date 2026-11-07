@@ -856,7 +856,18 @@ function PianoInner({
           songDuration={selectedSongDuration}
           isPlaying={isPlaying}
           language={language}
-          onToggle={setLoopEnabled}
+          onToggle={(enabled) => {
+            // Audit Studio : activée sans bornes réglées (0 → 0), la
+            // boucle jouait le morceau entier mais les champs affichaient
+            // « 0.0 / 0.0 » — on pré-remplit 0 → durée du morceau pour
+            // que l'UI reflète ce qui se joue (aligné sur le
+            // resolvePlaybackSection de la lecture).
+            setLoopEnabled(enabled);
+            if (enabled && loopStart === 0 && loopEnd === 0 && selectedSongDuration > 0) {
+              setLoopStart(0);
+              setLoopEnd(selectedSongDuration);
+            }
+          }}
           onStartChange={setLoopStart}
           onEndChange={setLoopEnd}
         />

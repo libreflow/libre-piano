@@ -16,6 +16,12 @@
 - **Worker MIDI** : les erreurs de fichier invalide ne désactivent plus le worker pour toute la session (seules les pannes d'infrastructure replient en synchrone)
 - **Stats de pratique** : `saveStats` sorti des updaters `setState` (pures)
 
+### Studio — audit du tiroir Réglages studio
+
+- **Ancrage du tiroir** : `position: absolute` DANS la bande réservée du pavé (le `fixed` top 4.9rem recouvrait la barre de profils pleine largeur en haut de page) ; ordre z unifié (console 35 < tiroir 40 < overlay drop 45 < backdrop mobile 80 < modales 100). Mobile ≤ 960px : une seule feuille (bas d'écran) sur backdrop, les deux media queries concurrentes sont fusionnées
+- **Boucle A-B** : bornes clampées à [0, durée] à la saisie (999 s sur un morceau de 30 s ne s'affiche plus tel quel) ; activation sans bornes pré-remplit 0 → durée du morceau (l'UI reflète ce qui se joue)
+- **Changement de timbre** : les notes tenues/sustained sur la voix quittée sont relâchées (`releaseAll`) — des notes pouvaient sonner à l'infini sur un nœud qui ne recevait plus de release
+
 ### UI — aucune superposition
 
 - **Message de statut** : le toast `position: fixed` qui recouvrait le bas du clavier et le chip d'accord vit désormais EN FLUX, dans une bande de statut réservée sous le clavier (`status-slot`/`chord-slot`, hauteur constante — zéro saut de mise en page)

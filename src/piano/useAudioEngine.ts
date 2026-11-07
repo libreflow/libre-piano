@@ -253,6 +253,13 @@ export function useAudioEngine(
     if (!reverb) return;
     const def = getVoice(voice);
     if (!def.options) return;
+    // Audit Studio : on quitte la voix sampler — les notes tenues ou
+    // sustained sur le sampler ne recevront PLUS de release (leur
+    // noteOff routera vers la nouvelle voix). On coupe tout : sans
+    // ça, elles sonnent à l'infini sur un nœud orphelin. (Dans l'autre
+    // sens, quitter une voix synth la dispose — ses notes s'arrêtent
+    // avec le nœud.)
+    samplerRef.current?.releaseAll();
     // Options du PolySynth : celles de la voix + gain de normalisation
     // (roadmap #29) — les synthés sont plus forts à enveloppe égale.
     // Les options du module pur sont volontairement "larges" ; le

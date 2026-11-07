@@ -31,6 +31,7 @@ const LoopBoundInput = memo(function LoopBoundInput({
   step,
   suffix,
   disabled,
+  songDuration,
   onCommit,
   ariaLabel,
 }: {
@@ -41,6 +42,8 @@ const LoopBoundInput = memo(function LoopBoundInput({
   step: number;
   suffix: string;
   disabled: boolean;
+  /** Durée du morceau : borne haute du clamp à la saisie (audit Studio). */
+  songDuration: number;
   onCommit: (v: number) => void;
   ariaLabel: string;
 }) {
@@ -52,7 +55,12 @@ const LoopBoundInput = memo(function LoopBoundInput({
   const commit = (raw: string) => {
     setText(raw);
     const parsed = Number(raw);
-    if (raw.trim() !== "" && Number.isFinite(parsed)) onCommit(parsed);
+    if (raw.trim() !== "" && Number.isFinite(parsed)) {
+      // Audit Studio : clamp à [0, songDuration] à la saisie — le nombre
+      // tapé peut dépasser le max de l'input (ex. 999 s pour un morceau
+      // de 30 s) et s'affichait tel quel alors que la lecture clampe.
+      onCommit(Math.max(0, Math.min(parsed, songDuration)));
+    }
   };
   return (
     <label className="loop-bound">
@@ -109,6 +117,7 @@ const LoopControls = memo(function LoopControls({
         step={0.5}
         suffix={t("loopSeconds")}
         disabled={isPlaying || !loopEnabled}
+        songDuration={songDuration}
         onCommit={onStartChange}
         ariaLabel={t("loopStartLabel")}
       />
@@ -120,6 +129,7 @@ const LoopControls = memo(function LoopControls({
         step={0.5}
         suffix={t("loopSeconds")}
         disabled={isPlaying || !loopEnabled}
+        songDuration={songDuration}
         onCommit={onEndChange}
         ariaLabel={t("loopEndLabel")}
       />

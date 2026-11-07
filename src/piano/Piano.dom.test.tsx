@@ -306,6 +306,21 @@ describe("Piano : non-régression du DOM (rôles et labels)", () => {
     expect(grand).toHaveAttribute("aria-checked", "false");
   });
 
+  it("activer la boucle A-B pré-remplit les bornes 0 → durée (audit Studio)", () => {
+    render(<Piano />);
+    fireEvent.click(screen.getByRole("button", { name: "Studio" }));
+    const drawer = screen.getByRole("region", { name: "Réglages studio" });
+    const toggle = within(drawer).getByRole("checkbox") as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    // Avant : la boucle jouait le morceau entier avec des champs
+    // « 0.0 / 0.0 » — la fin doit refléter la durée réelle.
+    const end = within(drawer).getByLabelText("Fin") as HTMLInputElement;
+    expect(Number(end.value)).toBeGreaterThan(0);
+    const start = within(drawer).getByLabelText("Début") as HTMLInputElement;
+    expect(Number(start.value)).toBe(0);
+  });
+
   it("le clavier 88 touches est rendu avec ses labels accessibles", () => {
     render(<Piano />);
 
