@@ -435,6 +435,40 @@ button:active:not(:disabled) {
   box-shadow: inset 0 0 60px var(--accent-soft);
 }
 
+/* ---------- Plein écran 1080p (refonte) ----------
+   Grand écran : clavier de meuble (touches larges, hautes), pluie
+   plus haute, tiroir Studio élargi — les dimensions du piano sont la
+   signature du plein écran. */
+@media (min-width: 1500px) {
+  .piano-scroll {
+    --key-w: 66px;
+    --rain-h: 185px;
+  }
+  .piano {
+    --key-h: 330px;
+  }
+  .key {
+    border-radius: 0 0 10px 10px;
+    padding-bottom: 16px;
+  }
+  .key-label {
+    font-size: 0.8rem;
+  }
+  .key.black .key-label {
+    font-size: 0.64rem;
+  }
+  .studio-drawer {
+    width: min(26rem, 94vw);
+  }
+  .waveform-canvas {
+    max-width: 640px;
+    height: 64px;
+  }
+  .playback-overlay {
+    width: min(640px, 100%);
+  }
+}
+
 /* Égaliseur compact (roadmap #24) : 3 mini-sliders sur une ligne. */
 .eq-band {
   display: inline-flex;
@@ -721,8 +755,10 @@ button:active:not(:disabled) {
 
 .piano-scroll {
   /* --key-w vit ICI : le clavier ET l'overlay pluie de notes en
-     héritent (l'overlay est un frère du .piano, pas son enfant). */
+     héritent (l'overlay est un frère du .piano, pas son enfant).
+     --rain-h aussi : la bande pluie suit les breakpoints. */
   --key-w: 60px;
+  --rain-h: 150px;
   /* Clavier 88 touches : plus large que la fenêtre -> défilement. */
   width: 100%;
   max-width: 100%;

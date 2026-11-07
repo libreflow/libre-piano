@@ -53,6 +53,7 @@ const NoteRain = memo(function NoteRain({
     // Géométrie : le canvas suit --key-w (responsive, défini sur
     // .piano-scroll pour que l'overlay en hérite) et le dpr (HiDPI).
     let keyW = 60;
+    let rainH = RAIN_HEIGHT;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     const accent =
       getComputedStyle(canvas).getPropertyValue("--accent").trim() ||
@@ -61,21 +62,25 @@ const NoteRain = memo(function NoteRain({
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = parseFloat(getComputedStyle(canvas).getPropertyValue("--key-w"));
       if (Number.isFinite(w) && w > 0) keyW = w;
+      // Plein écran : la hauteur de la bande suit --rain-h (185px en
+      // 1080p, 150px ailleurs) — définie sur .piano-scroll.
+      const rh = parseFloat(getComputedStyle(canvas).getPropertyValue("--rain-h"));
+      if (Number.isFinite(rh) && rh > 40) rainH = rh;
       const cssW = rainCanvasWidth(keyW);
       canvas.width = Math.round(cssW * dpr);
-      canvas.height = Math.round(RAIN_HEIGHT * dpr);
+      canvas.height = Math.round(rainH * dpr);
       canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${RAIN_HEIGHT}px`;
+      canvas.style.height = `${rainH}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     measure();
     window.addEventListener("resize", measure);
 
-    const H = RAIN_HEIGHT;
     let raf = 0;
-    const pxPerSec = H / NOTE_RAIN_LOOKAHEAD_SEC;
     const draw = () => {
       const { active, events, songDuration, speed, loop } = stateRef.current;
+      const H = rainH;
+      const pxPerSec = H / NOTE_RAIN_LOOKAHEAD_SEC;
       const W = rainCanvasWidth(keyW);
       // Hors lecture : la bande reste montée (zéro saut de mise en
       // page) mais ne dessine rien.

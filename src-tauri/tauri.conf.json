@@ -13,10 +13,11 @@
     "windows": [
       {
         "title": "Libre Piano",
-        "width": 1000,
-        "height": 650,
+        "width": 1600,
+        "height": 900,
         "minWidth": 560,
         "minHeight": 420,
+        "center": true,
         "dragDropEnabled": false
       }
     ],
