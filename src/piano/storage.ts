@@ -11,6 +11,7 @@ import {
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "./transpose";
 import { MIN_PLAYABLE_VELOCITY } from "./midi-import";
 import { EQ_DEFAULT_DB, EQ_MIN_DB, EQ_MAX_DB } from "./constants";
+import { DEFAULT_VOICE, sanitizeVoice, type VoiceId } from "./voices";
 
 const STORAGE_KEY = "libre-piano:state";
 /** Clé du profil actif (roadmap #63) : indépendante des données. */
@@ -74,6 +75,8 @@ export interface PersistedState {
   transpose: number;
   /** Égaliseur 3 bandes en dB (roadmap #24). */
   eq: { low: number; mid: number; high: number };
+  /** Timbre de l'instrument (roadmap #21) : sampler ou voix de synthèse. */
+  voice: VoiceId;
   /** Visualiseur audio activé (roadmap #30). */
   visualizer?: boolean;
   /** Pluie de notes pendant la lecture (refonte « Synthesia »). */
@@ -102,6 +105,7 @@ export const DEFAULT_STATE: PersistedState = {
   reverb: REVERB_DEFAULT_PERCENT,
   transpose: 0,
   eq: { low: EQ_DEFAULT_DB, mid: EQ_DEFAULT_DB, high: EQ_DEFAULT_DB },
+  voice: DEFAULT_VOICE,
   shortcuts: { sustain: "Space", togglePlayback: "Enter" },
   builtinFavoriteIds: [],
 };
@@ -156,13 +160,15 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     reverb,
     transpose,
     eq,
+    // Timbre inconnu (état corrompu, config d'une autre version) :
+    // piano — jamais de moteur hybride.
+    voice: sanitizeVoice(raw.voice),
     visualizer: raw.visualizer === true ? true : undefined,
     noteRain: raw.noteRain === true ? true : undefined,
     // m5 (audit) : langue absente du raw (états v1/v2 migrés, config d'une
     // ancienne version) => undefined, pour laisser detectLanguage()
     // faire la détection système (roadmap #82). Ne jamais forcer "fr".
-    language:
-      raw.language === "en" || raw.language === "fr" ? raw.language : undefined,
+    language: raw.language === "en" || raw.language === "fr" ? raw.language : undefined,
     shortcuts: {
       sustain:
         typeof (raw.shortcuts as { sustain?: unknown } | undefined)?.sustain ===

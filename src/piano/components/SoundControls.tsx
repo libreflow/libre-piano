@@ -18,6 +18,7 @@ import {
 } from "../constants";
 import { TRANSPOSE_MIN, TRANSPOSE_MAX } from "../transpose";
 import type { EqSettings } from "../useAudioEngine";
+import { VOICES, type VoiceId } from "../voices";
 import { useI18n } from "../useI18n";
 import { interpolate } from "../i18n";
 import type { Language } from "../i18n";
@@ -33,6 +34,9 @@ export interface SoundControlsProps {
   onEqChange: (updater: (prev: EqSettings) => EqSettings) => void;
   transpose: number;
   onTransposeChange: (updater: (v: number) => number) => void;
+  /** Timbre actif (roadmap #21). */
+  voice: VoiceId;
+  onVoiceChange: (voice: VoiceId) => void;
   isPlaying: boolean;
   language: Language;
 }
@@ -49,6 +53,8 @@ const SoundControls = memo(function SoundControls({
   onEqChange,
   transpose,
   onTransposeChange,
+  voice,
+  onVoiceChange,
   isPlaying,
   language,
 }: SoundControlsProps) {
@@ -107,7 +113,9 @@ const SoundControls = memo(function SoundControls({
           max={EQ_MAX_DB}
           step={1}
           value={eq.low}
-          onChange={(e) => onEqChange((prev) => ({ ...prev, low: Number(e.target.value) }))}
+          onChange={(e) =>
+            onEqChange((prev) => ({ ...prev, low: Number(e.target.value) }))
+          }
           aria-label={t("eqLow")}
           aria-valuetext={`${eq.low} dB`}
         />
@@ -117,7 +125,9 @@ const SoundControls = memo(function SoundControls({
           max={EQ_MAX_DB}
           step={1}
           value={eq.mid}
-          onChange={(e) => onEqChange((prev) => ({ ...prev, mid: Number(e.target.value) }))}
+          onChange={(e) =>
+            onEqChange((prev) => ({ ...prev, mid: Number(e.target.value) }))
+          }
           aria-label={t("eqMid")}
           aria-valuetext={`${eq.mid} dB`}
         />
@@ -127,11 +137,37 @@ const SoundControls = memo(function SoundControls({
           max={EQ_MAX_DB}
           step={1}
           value={eq.high}
-          onChange={(e) => onEqChange((prev) => ({ ...prev, high: Number(e.target.value) }))}
+          onChange={(e) =>
+            onEqChange((prev) => ({ ...prev, high: Number(e.target.value) }))
+          }
           aria-label={t("eqHigh")}
           aria-valuetext={`${eq.high} dB`}
         />
       </label>
+      {/* Timbre (roadmap #21) : sampler acoustique ou voix de synthèse.
+          Verrouillé pendant la lecture (le Part en cours joue sur la voix
+          choisie au lancement). */}
+      <div
+        className="segmented"
+        role="radiogroup"
+        aria-label={t("voiceGroup")}
+        title={t("voiceHint")}
+      >
+        {VOICES.map((v) => (
+          <button
+            key={v.id}
+            role="radio"
+            aria-checked={voice === v.id}
+            className={voice === v.id ? "seg-active" : ""}
+            onClick={() => onVoiceChange(v.id)}
+            disabled={isPlaying}
+            title={t("voiceHint")}
+          >
+            {t(v.labelKey)}
+          </button>
+        ))}
+      </div>
+
       <div
         className="segmented"
         role="group"
@@ -146,7 +182,9 @@ const SoundControls = memo(function SoundControls({
           <ChevronLeftIcon />
         </button>
         <span className="octave-label" aria-live="polite">
-          {interpolate(t("transposeLabel"), { value: transpose > 0 ? `+${transpose}` : transpose })}
+          {interpolate(t("transposeLabel"), {
+            value: transpose > 0 ? `+${transpose}` : transpose,
+          })}
         </span>
         <button
           onClick={() => onTransposeChange((v) => Math.min(TRANSPOSE_MAX, v + 1))}

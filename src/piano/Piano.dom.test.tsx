@@ -36,7 +36,14 @@ const { MockSampler, MockPart } = vi.hoisted(() => {
   return { MockSampler, MockPart };
 });
 
-const { MockToneAudioBuffer, MockReverb, MockEQ3 } = vi.hoisted(() => {
+const {
+  MockToneAudioBuffer,
+  MockReverb,
+  MockEQ3,
+  MockPolySynth,
+  MockSynth,
+  MockFMSynth,
+} = vi.hoisted(() => {
   class MockToneAudioBuffer {
     loaded = Promise.resolve();
 
@@ -79,7 +86,24 @@ const { MockToneAudioBuffer, MockReverb, MockEQ3 } = vi.hoisted(() => {
     dispose() {}
   }
 
-  return { MockToneAudioBuffer, MockReverb, MockEQ3 };
+  class MockPolySynth {
+    triggerAttack = vi.fn();
+    triggerRelease = vi.fn();
+    triggerAttackRelease = vi.fn();
+    set = vi.fn();
+    connect = vi.fn().mockReturnThis();
+    dispose = vi.fn();
+  }
+  class MockSynth {}
+  class MockFMSynth {}
+  return {
+    MockToneAudioBuffer,
+    MockReverb,
+    MockEQ3,
+    MockPolySynth,
+    MockSynth,
+    MockFMSynth,
+  };
 });
 
 vi.mock("./tone-gate", () => ({
@@ -98,6 +122,9 @@ vi.mock("./tone-gate", () => ({
   ensureAudioStarted: vi.fn().mockResolvedValue(undefined),
 
   Sampler: MockSampler,
+  PolySynth: MockPolySynth,
+  Synth: MockSynth,
+  FMSynth: MockFMSynth,
 
   getTransport: () => ({
     stop: vi.fn(),
@@ -250,6 +277,23 @@ describe("Piano : non-régression du DOM (rôles et labels)", () => {
     ).toBeTruthy();
 
     expect(within(drawer).getByText("C3")).toBeInTheDocument();
+  });
+
+  it("le tiroir Studio permet de changer le timbre (roadmap #21)", () => {
+    render(<Piano />);
+    fireEvent.click(screen.getByRole("button", { name: "Studio" }));
+    const drawer = screen.getByRole("region", { name: "Réglages studio" });
+    const voiceGroup = within(drawer).getByRole("radiogroup", {
+      name: "Timbre de l'instrument",
+    });
+    const grand = within(voiceGroup).getByRole("radio", { name: "Grand piano" });
+    const epiano = within(voiceGroup).getByRole("radio", {
+      name: "Piano électrique",
+    });
+    expect(grand).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(epiano);
+    expect(epiano).toHaveAttribute("aria-checked", "true");
+    expect(grand).toHaveAttribute("aria-checked", "false");
   });
 
   it("le clavier 88 touches est rendu avec ses labels accessibles", () => {

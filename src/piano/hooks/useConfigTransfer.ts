@@ -9,6 +9,7 @@ import { sanitizeState, DEFAULT_STATE } from "../storage";
 import { BUILTIN_SONGS } from "../songs";
 import { detectLanguage, interpolate, type Language } from "../i18n";
 import { DEFAULT_SHORTCUTS, type ShortcutConfig } from "../useKeyboardInput";
+import type { VoiceId } from "../voices";
 import type { LabelMode } from "../notes";
 import type { KeyboardLayout } from "../notes";
 import type { PersistedState } from "../storage";
@@ -25,6 +26,7 @@ export interface ConfigPrefs {
   reverb: number;
   transpose: number;
   eq: { low: number; mid: number; high: number };
+  voice: VoiceId;
   visualizer: boolean;
   noteRain: boolean;
   shortcuts: ShortcutConfig;
@@ -49,6 +51,7 @@ export function useConfigTransfer(
     setReverb: (v: number) => void;
     setTranspose: (v: number) => void;
     setEq: (v: { low: number; mid: number; high: number }) => void;
+    setVoice: (v: VoiceId) => void;
     setShowVisualizer: (v: boolean) => void;
     setNoteRain: (v: boolean) => void;
     setShortcuts: (v: ShortcutConfig) => void;
@@ -117,6 +120,7 @@ export function useConfigTransfer(
         setters.setReverb(clean.reverb);
         setters.setTranspose(clean.transpose);
         setters.setEq(clean.eq);
+        setters.setVoice(clean.voice);
         setters.setShowVisualizer(clean.visualizer ?? false);
         setters.setNoteRain(clean.noteRain ?? false);
         setters.setShortcuts(clean.shortcuts ?? DEFAULT_SHORTCUTS);

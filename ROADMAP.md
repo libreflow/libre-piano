@@ -32,7 +32,7 @@ incrément livrable indépendamment.
 
 ## Phase 3 — Moteur audio (21–30)
 
-21. Sélecteur d'instrument (piano, e-piano, orgue… via plusieurs `Tone.Sampler`)
+21. ✅ Sélecteur d'instrument (roadmap son : sampler Grand piano + voix de synthèse — piano électrique, orgue, cloches — sans asset supplémentaire)
 22. ✅ Contrôle de volume maître
 23. ✅ Réverbe réglable (`Tone.Reverb`)
 24. ✅ Égaliseur simple (EQ3 Tone.js : graves/médiums/aigus, ±12 dB, persisté)
@@ -40,7 +40,7 @@ incrément livrable indépendamment.
 26. ✅ Bundler les échantillons en local (fallback hors-ligne, pas de dépendance au CDN)
 27. ✅ Métronome audible pendant lecture/pratique
 28. ✅ Pédale sustain avec release réellement prolongé (3,5 s à l'extinction)
-29. Normalisation du volume entre instruments
+29. ✅ Normalisation du volume entre instruments (gain dB par voix, réglé à l'oreille sur le sampler de référence)
 30. ✅ Visualiseur audio (forme d'onde, activable depuis les Réglages, persisté)
 
 ## Phase 4 — Mode apprentissage avancé (31–45)

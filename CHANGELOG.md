@@ -1,8 +1,30 @@
 # Changelog
 
+## Non publié
+
+### Sécurité / moindre privilège
+
+- **Plugin `tauri-plugin-opener` retiré** (Cargo, npm, capability) : aucune utilisation front ; capability `updater:default` retirée (plugin updater inerte tant que la clé publique de release n'est pas configurée)
+- **Permission en lecture seule `core:window:allow-is-fullscreen`** ajoutée : l'état plein écran est resynchronisé avec la réalité native (le fullscreen Tauri ne déclenche pas l'événement DOM)
+
+### Corrections de bugs
+
+- **Echo ignore la transposition** : la démo echo joue et attend le morceau transposé, comme la lecture et l'apprentissage ; l'export `.mid` exporte également le morceau transposé audible
+- **Audio bloqué à vie** : un échec de `Tone.start()` (policy autoplay) n'est plus mis en cache — le prochain geste utilisateur relance proprement, avec un message de statut traduit
+- **Boucle A-B** : bornes normalisées par une fonction partagée (`resolvePlaybackSection`) — timecode, pluie de notes et lecture audio ne divergent plus sur micro-boucles ou bornes croisées
+- **Enregistrement plafonné** à 3000 événements (parité import MIDI) ; titre d'enregistrement localisé FR/EN
+- **Worker MIDI** : les erreurs de fichier invalide ne désactivent plus le worker pour toute la session (seules les pannes d'infrastructure replient en synchrone)
+- **Stats de pratique** : `saveStats` sorti des updaters `setState` (pures)
+
+### Nouvelle fonctionnalité — Timbres (route sonore)
+
+- **Sélecteur de timbre dans le tiroir Studio** : Grand piano (sampler Salamander), Piano électrique, Orgue et Cloches (voix de synthèse Tone.js, aucun asset supplémentaire), chaque voix avec un gain de normalisation
+- Timbre persisté par profil, inclus dans l'export/import de configuration, verrouillé pendant la lecture
+
 ## 0.5.1 — 2026-10-20
 
 ### Corrections de bugs (audit approfondi, 14 bugs)
+
 - **Import de configuration incomplet** : réverbe, égaliseur, transposition, visualiseur, raccourcis et langue sont maintenant exportés (l'import savait les lire, l'export ne les écrivait pas)
 - **Double lecture d'une phrase en echo** : `start()` programme la phrase une seule fois (timers doublés supprimés)
 - **Echo non arrêté au changement de morceau** : quitter l'echo au mauvais moment ne relance plus une session fantôme
@@ -19,6 +41,7 @@
 - **Re-renders en cascade** : `React.memo` sur les 10 composants UI passifs
 
 ### Ergonomie (audit complet, 14 problèmes)
+
 - **Internationalisation complète** : les ~120 chaînes françaises en dur sont traduites (FR/EN) — tous les composants, messages de statut, aria-labels, erreurs et avertissements MIDI
 - **`window.confirm()` remplacé** par une modale custom (`ConfirmDialog`) : focus auto, Échap, clic backdrop, `role="alertdialog"`, traduisible et stylisable
 - **Contraste WCAG AA** : boutons Lecture/Arrêt corrigés dans les deux thèmes (5.4:1 à 7.6:1 sur fond blanc)
@@ -31,6 +54,7 @@
 - **Flash visuel** après un import de configuration réussi
 
 ### Performance (audit complet, 6 problèmes)
+
 - **RAF de lecture isolé** : le compteur à 60 fps ne re-rend plus tout l'arbre React — nouveau composant mémoïsé `PlaybackOverlay` (paroles + mesures uniquement)
 - **Crash sur gros fichiers MIDI** : `Math.min/max(...spread)` remplacé par une boucle O(n) — un fichier avec >125k notes sur une piste ne fait plus planter l'import (`RangeError`)
 - **`sortLibrary` mémoïsé** dans le sélecteur de morceau
@@ -38,8 +62,8 @@
 - **Transposition ciblée** : seul le morceau sélectionné est transposé (plus toute la bibliothèque)
 
 ### Tests
-- 188 tests (+1 test de non-régression perf : 150k notes sur une piste)
 
+- 188 tests (+1 test de non-régression perf : 150k notes sur une piste)
 
 ## 0.5.0 — 2026-10-19
 

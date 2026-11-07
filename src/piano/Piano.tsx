@@ -14,6 +14,7 @@ import { downloadSongAsMidi } from "./midi-export";
 import { transposedSong } from "./transpose";
 import { getActiveProfile, loadPersistedState } from "./storage";
 import { useAudioEngine, SAMPLE_COUNT } from "./useAudioEngine";
+import type { VoiceId } from "./voices";
 import { usePlayback } from "./usePlayback";
 import { usePractice } from "./usePractice";
 import { useCallResponse } from "./useCallResponse";
@@ -127,6 +128,8 @@ function PianoInner({
   const [reverb, setReverb] = useState(initialState.reverb);
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
+  // Timbre de l'instrument (roadmap #21) : sampler ou voix de synthèse.
+  const [voice, setVoice] = useState<VoiceId>(initialState.voice);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
   // Pluie de notes (refonte « Synthesia ») : pendant la lecture, les
   // notes tombent en canvas sur leurs touches.
@@ -229,7 +232,7 @@ function PianoInner({
     noteOff: rawNoteOff,
     releaseSustainedNote,
     triggerAttackRelease,
-  } = useAudioEngine(volume, reverb, eq);
+  } = useAudioEngine(volume, reverb, eq, voice);
 
   // Morceau à entendre/jouer : TOUJOURS transposé (lecture, apprentissage,
   // echo, pluie). B1 (audit) : la transposition doit s'appliquer partout
@@ -461,6 +464,7 @@ function PianoInner({
       reverb,
       transpose,
       eq,
+      voice,
       visualizer: showVisualizer,
       noteRain: showNoteRain,
       shortcuts,
@@ -478,6 +482,7 @@ function PianoInner({
       reverb,
       transpose,
       eq,
+      voice,
       showVisualizer,
       showNoteRain,
       shortcuts,
@@ -513,6 +518,7 @@ function PianoInner({
       setReverb,
       setTranspose,
       setEq,
+      setVoice,
       setShowVisualizer,
       setNoteRain: setShowNoteRain,
       setShortcuts: setConfigShortcuts,
@@ -538,6 +544,7 @@ function PianoInner({
       reverb,
       transpose,
       eq,
+      voice,
       visualizer: showVisualizer,
       noteRain: showNoteRain,
       shortcuts,
@@ -555,6 +562,7 @@ function PianoInner({
       reverb,
       transpose,
       eq,
+      voice,
       showVisualizer,
       showNoteRain,
       shortcuts,
@@ -829,6 +837,8 @@ function PianoInner({
           onEqChange={setEq}
           transpose={transpose}
           onTransposeChange={setTranspose}
+          voice={voice}
+          onVoiceChange={setVoice}
           isPlaying={isPlaying}
           language={language}
         />

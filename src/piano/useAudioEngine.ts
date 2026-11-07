@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { trackNodeCreate, trackNodeDispose } from "./audio-health";
 import {
   EQ3,
+  FMSynth,
+  PolySynth,
   Reverb,
   Sampler,
+  Synth,
   ToneAudioBuffer,
   getDestination,
   getTransport,
@@ -16,8 +19,12 @@ import {
   REVERB_MAX_PERCENT,
 } from "./constants";
 import { EQ_MIN_DB, EQ_MAX_DB } from "./constants";
+import { DEFAULT_VOICE, getVoice, type VoiceId } from "./voices";
 
 export type SamplerStatus = "loading" | "ready" | "error";
+
+/** Voix polyphonique de synthèse (timbre ≠ piano, roadmap #21). */
+type SynthVoice = PolySynth<Synth> | PolySynth<FMSynth>;
 
 /** Release d'une note normale (secondes). */
 const NOTE_RELEASE_SEC = 1;
@@ -74,7 +81,10 @@ export interface EqSettings {
 export function useAudioEngine(
   volume: number,
   reverbPercent: number,
-  eq: EqSettings = { low: 0, mid: 0, high: 0 }
+  eq: EqSettings = { low: 0, mid: 0, high: 0 },
+  // Timbre actif (roadmap #21) : "piano" = sampler Salamander, les
+  // autres ids = voix de synthèse créées paresseusement ci-dessous.
+  voice: VoiceId = DEFAULT_VOICE
 ) {
   const samplerRef = useRef<Sampler | null>(null);
   // Réverbe (roadmap #23) : chaîne sampler -> reverb -> destination.
@@ -227,27 +237,83 @@ export function useAudioEngine(
     if (reverbRef.current) reverbRef.current.wet.value = pct / 100;
   }, [reverbPercent]);
 
+  // --- Voix de synthèse (roadmap #21, timbre ≠ piano) ---------------------
+  // Le sampler Salamander est TOUJOURS chargé (voix par défaut, et le
+  // statut ready en dépend) ; la voix synth est créée paresseusement
+  // quand le timbre actif l'exige, branchée sur la même chaîne reverb.
+  const synthRef = useRef<SynthVoice | null>(null);
+  const voiceIdRef = useRef<VoiceId>(voice);
+  useEffect(() => {
+    voiceIdRef.current = voice;
+  }, [voice]);
+
+  useEffect(() => {
+    if (voice === "piano" || status !== "ready") return;
+    const reverb = reverbRef.current;
+    if (!reverb) return;
+    const def = getVoice(voice);
+    if (!def.options) return;
+    // Options du PolySynth : celles de la voix + gain de normalisation
+    // (roadmap #29) — les synthés sont plus forts à enveloppe égale.
+    // Les options du module pur sont volontairement "larges" ; le
+    // contenu est garanti par voices.test (moteur connu par voix).
+    let poly: SynthVoice;
+    if (def.engine === "fm") {
+      poly = new PolySynth(FMSynth, { ...def.options, volume: def.gainDb } as never);
+    } else {
+      poly = new PolySynth(Synth, { ...def.options, volume: def.gainDb } as never);
+    }
+    poly.connect(reverb);
+    trackNodeCreate();
+    synthRef.current = poly;
+    return () => {
+      poly.dispose();
+      trackNodeDispose();
+      synthRef.current = null;
+    };
+  }, [voice, status, attempt]);
+
   const noteOn = useCallback((note: string, velocity?: number) => {
-    samplerRef.current?.triggerAttack(note, undefined, velocity);
+    if (voiceIdRef.current === "piano") {
+      samplerRef.current?.triggerAttack(note, undefined, velocity);
+    } else {
+      synthRef.current?.triggerAttack(note, undefined, velocity);
+    }
   }, []);
 
   const noteOff = useCallback((note: string) => {
-    samplerRef.current?.triggerRelease(note);
+    if (voiceIdRef.current === "piano") {
+      samplerRef.current?.triggerRelease(note);
+    } else {
+      synthRef.current?.triggerRelease(note);
+    }
   }, []);
   /** Libère une note tenue par la pédale (roadmap #28) : release long,
    * la note s'éteint doucement au lieu d'être coupée. */
   const releaseSustainedNote = useCallback((note: string) => {
-    const sampler = samplerRef.current;
-    if (!sampler) return;
-    const previous = sampler.release;
-    sampler.release = SUSTAINED_RELEASE_SEC;
-    sampler.triggerRelease(note);
-    sampler.release = previous;
+    if (voiceIdRef.current === "piano") {
+      const sampler = samplerRef.current;
+      if (!sampler) return;
+      const previous = sampler.release;
+      sampler.release = SUSTAINED_RELEASE_SEC;
+      sampler.triggerRelease(note);
+      sampler.release = previous;
+      return;
+    }
+    const poly = synthRef.current;
+    if (!poly) return;
+    poly.set({ envelope: { release: SUSTAINED_RELEASE_SEC } });
+    poly.triggerRelease(note);
+    poly.set({ envelope: { release: getVoice(voiceIdRef.current).releaseSec } });
   }, []);
 
   const triggerAttackRelease = useCallback(
     (note: string, duration: number, time?: number, velocity?: number) => {
-      samplerRef.current?.triggerAttackRelease(note, duration, time, velocity);
+      if (voiceIdRef.current === "piano") {
+        samplerRef.current?.triggerAttackRelease(note, duration, time, velocity);
+      } else {
+        synthRef.current?.triggerAttackRelease(note, duration, time, velocity);
+      }
     },
     []
   );
