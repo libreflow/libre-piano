@@ -29,6 +29,9 @@ export interface SettingsMenuProps {
   onLabelModeChange: (mode: LabelMode) => void;
   showVisualizer: boolean;
   onToggleVisualizer: () => void;
+  /** Pluie de notes pendant la lecture (refonte). */
+  showNoteRain: boolean;
+  onToggleNoteRain: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   language: Language;
@@ -56,6 +59,8 @@ const SettingsMenu = memo(function SettingsMenu({
   onLabelModeChange,
   showVisualizer,
   onToggleVisualizer,
+  showNoteRain,
+  onToggleNoteRain,
   isFullscreen,
   onToggleFullscreen,
   language,
@@ -151,6 +156,14 @@ const SettingsMenu = memo(function SettingsMenu({
               title={t("waveHint")}
             >
               {showVisualizer ? t("waveToggleOn") : t("waveToggleOff")}
+            </button>
+            <button
+              className="import-btn"
+              onClick={onToggleNoteRain}
+              aria-pressed={showNoteRain}
+              title={t("noteRainHint")}
+            >
+              {showNoteRain ? t("noteRainOn") : t("noteRainOff")}
             </button>
             <button className="import-btn" onClick={onToggleFullscreen} aria-pressed={isFullscreen}>
               {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}

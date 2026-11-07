@@ -26,6 +26,7 @@ export interface ConfigPrefs {
   transpose: number;
   eq: { low: number; mid: number; high: number };
   visualizer: boolean;
+  noteRain: boolean;
   shortcuts: ShortcutConfig;
   language: Language;
 }
@@ -49,6 +50,7 @@ export function useConfigTransfer(
     setTranspose: (v: number) => void;
     setEq: (v: { low: number; mid: number; high: number }) => void;
     setShowVisualizer: (v: boolean) => void;
+    setNoteRain: (v: boolean) => void;
     setShortcuts: (v: ShortcutConfig) => void;
     setLanguage: (v: Language) => void;
     setImportedSongs: (songs: PersistedState["importedSongs"]) => void;
@@ -116,6 +118,7 @@ export function useConfigTransfer(
         setters.setTranspose(clean.transpose);
         setters.setEq(clean.eq);
         setters.setShowVisualizer(clean.visualizer ?? false);
+        setters.setNoteRain(clean.noteRain ?? false);
         setters.setShortcuts(clean.shortcuts ?? DEFAULT_SHORTCUTS);
         setters.setLanguage(clean.language ?? detectLanguage());
         statusMessage(

@@ -7,6 +7,7 @@ import { memo, useEffect, useState } from "react";
 import { getTransport } from "../tone-gate";
 import type { Song } from "../songs";
 import { REFERENCE_BPM } from "../constants";
+import { playbackSeconds } from "../playback-clock";
 import { useI18n } from "../useI18n";
 import type { Language } from "../i18n";
 
@@ -15,8 +16,7 @@ interface PlaybackOverlayProps {
   songDuration: number;
   speed: number;
   language: Language;
-  /** Fenêtre de lecture boucle A-B (audit refonte : sans elle, le
-   * timecode restait plaqué à 100 % pendant toute la boucle). */
+  /** Fenêtre de lecture boucle A-B. */
   loop: { enabled: boolean; start: number; end: number };
 }
 
@@ -30,32 +30,25 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
   const { t } = useI18n(language);
   // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
   // pendant la lecture, pour les marqueurs de mesures et les paroles.
-  const [playbackSeconds, setPlaybackSeconds] = useState(0);
+  const [transportSeconds, setTransportSeconds] = useState(0);
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      setPlaybackSeconds(getTransport().seconds);
+      setTransportSeconds(getTransport().seconds);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
-  // M4 (audit) : les événements du morceau sont scalés par speedFactor,
-  // transport.seconds avance donc en temps « réduit » — on le ramène en
-  // temps x1 avant de comparer aux lyrics et marqueurs de mesures.
-  const speedFactor = speed / 100;
-  // Position dans la fenêtre jouée : en boucle A-B, la lecture tourne
-  // sur la section — le timecode doit défiler DANS la section, pas
-  // rester plaqué à la fin du morceau (audit refonte).
-  const clampedStart = Math.max(0, Math.min(loop.start, songDuration));
-  const clampedEnd = Math.max(clampedStart, Math.min(loop.end, songDuration));
-  const sectionStart = loop.enabled ? clampedStart : 0;
-  const sectionEnd = loop.enabled ? clampedEnd : songDuration;
-  const inSection = Math.min(
-    Math.max(playbackSeconds * speedFactor, 0),
-    Math.max(0, sectionEnd - sectionStart)
+  // M4 (audit) + refonte : la position « temps x1 dans la fenêtre jouée »
+  // vit dans playback-clock — partagée avec la pluie de notes pour ne
+  // jamais diverger d'un affichage à l'autre.
+  const songSeconds = playbackSeconds(
+    transportSeconds,
+    speed,
+    loop,
+    songDuration
   );
-  const songSeconds = Math.min(inSection + sectionStart, songDuration);
   // Refonte UI (ergonomie) : timecode + barre de progression — un
   // lecteur pro montre où en est le morceau, pas seulement des mesures.
   const fmt = (s: number) => {

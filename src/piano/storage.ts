@@ -76,6 +76,8 @@ export interface PersistedState {
   eq: { low: number; mid: number; high: number };
   /** Visualiseur audio activé (roadmap #30). */
   visualizer?: boolean;
+  /** Pluie de notes pendant la lecture (refonte « Synthesia »). */
+  noteRain?: boolean;
   /** Raccourcis personnalisés (roadmap #65), codes physiques. */
   shortcuts?: { sustain: string; togglePlayback: string };
   /** Langue de l'interface (roadmap #82). undefined = pas encore
@@ -155,6 +157,7 @@ function sanitize(raw: Partial<PersistedState>): PersistedState {
     transpose,
     eq,
     visualizer: raw.visualizer === true ? true : undefined,
+    noteRain: raw.noteRain === true ? true : undefined,
     // m5 (audit) : langue absente du raw (états v1/v2 migrés, config d'une
     // ancienne version) => undefined, pour laisser detectLanguage()
     // faire la détection système (roadmap #82). Ne jamais forcer "fr".

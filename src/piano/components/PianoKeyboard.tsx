@@ -20,6 +20,9 @@ interface PianoKeyboardProps {
   keyStateClass: (note: string) => string;
   /** Notes actives (pour pointerLeave : relâcher une note tenue). */
   activeNotes: ReadonlySet<string>;
+  /** Overlay décoratif au-dessus du clavier, dans le même conteneur
+   * SCROLLABLE (pluie de notes synchro avec les touches). */
+  overlay?: React.ReactNode;
   onPointerDown: (note: string, e: ReactPointerEvent<HTMLButtonElement>) => void;
   onPointerUp: (note: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -58,6 +61,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
   isPlaying,
   keyStateClass,
   activeNotes,
+  overlay,
   onPointerDown,
   onPointerUp,
   scrollRef,
@@ -72,6 +76,11 @@ const PianoKeyboard = memo(function PianoKeyboard({
       role="group"
       aria-label={t("pianoGroup")}
     >
+      {overlay && (
+        <div className="piano-overlay" aria-hidden="true">
+          {overlay}
+        </div>
+      )}
       <div
         className={`piano ${isPlaying ? "piano-readonly" : ""}`}
         style={{ ["--white-keys" as any]: whiteKeyCount }}

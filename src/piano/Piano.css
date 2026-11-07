@@ -720,6 +720,9 @@ button:active:not(:disabled) {
 /* ---------- Clavier ---------- */
 
 .piano-scroll {
+  /* --key-w vit ICI : le clavier ET l'overlay pluie de notes en
+     héritent (l'overlay est un frère du .piano, pas son enfant). */
+  --key-w: 60px;
   /* Clavier 88 touches : plus large que la fenêtre -> défilement. */
   width: 100%;
   max-width: 100%;
@@ -728,10 +731,23 @@ button:active:not(:disabled) {
   padding: 0.25rem 0 0.6rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+/* Pluie de notes : même largeur que le clavier, défile avec lui. */
+.piano-overlay {
+  width: max-content;
+  display: block;
+}
+
+.note-rain-canvas {
+  display: block;
 }
 
 .piano {
-  --key-w: 60px;
   --key-h: 220px;
   position: relative;
   display: block;
@@ -872,15 +888,19 @@ button:active:not(:disabled) {
 
 /* Responsive : le clavier rétrécit plutôt que de déborder. */
 @media (max-width: 1020px) {
-  .piano {
+  .piano-scroll {
     --key-w: 48px;
+  }
+  .piano {
     --key-h: 200px;
   }
 }
 
 @media (max-width: 880px) {
-  .piano {
+  .piano-scroll {
     --key-w: 44px;
+  }
+  .piano {
     --key-h: 180px;
   }
   .key-label {
@@ -906,8 +926,10 @@ button:active:not(:disabled) {
 }
 
 @media (max-width: 760px) {
-  .piano {
+  .piano-scroll {
     --key-w: 36px;
+  }
+  .piano {
     --key-h: 160px;
   }
   .console-row {
@@ -996,6 +1018,24 @@ button:active:not(:disabled) {
 .melody-tag svg {
   width: 11px;
   height: 11px;
+}
+
+/* Détection d'accords : chip sous le clavier, à la manière d'un
+   afficheur d'accord de gamme professionnelle. */
+.chord-chip {
+  align-self: center;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  box-shadow: var(--shadow-sm);
+  animation: lyrics-in 0.15s ease-out;
+  user-select: none;
 }
 
 /* ---------- Bouton supprimer morceau ---------- */

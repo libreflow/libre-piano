@@ -39,6 +39,8 @@ import KeyboardControls from "./components/KeyboardControls";
 import ConfirmDialog from "./components/ConfirmDialog";
 import PlaybackOverlay from "./components/PlaybackOverlay";
 import ProfileBar from "./components/ProfileBar";
+import NoteRain from "./components/NoteRain";
+import { detectChord } from "./chords";
 import { useActiveNotes } from "./hooks/useActiveNotes";
 import { useSettingsMenuState } from "./hooks/useSettingsMenuState";
 import { useSongLibrary } from "./hooks/useSongLibrary";
@@ -125,6 +127,9 @@ function PianoInner({
   const [transpose, setTranspose] = useState(initialState.transpose);
   const [eq, setEq] = useState(initialState.eq);
   const [showVisualizer, setShowVisualizer] = useState(initialState.visualizer ?? false);
+  // Pluie de notes (refonte « Synthesia ») : pendant la lecture, les
+  // notes tombent en canvas sur leurs touches.
+  const [showNoteRain, setShowNoteRain] = useState(initialState.noteRain ?? false);
   // Thème clair/sombre (roadmap #64), persisté avec les préférences.
   // Déclaré avant useVisualizer : la couleur d'accent du visualiseur
   // se relit quand le thème change (P2).
@@ -461,6 +466,7 @@ function PianoInner({
       transpose,
       eq,
       visualizer: showVisualizer,
+      noteRain: showNoteRain,
       shortcuts,
       language,
     }),
@@ -477,6 +483,7 @@ function PianoInner({
       transpose,
       eq,
       showVisualizer,
+      showNoteRain,
       shortcuts,
       language,
     ]
@@ -511,6 +518,7 @@ function PianoInner({
       setTranspose,
       setEq,
       setShowVisualizer,
+      setNoteRain: setShowNoteRain,
       setShortcuts: setConfigShortcuts,
       setLanguage,
       setSelectedSongId,
@@ -533,6 +541,7 @@ function PianoInner({
       transpose,
       eq,
       visualizer: showVisualizer,
+      noteRain: showNoteRain,
       shortcuts,
       language,
     },
@@ -715,6 +724,8 @@ function PianoInner({
             onLabelModeChange={setLabelMode}
             showVisualizer={showVisualizer}
             onToggleVisualizer={() => setShowVisualizer((v) => !v)}
+            showNoteRain={showNoteRain}
+            onToggleNoteRain={() => setShowNoteRain((v) => !v)}
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
             language={language}
@@ -901,11 +912,37 @@ function PianoInner({
         isPlaying={isPlaying}
         keyStateClass={keyStateClass}
         activeNotes={activeNotes}
+        overlay={
+          showNoteRain && isPlaying && selectedPlayableForPlayback ? (
+            <NoteRain
+              events={selectedPlayableForPlayback.events}
+              songDuration={selectedSongDuration}
+              speed={speed}
+              loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
+            />
+          ) : undefined
+        }
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         scrollRef={pianoScrollRef}
         language={language}
       />
+      {/* Détection d'accords (hors-piste) : ce qui est joué — par
+          l'utilisateur (active + sustained) ou la lecture (auto). */}
+      {(() => {
+        const sounding = new Set<string>([
+          ...activeNotes,
+          ...sustainedNotes,
+          ...autoActiveNotes,
+        ]);
+        const chord = sounding.size >= 3 ? detectChord(sounding) : null;
+        if (!chord) return null;
+        return (
+          <span className="chord-chip" title={t("chordDetected")}>
+            {chord}
+          </span>
+        );
+      })()}
       {/* E3 (audit ergonomie) : modale de confirmation de suppression. */}
       <ConfirmDialog
         open={deleteTarget !== null}
