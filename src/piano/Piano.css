@@ -469,6 +469,27 @@ button:active:not(:disabled) {
   }
 }
 
+/* Grand écran mais fenêtre basse (ex: 1600x900) : le clavier et la
+   pluie rétrécissent pour que TOUT tienne sans scroll vertical —
+   sinon la scrollbar clignote à chaque apparition de chip/overlay. */
+@media (min-width: 1500px) and (max-height: 1000px) {
+  .piano {
+    --key-h: 240px;
+  }
+  .piano-scroll {
+    --rain-h: 130px;
+  }
+  .playback-zone {
+    min-height: 5rem;
+  }
+  .chord-slot {
+    min-height: 2.2rem;
+  }
+  .piano-wrap {
+    gap: 0.65rem;
+  }
+}
+
 /* Égaliseur compact (roadmap #24) : 3 mini-sliders sur une ligne. */
 .eq-band {
   display: inline-flex;
@@ -636,19 +657,41 @@ button:active:not(:disabled) {
   box-shadow: var(--shadow-sm);
 }
 
+/* Zone de lecture : HAUTEUR CONSTANTE (timecode quand ça joue, vide
+   sinon) — l'apparition/disparition de la boîte faisait basculer la
+   scrollbar du document, clignotement visible avec la pluie. */
+.playback-zone {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-height: 6.6rem;
+  width: 100%;
+}
+
+.playback-zone .playback-overlay {
+  min-height: 0;
+}
+
 /* ---------- Messages & sélecteur de pistes ---------- */
 
+/* Toast flottant : n'impacte JAMAIS la hauteur du document. */
 .status-message {
-  max-width: 560px;
+  position: fixed;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  max-width: min(560px, 90vw);
   padding: 0.55rem 1.1rem;
   font-size: 0.85rem;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-panel) 88%, var(--accent) 12%);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   text-align: center;
   animation: lyrics-in 0.2s ease-out;
+  pointer-events: none;
 }
 
 .track-picker {
@@ -1054,8 +1097,18 @@ button:active:not(:disabled) {
   height: 11px;
 }
 
-/* Détection d'accords : chip sous le clavier, à la manière d'un
-   afficheur d'accord de gamme professionnelle. */
+/* Détection d'accords : slot à HAUTEUR CONSTANTE sous le clavier —
+   le chip apparaissant à chaque accord ne doit pas faire respirer
+   la page (scrollbar clignotante avec la pluie de notes). */
+.chord-slot {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  width: 100%;
+}
+
 .chord-chip {
   align-self: center;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;

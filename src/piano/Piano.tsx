@@ -895,15 +895,21 @@ function PianoInner({
       {/* B6 (audit) : les paroles ne s'affichent que pendant la lecture
           automatique — pendant l'echo ou l'apprentissage, le temps de
           lecture est périmé et la ligne serait fausse. */}
-      {isPlaying && (
-        <PlaybackOverlay
-          song={selectedSong}
-          songDuration={selectedSongDuration}
-          speed={speed}
-          language={language}
-          loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
-        />
-      )}
+      {/* Plein écran : la zone de lecture garde une hauteur CONSTANTE —
+          monter/ne pas monter la boîte timecode faisait basculer la
+          scrollbar verticale du document (clignotement avec la pluie
+          de notes activée). */}
+      <div className="playback-zone" aria-hidden={!isPlaying}>
+        {isPlaying && (
+          <PlaybackOverlay
+            song={selectedSong}
+            songDuration={selectedSongDuration}
+            speed={speed}
+            language={language}
+            loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
+          />
+        )}
+      </div>
       <PianoKeyboard
         allKeys={ALL_KEYS}
         whiteKeyCount={whiteKeyCount}
@@ -930,20 +936,22 @@ function PianoInner({
       />
       {/* Détection d'accords (hors-piste) : ce qui est joué — par
           l'utilisateur (active + sustained) ou la lecture (auto). */}
-      {(() => {
-        const sounding = new Set<string>([
-          ...activeNotes,
-          ...sustainedNotes,
-          ...autoActiveNotes,
-        ]);
-        const chord = sounding.size >= 3 ? detectChord(sounding) : null;
-        if (!chord) return null;
-        return (
-          <span className="chord-chip" title={t("chordDetected")}>
-            {chord}
-          </span>
-        );
-      })()}
+      <div className="chord-slot" aria-hidden="true">
+        {(() => {
+          const sounding = new Set<string>([
+            ...activeNotes,
+            ...sustainedNotes,
+            ...autoActiveNotes,
+          ]);
+          const chord = sounding.size >= 3 ? detectChord(sounding) : null;
+          if (!chord) return null;
+          return (
+            <span className="chord-chip" title={t("chordDetected")}>
+              {chord}
+            </span>
+          );
+        })()}
+      </div>
       {/* E3 (audit ergonomie) : modale de confirmation de suppression. */}
       <ConfirmDialog
         open={deleteTarget !== null}
