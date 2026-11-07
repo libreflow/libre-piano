@@ -248,7 +248,7 @@ button:active:not(:disabled) {
     var(--play)
   );
   color: white;
-  padding-inline: 1.4rem;
+  padding-inline: var(--sp-5);
   box-shadow: 0 2px 12px color-mix(in srgb, var(--play) 45%, transparent);
 }
 
@@ -276,7 +276,7 @@ button:active:not(:disabled) {
     var(--stop)
   );
   color: white;
-  padding-inline: 1.4rem;
+  padding-inline: var(--sp-5);
   box-shadow: 0 2px 12px color-mix(in srgb, var(--stop) 45%, transparent);
 }
 
@@ -1418,7 +1418,7 @@ button:active:not(:disabled) {
     padding: var(--sp-2);
   }
   .speed-label input[type="range"] {
-    width: 90px;
+    width: 5.625rem;
   }
 }
 

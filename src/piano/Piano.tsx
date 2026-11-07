@@ -777,7 +777,7 @@ function PianoInner({
           {loopEnabled && (
             <span
               className="loop-chip on"
-              title={`${t("loopToggle")} — ${loopStart.toFixed(1)}s → ${loopEnd.toFixed(1)}s`}
+              title={`${t("loopToggle")}: ${loopStart.toFixed(1)}s → ${loopEnd.toFixed(1)}s`}
             >
               ⟲ {loopStart.toFixed(1)}–{loopEnd.toFixed(1)}s
             </span>
@@ -929,6 +929,7 @@ function PianoInner({
           showNoteRain && selectedPlayableForPlayback ? (
             <NoteRain
               active={isPlaying}
+              theme={theme}
               events={selectedPlayableForPlayback.events}
               songDuration={selectedSongDuration}
               speed={speed}

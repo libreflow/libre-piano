@@ -91,7 +91,9 @@ const PlaybackControls = memo(function PlaybackControls({
         disabled={isPlaying || isRecording || echoActive}
         aria-label={t("selectSongAria")}
         title={
-          isPlaying || isRecording || echoActive ? t("selectSongDisabledHint") : ""
+          isPlaying || isRecording || echoActive
+            ? t("selectSongDisabledHint")
+            : undefined
         }
       >
         {/* B8 (audit) : tri via sortLibrary (était dupliqué inline). */}
@@ -140,11 +142,12 @@ const PlaybackControls = memo(function PlaybackControls({
           className="play-btn"
           onClick={onPlay}
           disabled={!statusReady || hasPendingImport || practiceActive || echoActive}
+          title={t("playHint")}
         >
           <PlayIcon /> {t("playSong")}
         </button>
       ) : (
-        <button className="stop-btn" onClick={onStop}>
+        <button className="stop-btn" onClick={onStop} title={t("stopSong")}>
           <StopIcon /> {t("stopSong")}
         </button>
       )}
@@ -153,6 +156,7 @@ const PlaybackControls = memo(function PlaybackControls({
         className="import-btn"
         onClick={() => fileInputRef.current?.click()}
         disabled={isPlaying || isImporting}
+        title={t("importHint")}
       >
         {isImporting ? (
           t("importProgress")

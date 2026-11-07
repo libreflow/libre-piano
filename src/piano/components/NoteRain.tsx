@@ -27,6 +27,9 @@ interface NoteRainProps {
   songDuration: number;
   speed: number;
   loop: PlaybackWindow;
+  /** Audit : l'accent (couleur des couloirs) varie par thème — il
+   * doit être relu au changement, sinon la pluie garde l'ancien. */
+  theme: string;
 }
 
 const RAIN_HEIGHT = 150;
@@ -37,6 +40,7 @@ const NoteRain = memo(function NoteRain({
   songDuration,
   speed,
   loop,
+  theme,
 }: NoteRainProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Miroir refs : Piano re-render à chaque note pendant la lecture — un
@@ -49,6 +53,8 @@ const NoteRain = memo(function NoteRain({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    // theme en dépendance : relit l'accent de pluie au changement.
+    void theme;
 
     // Géométrie : le canvas suit --key-w (responsive, défini sur
     // .piano-scroll pour que l'overlay en hérite) et le dpr (HiDPI).
@@ -130,7 +136,7 @@ const NoteRain = memo(function NoteRain({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <canvas
