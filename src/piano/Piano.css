@@ -1,11 +1,15 @@
-/* Refonte UI pro : console à deux rangées avec sections libellées,
-   clavier premium, feedback visuel riche (timecode, pulse, toasts). */
+/* =============================================================================
+   Libre Piano — feuille de l'application.
+   Retravail tailles : TOUTES les dimensions dérivent des tokens définis
+   dans App.css --root (échelle typo 5 crans, 2 hauteurs de contrôle,
+   5 rayons, 6 espacements). Aucune valeur ad hoc.
+   ========================================================================== */
 
 .piano-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: var(--sp-3);
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
@@ -13,7 +17,7 @@
   position: relative;
 }
 
-/* ---------- Barre de profils (haut de l'app, refonte) ---------- */
+/* ---------- Barre de profils (haut de l'app) ---------- */
 
 .piano-topbar {
   width: 100%;
@@ -22,49 +26,51 @@
 }
 
 .piano-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  padding: 0.55rem 1.1rem;
+  font-size: var(--font-small);
+  font-variant-numeric: tabular-nums;
+  padding: var(--sp-2) var(--sp-4);
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-sm);
 }
 
 .piano-loading button {
-  margin: 0 0.5rem;
-}
-.piano-error-hint {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--text-faint);
-}
-
-.piano-loading {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-variant-numeric: tabular-nums;
+  margin: 0 var(--sp-2);
 }
 
 .piano-loading progress {
-  width: 120px;
+  width: 7.5rem;
   accent-color: var(--accent);
 }
 
-/* ---------- Console (panneau de contrôles, refonte) ---------- */
+.piano-error-hint {
+  display: block;
+  margin-top: var(--sp-1);
+  font-size: var(--font-micro);
+  color: var(--text-faint);
+}
+
+/* ---------- Console (transport sticky) ---------- */
 
 .playback-controls {
   position: sticky;
-  top: 0.5rem;
+  top: var(--sp-1);
   z-index: 35;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: var(--sp-2);
   width: 100%;
-  padding: 0.7rem 0.9rem;
-  background: linear-gradient(to bottom, var(--bg-panel), color-mix(in srgb, var(--bg-panel) 92%, black));
+  padding: var(--sp-2) var(--sp-3);
+  background: linear-gradient(
+    to bottom,
+    var(--bg-panel),
+    color-mix(in srgb, var(--bg-panel) 92%, black)
+  );
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -74,36 +80,33 @@
 .console-row {
   display: flex;
   align-items: stretch;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   flex-wrap: wrap;
   justify-content: center;
 }
 
-/* Séparateur vertical entre rangées : la hiérarchie se lit d'un coup d'œil. */
+/* Separateur entre rangées. */
 .console-row + .console-row {
   border-top: 1px solid var(--border-subtle);
-  padding-top: 0.55rem;
+  padding-top: var(--sp-2);
 }
 
-/* Loi de Hick : regrouper les contrôles en sections sémantiques
-   réduit la charge cognitive ; le séparateur matérialise la frontière. */
+/* Groupes sémantiques (loi de Hick) : le filet matérialise la frontière. */
 .control-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .control-group + .control-group {
   border-left: 1px solid var(--border-subtle);
-  padding-left: 0.6rem;
+  padding-left: var(--sp-3);
 }
 
-/* Groupe à libellé : micro-titre de section, comme un canal de console.
-   Le libellé est un surcouche (position absolute) : le groupe reste une
-   RANGÉE de contrôles — le libellé vit dans le padding-top réservé.
-   (Audit de la refonte : flex-direction column empilait les contrôles.) */
+/* Groupe à libellé : le libellé est une surcouche absolute — le groupe
+   reste une RANGÉE de contrôles. */
 .control-group.labeled {
   position: relative;
   padding-top: 1.2rem;
@@ -119,21 +122,17 @@
 
 .groups-chunk .control-group + .control-group {
   border-left: 1px solid var(--border-subtle);
-  padding-left: 0.6rem;
+  padding-left: var(--sp-3);
 }
 
-/* Audit de la refonte : la console alterne chunks et groupes — le
-   sélecteur ".control-group + .control-group" ne matchait pas les
-   voisins de groups-chunk. */
 .groups-chunk + .control-group {
   border-left: 1px solid var(--border-subtle);
-  padding-left: 0.6rem;
+  padding-left: var(--sp-3);
 }
 
-/* La boucle ferme la 2e rangée : même filet que les autres groupes. */
 .control-group + .loop-controls {
   border-left: 1px solid var(--border-subtle);
-  padding-left: 0.6rem;
+  padding-left: var(--sp-3);
 }
 
 .group-label {
@@ -142,10 +141,10 @@
   left: 0;
   right: 0;
   display: block;
-  font-size: 0.62rem;
+  font-size: var(--font-micro);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-align: center;
   color: var(--text-faint);
   user-select: none;
@@ -155,29 +154,15 @@
   text-overflow: ellipsis;
 }
 
-/* Sur écran étroit les groupes passent chacun sur leur propre ligne :
-   le séparateur latéral n'a plus de sens, on l'enlève. */
-@media (max-width: 880px) {
-  .playback-controls {
-    gap: 0.5rem;
-  }
-  .control-group + .control-group,
-  .groups-chunk .control-group + .control-group,
-  .groups-chunk + .control-group,
-  .control-group + .loop-controls {
-    border-left: none;
-    padding-left: 0;
-  }
-}
-
 .playback-controls select {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: var(--text-primary);
-  padding: 0.45rem 0.7rem;
+  padding: 0 var(--sp-2);
   min-height: var(--control-h);
-  font-size: 0.9rem;
+  font-size: var(--font-base);
+  font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -200,8 +185,8 @@ button:focus-visible {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  gap: var(--sp-2);
+  font-size: var(--font-small);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -230,15 +215,15 @@ button.stop-btn,
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   min-height: var(--control-h);
-  padding: 0.45rem 0.95rem;
-  font-size: 0.88rem;
+  padding: 0 var(--sp-3);
+  font-size: var(--font-base);
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: var(--sp-2);
   white-space: nowrap;
   transition:
     background 0.15s,
@@ -257,33 +242,50 @@ button:active:not(:disabled) {
 
 /* CTA transport : plus grands, immédiatement identifiables. */
 .play-btn {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--play) 88%, white), var(--play));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--play) 88%, white),
+    var(--play)
+  );
   color: white;
   padding-inline: 1.4rem;
   box-shadow: 0 2px 12px color-mix(in srgb, var(--play) 45%, transparent);
 }
 
 .play-btn:hover:not(:disabled) {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--play) 80%, black), color-mix(in srgb, var(--play) 92%, black));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--play) 80%, black),
+    color-mix(in srgb, var(--play) 92%, black)
+  );
   box-shadow: 0 3px 16px color-mix(in srgb, var(--play) 55%, transparent);
 }
 
 .play-btn:disabled {
   background: var(--bg-panel-hover);
+  border-color: var(--border-subtle);
   color: var(--text-faint);
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .stop-btn {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--stop) 88%, white), var(--stop));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--stop) 88%, white),
+    var(--stop)
+  );
   color: white;
   padding-inline: 1.4rem;
   box-shadow: 0 2px 12px color-mix(in srgb, var(--stop) 45%, transparent);
 }
 
 .stop-btn:hover {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--stop) 80%, black), color-mix(in srgb, var(--stop) 92%, black));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--stop) 80%, black),
+    color-mix(in srgb, var(--stop) 92%, black)
+  );
 }
 
 .import-btn {
@@ -302,15 +304,20 @@ button:active:not(:disabled) {
   cursor: not-allowed;
 }
 
-/* Bouton icône compact (favori, suppression) : cible cohérente avec
-   la hauteur des autres contrôles, sans manger la largeur. */
+/* Bouton icône compact : carré de la hauteur standard. */
 .import-btn.icon-btn {
   padding: 0;
   width: var(--control-h);
 }
 
-/* Enregistrement : pastille dédiée avec pulsation quand ça capte,
-   comme le témoin REC d'un matériel audio. */
+/* État actif du bouton Studio. */
+.import-btn.studio-btn-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+/* Enregistrement : pastille REC avec pulsation quand ça capte. */
 .rec-dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -335,21 +342,27 @@ button:active:not(:disabled) {
   }
 }
 
-.pedal-badge {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  padding: 0.3rem 0.8rem;
-  min-height: var(--control-h);
+/* ---------- Chips (style partagé : pastille, bord,Metrics mono) ---------- */
+
+.pedal-badge,
+.audio-health,
+.chord-chip,
+.loop-chip.on {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-1);
+  font-size: var(--font-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--sp-3);
+  min-height: var(--control-h-sm);
   white-space: nowrap;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+  box-shadow: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .pedal-badge.pedal-on {
@@ -359,26 +372,44 @@ button:active:not(:disabled) {
   box-shadow: 0 0 14px rgba(154, 108, 255, 0.4);
 }
 
+.audio-health {
+  font-size: var(--font-micro);
+  color: var(--text-faint);
+}
+
+.chord-chip {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: var(--font-base);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+  box-shadow: var(--shadow-sm);
+  animation: lyrics-in 0.15s ease-out;
+  user-select: none;
+}
+
 /* ---------- Boucle A-B ---------- */
 
 .loop-controls {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: var(--sp-3);
   flex-wrap: wrap;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: var(--font-small);
   color: var(--text-secondary);
-  padding: 0.35rem 0.7rem;
+  padding: var(--sp-1) var(--sp-2);
   background: transparent;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .loop-toggle {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-1);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -387,24 +418,25 @@ button:active:not(:disabled) {
 .loop-toggle input {
   accent-color: var(--accent);
   cursor: pointer;
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }
 
 .loop-bound {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
 }
 
 .loop-bound input[type="number"] {
-  width: 64px;
-  border-radius: 6px;
+  width: 4rem;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: var(--text-primary);
-  padding: 0.35rem 0.4rem;
-  min-height: 26px;
+  padding: 0 var(--sp-1);
+  min-height: var(--control-h-sm);
+  font-size: var(--font-small);
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
@@ -414,7 +446,8 @@ button:active:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
-/* Overlay de glisser-déposer : couvre toute la zone du piano. */
+/* ---------- Overlay de glisser-déposer ---------- */
+
 .drop-overlay {
   position: absolute;
   inset: 0;
@@ -422,8 +455,8 @@ button:active:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  font-size: 1.05rem;
+  padding: var(--sp-4);
+  font-size: var(--font-title);
   font-weight: 700;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-app) 72%, transparent);
@@ -435,106 +468,56 @@ button:active:not(:disabled) {
   box-shadow: inset 0 0 60px var(--accent-soft);
 }
 
-/* ---------- Plein écran 1080p (refonte) ----------
-   Grand écran : clavier de meuble (touches larges, hautes), pluie
-   plus haute, tiroir Studio élargi — les dimensions du piano sont la
-   signature du plein écran. */
-@media (min-width: 1500px) {
-  .piano-scroll {
-    --key-w: 66px;
-    --rain-h: 185px;
-  }
-  .piano {
-    --key-h: 330px;
-  }
-  .key {
-    border-radius: 0 0 10px 10px;
-    padding-bottom: 16px;
-  }
-  .key-label {
-    font-size: 0.8rem;
-  }
-  .key.black .key-label {
-    font-size: 0.64rem;
-  }
-  .studio-drawer {
-    width: min(26rem, 94vw);
-  }
-  .waveform-canvas {
-    max-width: 640px;
-    height: 64px;
-  }
-  .playback-overlay {
-    width: min(640px, 100%);
-  }
-}
-
-/* Grand écran mais fenêtre basse (ex: 1600x900) : le clavier et la
-   pluie rétrécissent pour que TOUT tienne sans scroll vertical —
-   sinon la scrollbar clignote à chaque apparition de chip/overlay. */
-@media (min-width: 1500px) and (max-height: 1000px) {
-  .piano {
-    --key-h: 240px;
-  }
-  .piano-scroll {
-    --rain-h: 130px;
-  }
-  .playback-zone {
-    min-height: 5rem;
-  }
-  .chord-slot {
-    min-height: 2.2rem;
-  }
-  .piano-wrap {
-    gap: 0.65rem;
-  }
-}
-
-/* Égaliseur compact (roadmap #24) : 3 mini-sliders sur une ligne. */
+/* Égaliseur compact : 3 mini-sliders. */
 .eq-band {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--sp-1);
 }
 .eq-band input[type="range"] {
-  width: 56px;
+  width: 3.5rem;
 }
 
-/* Barre de profils (roadmap #63). */
+/* ---------- Barre de profils ---------- */
+
 .profile-bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.78rem;
+  gap: var(--sp-2);
+  font-size: var(--font-small);
   color: var(--text-secondary);
 }
+
 .profile-bar select,
 .profile-bar input {
-  padding: 0.28rem 0.55rem;
-  font-size: 0.78rem;
-  min-height: calc(var(--control-h) - 0.3rem);
+  padding: 0 var(--sp-2);
+  font-size: var(--font-small);
+  min-height: var(--control-h-sm);
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
+  font-family: inherit;
   transition: border-color 0.15s;
 }
+
 .profile-bar select:hover,
 .profile-bar input:hover {
   border-color: var(--accent);
 }
+
 .profile-bar input {
-  width: 130px;
+  width: 8rem;
 }
-/* E9 (audit ergonomie) : label visible des champs de la barre de profil. */
+
 .profile-label-text {
-  font-size: 0.78rem;
+  font-size: var(--font-small);
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
-/* Visualiseur audio (roadmap #30) : même largeur que le bandeau de
-   lecture — la refonte l'alignait sur un vieux 480px d'un autre âge. */
+/* ---------- Visualiseur ---------- */
+
 .waveform-canvas {
   display: block;
   max-width: 520px;
@@ -547,16 +530,24 @@ button:active:not(:disabled) {
   box-shadow: var(--shadow-sm);
 }
 
-/* ---------- Bandeau de lecture (timecode + paroles + mesures) ---------- */
+/* ---------- Zone de lecture (timecode quand ça joue, santé sinon) ---------- */
+
+.playback-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6.6rem;
+  width: 100%;
+}
 
 .playback-overlay {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--sp-1);
   min-height: 1.6rem;
   width: min(520px, 100%);
-  padding: 0.4rem 1rem;
+  padding: var(--sp-2) var(--sp-4);
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -564,11 +555,12 @@ button:active:not(:disabled) {
 }
 
 .lyrics-line {
-  font-size: 0.95rem;
+  font-size: var(--font-title);
   font-weight: 600;
   color: var(--text-primary);
   animation: lyrics-in 0.25s ease-out;
 }
+
 @keyframes lyrics-in {
   from {
     opacity: 0;
@@ -580,18 +572,17 @@ button:active:not(:disabled) {
   }
 }
 
-/* Progression + timecode : lecture pro, on sait où l'on en est. */
 .playback-progress {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--sp-3);
   width: 100%;
 }
 
 .progress-track {
   flex: 1;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-input);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
@@ -599,15 +590,19 @@ button:active:not(:disabled) {
 
 .progress-fill {
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #4aa3ff));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, #4aa3ff)
+  );
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
   transition: width 0.2s linear;
 }
 
 .playback-time {
   font-variant-numeric: tabular-nums;
-  font-size: 0.82rem;
+  font-size: var(--font-small);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -626,64 +621,34 @@ button:active:not(:disabled) {
   gap: 6px;
   align-items: center;
 }
+
 .measure-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--border-strong);
 }
+
 .measure-dot.strong {
   background: var(--text-faint);
 }
+
 .measure-dot.active {
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* Indicateur de santé audio (roadmap #76) : chip métrique discret,
-   style matériel (typedef chiffres tabulaires). */
-.audio-health {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.7rem;
-  line-height: 1;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-  padding: 0.35rem 0.8rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  box-shadow: var(--shadow-sm);
-}
+/* ---------- Toast flottant (n'impacte pas la hauteur du document) ---------- */
 
-/* Zone de lecture : HAUTEUR CONSTANTE (timecode quand ça joue, vide
-   sinon) — l'apparition/disparition de la boîte faisait basculer la
-   scrollbar du document, clignotement visible avec la pluie. */
-.playback-zone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 6.6rem;
-  width: 100%;
-}
-
-.playback-zone .audio-health {
-  align-self: center;
-}
-
-/* ---------- Messages & sélecteur de pistes ---------- */
-
-/* Toast flottant : n'impacte JAMAIS la hauteur du document. */
 .status-message {
   position: fixed;
-  bottom: 1.1rem;
+  bottom: var(--sp-4);
   left: 50%;
   transform: translateX(-50%);
   z-index: 70;
   max-width: min(560px, 90vw);
-  padding: 0.55rem 1.1rem;
-  font-size: 0.85rem;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--font-small);
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-panel) 88%, var(--accent) 12%);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
@@ -694,11 +659,13 @@ button:active:not(:disabled) {
   pointer-events: none;
 }
 
+/* ---------- Sélecteur de pistes ---------- */
+
 .track-picker {
   max-width: 520px;
   width: 100%;
-  margin: 0 auto 0.5rem;
-  padding: 1rem 1.2rem;
+  margin: 0 auto var(--sp-1);
+  padding: var(--sp-4) var(--sp-5);
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -707,51 +674,53 @@ button:active:not(:disabled) {
 }
 
 .track-picker h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--font-title);
 }
 
 .track-picker-hint {
-  margin: 0 0 0.7rem;
-  font-size: 0.8rem;
+  margin: 0 0 var(--sp-3);
+  font-size: var(--font-small);
   color: var(--text-secondary);
 }
 
-/* Ligne de piste : label + bouton de pré-écoute côte à côte. */
 .track-list li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
+
 .track-list li > label {
   flex: 1;
   margin: 0;
 }
+
 .preview-btn {
   flex-shrink: 0;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--sp-3);
+  font-size: var(--font-small);
 }
 
 .track-list {
   list-style: none;
-  margin: 0 0 0.9rem;
+  margin: 0 0 var(--sp-3);
   padding: 0;
-  max-height: 220px;
+  max-height: 13.75rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--sp-1);
 }
 
 .track-list label {
   display: flex;
   align-items: flex-start;
-  gap: 0.55rem;
-  font-size: 0.85rem;
+  gap: var(--sp-2);
+  font-size: var(--font-base);
   color: var(--text-primary);
   cursor: pointer;
-  padding: 0.4rem 0.5rem;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   transition: background 0.12s, border-color 0.12s;
@@ -770,8 +739,8 @@ button:active:not(:disabled) {
   margin-top: 0.25rem;
   accent-color: var(--play);
   cursor: pointer;
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }
 
 .track-info {
@@ -784,14 +753,42 @@ button:active:not(:disabled) {
 }
 
 .track-details {
-  font-size: 0.75rem;
+  font-size: var(--font-small);
   color: var(--text-faint);
 }
 
 .track-picker-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
+  gap: var(--sp-2);
+}
+
+/* Tag mélodie du sélecteur de pistes. */
+.melody-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--font-micro);
+  font-weight: 700;
+  color: #ffd77a;
+  background: rgba(255, 200, 90, 0.12);
+  border: 1px solid rgba(255, 200, 90, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--sp-2);
+  margin-left: var(--sp-1);
+  vertical-align: middle;
+}
+
+/* En thème clair l'or clair était illisible (~1.9:1) : or foncé. */
+:root[data-theme="light"] .melody-tag {
+  color: #7a5600;
+  background: rgba(255, 200, 90, 0.22);
+  border-color: rgba(186, 133, 20, 0.45);
+}
+
+.melody-tag svg {
+  width: 11px;
+  height: 11px;
 }
 
 /* ---------- Clavier ---------- */
@@ -802,22 +799,20 @@ button:active:not(:disabled) {
      --rain-h aussi : la bande pluie suit les breakpoints. */
   --key-w: 60px;
   --rain-h: 150px;
-  /* Clavier 88 touches : plus large que la fenêtre -> défilement. */
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.25rem 0 0.6rem;
+  padding: var(--sp-1) 0 var(--sp-2);
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
 
 /* Pluie de notes : même largeur que le clavier, défile avec lui.
-   Toujours montée quand activée — la bande garde sa hauteur même
-   arrêtée, sinon le clavier saute de 150 px au démarrage. */
+   Toujours montée quand activée — pas de saut de mise en page. */
 .piano-overlay {
   width: max-content;
-  margin-bottom: 0.3rem;
+  margin-bottom: var(--sp-1);
 }
 
 .note-rain-canvas {
@@ -832,11 +827,11 @@ button:active:not(:disabled) {
   height: var(--key-h);
   margin: 0 auto;
   user-select: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
 /* Le feutre rouge — la bande de feutre au-dessus des touches d'un vrai
-   piano. Sépare visuellement la chute des notes (pluie) du clavier. */
+   piano. Sépare visuellement la pluie de notes du clavier. */
 .piano::before {
   content: "";
   position: absolute;
@@ -845,7 +840,7 @@ button:active:not(:disabled) {
   right: 0;
   height: 7px;
   background: linear-gradient(to bottom, #b23a3a, #6e1d1d);
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
   z-index: 3;
   pointer-events: none;
@@ -859,15 +854,14 @@ button:active:not(:disabled) {
   position: absolute;
   top: 0;
   border: 1px solid #0d0e18;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 10px;
+  padding-bottom: var(--sp-2);
   padding-left: 2px;
   padding-right: 2px;
-  box-sizing: border-box;
   font-family: inherit;
   transition: box-shadow 0.08s, transform 0.06s, background 0.08s;
   /* Empêche le scroll/zoom natif de voler les événements sur tactile. */
@@ -923,7 +917,7 @@ button:active:not(:disabled) {
   background: linear-gradient(to bottom, #43465a 0%, #23253a 60%, #13141f 100%);
   color: #9ba0b5;
   z-index: 2;
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 5px 5px;
   box-shadow:
     inset 0 -3px 0 rgba(255, 255, 255, 0.08),
     0 5px 10px rgba(0, 0, 0, 0.5);
@@ -949,25 +943,21 @@ button:active:not(:disabled) {
 }
 
 .key-label {
-  font-size: 0.72rem;
+  font-size: var(--font-small);
   font-weight: 600;
   opacity: 0.65;
   pointer-events: none;
   text-align: center;
   line-height: 1.15;
-  /* Jamais de débordement : la largeur est bornée par la touche
-     (padding horizontal de la .key), et un texte trop long se termine
-     proprement plutôt que de mordre sur la touche voisine. */
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Mode "A B C + Do" : la seconde ligne (solfège) est plus discrète. */
 .key-label .key-label-solfege {
   display: block;
-  font-size: 0.62rem;
+  font-size: var(--font-micro);
   font-weight: 500;
   max-width: 100%;
   overflow: hidden;
@@ -976,10 +966,421 @@ button:active:not(:disabled) {
 
 .key.black .key-label {
   opacity: 0.55;
-  font-size: 0.58rem;
+  font-size: var(--font-micro);
 }
 
-/* Responsive : le clavier rétrécit plutôt que de déborder. */
+/* Touche attendue (apprentissage) : halo vert pulsant. */
+.key.expected {
+  box-shadow:
+    inset 0 0 0 2px var(--play),
+    0 0 22px rgba(52, 168, 83, 0.55);
+  animation: expected-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes expected-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+.key.white.expected {
+  background: linear-gradient(to bottom, #e2f5e8, #b8e6c6);
+}
+
+.key.black.expected {
+  background: linear-gradient(to bottom, #1d5c30, #0d3a1c);
+  box-shadow:
+    inset 0 0 0 2px var(--play),
+    0 0 22px rgba(52, 168, 83, 0.55);
+}
+
+/* Touche suivante (anticipation) : liseré discret. */
+.key.next {
+  box-shadow: inset 0 0 0 2px var(--accent, #4f7cff);
+}
+.key.white.next {
+  background: linear-gradient(to bottom, #eef2ff, #dde6ff);
+}
+.key.black.next {
+  background: linear-gradient(to bottom, #24304f, #131a30);
+}
+
+/* Repère d'octave : petit point sous chaque Do. */
+.key.white.octave-marker::after {
+  content: "";
+  position: absolute;
+  bottom: var(--sp-1);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  opacity: 0.7;
+}
+
+.key.white.octave-marker:hover::after,
+.key.white.active.octave-marker::after {
+  background: #3a5fcc;
+}
+
+/* ---------- Segmented control ---------- */
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  gap: 2px;
+}
+
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0 var(--sp-3);
+  min-height: var(--control-h-sm);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.segmented button:hover {
+  color: var(--text-primary);
+}
+
+.segmented button.seg-active {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  box-shadow:
+    inset 0 0 0 1px var(--border-strong),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Bouton supprimer morceau ---------- */
+
+.delete-song {
+  color: var(--text-secondary);
+}
+
+.delete-song:hover:not(:disabled) {
+  border-color: var(--stop);
+  color: var(--stop);
+  background: rgba(217, 85, 85, 0.08);
+}
+
+/* ---------- Mode apprentissage / echo ---------- */
+
+.practice-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent-soft);
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.practice-panel .import-btn {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--sp-3);
+  font-size: var(--font-small);
+}
+
+.practice-stats {
+  display: block;
+  margin-bottom: var(--sp-1);
+  font-size: var(--font-small);
+  color: var(--text-secondary);
+}
+
+/* Touche PC à presser (mode apprentissage). */
+.practice-key {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.05rem 0.4rem;
+  text-align: center;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 700;
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2.5px;
+  border-radius: var(--radius-xs);
+}
+
+.octave-label {
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 0.2rem;
+  min-width: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Tiroir Studio ---------- */
+
+.studio-drawer {
+  position: fixed;
+  top: 4.9rem;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  width: min(23rem, 92vw);
+  /* Sous la console sticky (z-35) : le menu Paramètres qui s'ouvre
+     dedans sinon restait masqué par le tiroir. */
+  z-index: 34;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) var(--sp-5);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  animation: drawer-in 0.18s ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.studio-header h3 {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Chaque section du Studio est une carte aérée. */
+.studio-drawer .control-group.labeled {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.1rem var(--sp-3) var(--sp-3);
+  gap: var(--sp-2);
+}
+
+.studio-drawer .control-group + .control-group {
+  border-left: none;
+}
+
+.studio-drawer .speed-label input[type="range"] {
+  width: 6.875rem;
+}
+
+.studio-drawer .eq-band input[type="range"] {
+  width: 5.25rem;
+}
+
+/* La Boucle A-B est la troisième carte du tiroir. */
+.studio-drawer .loop-controls {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem var(--sp-3) var(--sp-3);
+  gap: var(--sp-2);
+}
+
+/* Mobile : le tiroir devient une feuille plein largeur. */
+@media (max-width: 700px) {
+  .studio-drawer {
+    top: auto;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    bottom: var(--sp-2);
+    width: auto;
+    max-height: 72vh;
+  }
+}
+
+/* Rappel de boucle active dans le groupe Studio. */
+.loop-chip {
+  display: none;
+}
+
+.loop-chip.on {
+  display: inline-flex;
+  cursor: help;
+  color: var(--text-primary);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
+}
+
+/* ---------- Menu Paramètres ---------- */
+
+.settings-menu {
+  position: relative;
+}
+
+.settings-panel {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-1);
+  min-width: 15rem;
+  max-width: min(22rem, 90vw);
+  padding: var(--sp-3);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.settings-panel h4 {
+  margin: var(--sp-1) 0 0.15rem;
+  font-size: var(--font-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.settings-panel .segmented {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.settings-panel .import-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-align: left;
+}
+
+/* Le bouton thème vit DANS le groupe Affichage, dans le flux. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--bg-panel-hover);
+  transform: scale(1.06);
+}
+
+/* ---------- Modale de confirmation ---------- */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-dialog {
+  min-width: 280px;
+  max-width: min(420px, 90vw);
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--font-title);
+  color: var(--text-primary);
+}
+
+.confirm-dialog p {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+/* ---------- Slot d'accord (hauteur constante) ---------- */
+
+.chord-slot {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  width: 100%;
+}
+
+/* ---------- Flash configuration ---------- */
+
+.playback-controls.config-flash {
+  animation: config-flash 1.2s ease-out;
+}
+
+@keyframes config-flash {
+  0% {
+    box-shadow: 0 0 0 3px var(--accent), var(--shadow-md);
+  }
+  100% {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+/* Clavier : rétrécit par paliers plutôt que de déborder. */
 @media (max-width: 1020px) {
   .piano-scroll {
     --key-w: 48px;
@@ -997,21 +1398,24 @@ button:active:not(:disabled) {
     --key-h: 180px;
   }
   .key-label {
-    font-size: 0.6rem;
+    font-size: var(--font-micro);
   }
-}
-
-@media (max-width: 880px) {
-  /* Roadmap #19 : les groupes de contrôle passent à la ligne et
-     respirent sur les écrans étroits. */
+  /* Les groupes de contrôle passent à la ligne. */
   .control-group {
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.4rem;
+    gap: var(--sp-1);
+  }
+  .control-group + .control-group,
+  .groups-chunk .control-group + .control-group,
+  .groups-chunk + .control-group,
+  .control-group + .loop-controls {
+    border-left: none;
+    padding-left: 0;
   }
   .playback-controls {
-    gap: 0.45rem;
-    padding: 0.5rem 0.6rem;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
   }
   .speed-label input[type="range"] {
     width: 90px;
@@ -1041,486 +1445,55 @@ button:active:not(:disabled) {
   }
 }
 
-/* ---------- Segmented control (disposition clavier) ---------- */
-
-.segmented {
-  display: inline-flex;
-  padding: 3px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: 9px;
-  gap: 2px;
-}
-
-.segmented button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-family: inherit;
-  padding: 0.45rem 0.8rem;
-  min-height: 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.segmented button:hover {
-  color: var(--text-primary);
-}
-
-.segmented button.seg-active {
-  background: var(--bg-panel-hover);
-  color: var(--text-primary);
-  box-shadow:
-    inset 0 0 0 1px var(--border-strong),
-    0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-/* ---------- Tag mélodie (sélecteur de pistes) ---------- */
-
-.melody-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #ffd77a;
-  background: rgba(255, 200, 90, 0.12);
-  border: 1px solid rgba(255, 200, 90, 0.35);
-  border-radius: 999px;
-  padding: 0.05rem 0.5rem;
-  margin-left: 0.4rem;
-  vertical-align: middle;
-}
-
-/* UX (audit) : en thème clair le panneau est blanc — l'or clair
-   (#ffd77a) y était illisible (~1.9:1). Variante or foncé. */
-:root[data-theme="light"] .melody-tag {
-  color: #7a5600;
-  background: rgba(255, 200, 90, 0.22);
-  border-color: rgba(186, 133, 20, 0.45);
-}
-
-.melody-tag svg {
-  width: 11px;
-  height: 11px;
-}
-
-/* Détection d'accords : slot à HAUTEUR CONSTANTE sous le clavier —
-   le chip apparaissant à chaque accord ne doit pas faire respirer
-   la page (scrollbar clignotante avec la pluie de notes). */
-.chord-slot {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.6rem;
-  width: 100%;
-}
-
-.chord-chip {
-  align-self: center;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
-  box-shadow: var(--shadow-sm);
-  animation: lyrics-in 0.15s ease-out;
-  user-select: none;
-}
-
-/* ---------- Bouton supprimer morceau ---------- */
-
-.delete-song {
-  padding: 0.45rem 0.55rem;
-  color: var(--text-secondary);
-}
-
-.delete-song:hover:not(:disabled) {
-  border-color: var(--stop);
-  color: var(--stop);
-  background: rgba(217, 85, 85, 0.08);
-}
-
-/* ---------- Mode apprentissage ---------- */
-
-.practice-panel {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 0.55rem 1.1rem;
-  background: var(--accent-soft);
-  border: 1px solid rgba(124, 92, 255, 0.4);
-  border-radius: var(--radius-md);
-  font-size: 0.88rem;
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.practice-panel .import-btn {
-  padding: 0.3rem 0.8rem;
-  font-size: 0.8rem;
-  min-height: calc(var(--control-h) - 0.4rem);
-}
-
-/* Stats de progression dans le panneau apprentissage (roadmap #38). */
-.practice-stats {
-  display: block;
-  margin-bottom: 0.3rem;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-/* Touche attendue : halo vert pulsant, prioritaire sur les autres états. */
-.key.expected {
-  box-shadow:
-    inset 0 0 0 2px var(--play),
-    0 0 22px rgba(52, 168, 83, 0.55);
-  animation: expected-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes expected-pulse {
-  0%,
-  100% {
-    filter: brightness(1);
+/* ---------- Plein écran 1080p ----------
+   Grand écran : clavier de meuble, pluie plus haute, tiroir élargi. */
+@media (min-width: 1500px) {
+  .piano-scroll {
+    --key-w: 66px;
+    --rain-h: 185px;
   }
-  50% {
-    filter: brightness(1.18);
+  .piano {
+    --key-h: 330px;
   }
-}
-
-.key.white.expected {
-  background: linear-gradient(to bottom, #e2f5e8, #b8e6c6);
-}
-
-.key.black.expected {
-  background: linear-gradient(to bottom, #1d5c30, #0d3a1c);
-  box-shadow:
-    inset 0 0 0 2px var(--play),
-    0 0 22px rgba(52, 168, 83, 0.55);
-}
-
-/* Touche suivante (anticipation) : liseré discret, sans halo. */
-.key.next {
-  box-shadow: inset 0 0 0 2px var(--accent, #4f7cff);
-}
-.key.white.next {
-  background: linear-gradient(to bottom, #eef2ff, #dde6ff);
-}
-.key.black.next {
-  background: linear-gradient(to bottom, #24304f, #131a30);
-}
-
-/* ---------- Navigation 88 touches ---------- */
-
-.octave-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding: 0 0.2rem;
-  min-width: 2ch;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Repère d'octave : petit point sous chaque Do, comme le repère
-   du Do central sur un piano réel. */
-.key.white.octave-marker::after {
-  content: "";
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--border-strong);
-  opacity: 0.7;
-}
-
-.key.white.octave-marker:hover::after,
-.key.white.active.octave-marker::after {
-  background: #3a5fcc;
-}
-
-/* Touche PC à presser (mode apprentissage) */
-.practice-key {
-  display: inline-block;
-  min-width: 1.6em;
-  padding: 0.05rem 0.4rem;
-  text-align: center;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  background: var(--bg-input);
-  border: 1px solid var(--border-strong);
-  border-bottom-width: 2.5px;
-  border-radius: 5px;
-}
-
-/* Refonte IA : panneau Studio (tiroir latéral, non modal — on peut
-   continuer à jouer en réglant le son). */
-.studio-drawer {
-  position: fixed;
-  top: 4.9rem;
-  right: 1rem;
-  bottom: 1rem;
-  width: min(23rem, 92vw);
-  /* Sous la console sticky (z-35) : le menu Paramètres qui s'ouvre
-     dedans sinon restait masqué par le tiroir (contexte d'empilement). */
-  z-index: 34;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  padding: 1rem 1.1rem 1.2rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-  animation: drawer-in 0.18s ease-out;
-}
-
-@keyframes drawer-in {
-  from {
-    opacity: 0;
-    transform: translateX(12px);
+  .key {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    padding-bottom: 1rem;
   }
-  to {
-    opacity: 1;
-    transform: none;
+  .key-label {
+    font-size: var(--font-base);
   }
-}
-
-.studio-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.studio-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-/* Chaque section du Studio est une carte aérée. */
-.studio-drawer .control-group.labeled {
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1.1rem 0.85rem 0.85rem;
-  gap: 0.55rem;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.studio-drawer .control-group + .control-group {
-  border-left: none;
-}
-
-/* Audit IA : la Boucle A-B est la troisième carte du tiroir — sa racine
-   (.loop-controls) n'est pas un .control-group, elle restait nue. */
-.studio-drawer .loop-controls {
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1rem 0.85rem 0.85rem;
-  gap: 0.55rem;
-}
-
-.studio-drawer .speed-label input[type="range"] {
-  width: 110px;
-}
-
-.studio-drawer .eq-band input[type="range"] {
-  width: 84px;
-}
-
-/* Sur mobile : le tiroir devient une feuille plein largeur. */
-@media (max-width: 700px) {
+  .key.black .key-label {
+    font-size: var(--font-small);
+  }
   .studio-drawer {
-    top: auto;
-    left: 0.5rem;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    width: auto;
-    max-height: 72vh;
+    width: min(26rem, 94vw);
+  }
+  .waveform-canvas {
+    max-width: 640px;
+    height: 64px;
+  }
+  .playback-overlay {
+    width: min(640px, 100%);
   }
 }
 
-/* Audit IA : l'état actif du bouton Studio n'était visible nulle part
-   (.seg-active ne stylait que les .segmented button). */
-.import-btn.studio-btn-on {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--text-primary);
-}
-
-/* Rappel de boucle active dans le groupe Studio (la boucle se règle
-   dans le tiroir ; on veut la voir d'un coup d'œil depuis le jeu). */
-.loop-chip {
-  display: none;
-}
-
-.loop-chip.on {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border-subtle));
-  border-radius: 999px;
-  padding: 0.25rem 0.6rem;
-  white-space: nowrap;
-  cursor: help;
-}
-
-/* ---------- Menu Paramètres ---------- */
-
-.settings-menu {
-  position: relative;
-}
-
-.settings-panel {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
-  min-width: 15rem;
-  max-width: min(22rem, 90vw);
-  padding: 0.75rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-
-.settings-panel h4 {
-  margin: 0.35rem 0 0.15rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-}
-
-.settings-panel .segmented {
-  justify-content: flex-start;
-  flex-wrap: wrap;
-}
-
-.settings-panel .import-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: left;
-}
-
-/* Audit de la refonte : le bouton thème vivait en position:fixed et
-   chevauchait la nouvelle barre applicative. Il vit désormais DANS le
-   groupe Affichage, comme les autres contrôles de la console. */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-h);
-  height: var(--control-h);
-  padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.15s, transform 0.15s, background 0.15s;
-}
-
-.theme-toggle:hover {
-  border-color: var(--accent);
-  background: var(--bg-panel-hover);
-  transform: scale(1.06);
-}
-
-/* ---------- Modale de confirmation (E3) ---------- */
-
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-}
-
-.confirm-dialog {
-  min-width: 280px;
-  max-width: min(420px, 90vw);
-  padding: 1.25rem 1.5rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.confirm-dialog h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-  color: var(--text-primary);
-}
-
-.confirm-dialog p {
-  margin: 0 0 1rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-}
-
-/* E13 : flash bref sur la console après un import de configuration réussi. */
-.playback-controls.config-flash {
-  animation: config-flash 1.2s ease-out;
-}
-@keyframes config-flash {
-  0% {
-    box-shadow: 0 0 0 3px var(--accent), var(--shadow-md);
+/* Grand écran mais fenêtre basse (ex: 1600x900) : tout tient SANS
+   scroll vertical — sinon la scrollbar clignote à chaque chip. */
+@media (min-width: 1500px) and (max-height: 1000px) {
+  .piano {
+    --key-h: 240px;
   }
-  100% {
-    box-shadow: var(--shadow-md);
+  .piano-scroll {
+    --rain-h: 130px;
+  }
+  .playback-zone {
+    min-height: 5rem;
+  }
+  .chord-slot {
+    min-height: 2.2rem;
+  }
+  .piano-wrap {
+    gap: var(--sp-2);
   }
 }
 

@@ -1,5 +1,5 @@
 :root {
-  /* Design system — thème sombre (défaut) */
+  /* ===== Design system — thème sombre (défaut) ===== */
   --bg-app: #12141f;
   --bg-panel: #1c1f2e;
   --bg-panel-hover: #262a3d;
@@ -16,12 +16,33 @@
   --stop: #b03030;
   --sustain: #9a6cff;
 
-  /* Refonte UI : tokens de mise en page — une seule source pour
-     les hauteurs, rayons et ombres de l'interface. */
-  --control-h: 2.35rem;
-  --radius-lg: 16px;
-  --radius-md: 10px;
+  /* Échelle typographique stricte (retravail tailles) : 5 tailles
+     seulement, tout le reste de l'UI en dérive. */
+  --font-micro: 0.68rem; /* libellés de sections uppercase, détails */
+  --font-small: 0.8rem; /* labels secondaires, chips, hint */
+  --font-base: 0.9rem; /* boutons, champs, corps */
+  --font-title: 1rem; /* titres de panneaux, paroles */
+  --font-brand: 1.25rem;
+
+  /* Hauteurs de contrôle : deux seulement. */
+  --control-h: 2.4rem;
+  --control-h-sm: 1.9rem;
+
+  /* Rayons : xs · sm · md · lg · pill. */
+  --radius-xs: 4px;
   --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Espacement : 4px de base, 6 crans. */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3),
     0 4px 14px rgba(0, 0, 0, 0.18);
   --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35),
@@ -93,7 +114,7 @@
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
@@ -108,22 +129,22 @@ body {
 
 .container {
   margin: 0 auto;
-  padding: 1rem 1.25rem 2.5rem;
+  padding: var(--sp-4) var(--sp-5) calc(var(--sp-6) + var(--sp-4));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.9rem;
+  gap: var(--sp-4);
   max-width: 1240px;
 }
 
-/* ---------- Barre applicative (refonte) ---------- */
+/* ---------- Barre applicative ---------- */
 
 .app-header {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -134,24 +155,24 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--sp-2);
   min-width: 0;
 }
 
 .app-header img {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
   box-shadow: 0 4px 14px rgba(124, 92, 255, 0.28);
   flex-shrink: 0;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-brand);
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #e8eaf2, #b8a8ff);
+  background: linear-gradient(90deg, var(--text-primary), #b8a8ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -162,7 +183,7 @@ body {
 .hint {
   margin: 0 0 0 auto;
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  font-size: var(--font-small);
   text-align: right;
   line-height: 1.6;
 }
@@ -173,24 +194,40 @@ body {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   padding: 0.02rem 0.38rem;
-  font-size: 0.78rem;
+  font-size: var(--font-micro);
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   white-space: nowrap;
 }
 
+/* ---------- Plein écran 1080p ----------
+   Au-delà de 1500 px : plus de colonne centrée de 1240 px — la surface
+   s'étend, l'échelle racine passe à 17 px (tout le squelette est en
+   rem) et le clavier prend la hauteur (cf. Piano.css). */
+@media (min-width: 1500px) {
+  :root {
+    font-size: 17px;
+  }
+  .container {
+    max-width: none;
+    padding: var(--sp-4) 2.25rem 2.25rem;
+    gap: var(--sp-4);
+  }
+}
+
 @media (max-width: 700px) {
   .container {
-    padding: 0.75rem 0.6rem 1.5rem;
+    padding: var(--sp-3) var(--sp-2) var(--sp-5);
+    gap: var(--sp-3);
   }
   .app-header {
     justify-content: center;
-    padding: 0.5rem;
+    padding: var(--sp-2);
   }
   .app-header img {
-    width: 28px;
-    height: 28px;
+    width: 1.75rem;
+    height: 1.75rem;
   }
   .app-header h1 {
     font-size: 1.05rem;
@@ -198,29 +235,14 @@ body {
   .hint {
     margin: 0;
     text-align: center;
-    font-size: 0.72rem;
-  }
-}
-
-/* ---------- Plein écran 1080p (refonte) ----------
-   Au-delà de 1500 px : plus de colonne centrée de 1240 px — la surface
-   s'étend, l'échelle racine passe à 17 px (tout le squelette est en
-   rem) et le clavier prend la hauteur d'un vrai meuble (cf. Piano.css). */
-@media (min-width: 1500px) {
-  :root {
-    font-size: 17px;
-  }
-  .container {
-    max-width: none;
-    padding: 1.1rem 2.25rem 2.25rem;
-    gap: 1.1rem;
+    font-size: var(--font-micro);
   }
 }
 
 .app-crash {
-  max-width: 560px;
+  max-width: 35rem;
   margin: 4rem auto;
-  padding: 1.5rem 2rem;
+  padding: var(--sp-5) var(--sp-6);
   background: var(--bg-panel);
   border: 1px solid var(--stop);
   border-radius: var(--radius-lg);
@@ -229,15 +251,15 @@ body {
 }
 
 .app-crash h2 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .app-crash pre {
-  font-size: 0.8rem;
+  font-size: var(--font-small);
   color: #ffb0b0;
   background: rgba(0, 0, 0, 0.3);
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: var(--sp-3);
+  border-radius: var(--radius-md);
   overflow-x: auto;
   text-align: left;
   white-space: pre-wrap;
@@ -245,21 +267,21 @@ body {
 
 .app-crash-hint {
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-small);
 }
 
 .app-crash-actions {
-  margin: 0.5rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .app-crash-actions button {
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: var(--text-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.4rem 0.9rem;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--font-small);
   cursor: pointer;
 }
 
