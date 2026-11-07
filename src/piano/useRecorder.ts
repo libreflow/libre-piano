@@ -5,27 +5,37 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getContext } from "./tone-gate";
 import type { Song, SongEvent } from "./songs";
+import { interpolate, translate, type Language } from "./i18n";
 
-/** Nom par défaut du morceau enregistré (horodaté pour l'unicité). */
-export function recordedSongTitle(): string {
+/** Nom par défaut du morceau enregistré (horodaté pour l'unicité) —
+ * localisé (audit i18n) : l'UI EN n'affichait que du français. */
+export function recordedSongTitle(language: Language = "fr"): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `Enregistrement ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
     now.getDate()
   )} ${pad(now.getHours())}h${pad(now.getMinutes())}`;
+  return interpolate(translate(language, "recordingTitle"), { date });
 }
 
 /** Durée minimale d'une note capturée (évite les notes nulles). */
 const MIN_CAPTURED_DURATION_SEC = 0.05;
 /** Durée max d'une note capturée sans noteOff (sécurité). */
 const MAX_CAPTURED_DURATION_SEC = 12;
+/** Nombre max d'événements d'un enregistrement (parité avec l'import
+ * MIDI, cf. MAX_IMPORTED_EVENTS) : sans plafond, un enregistrement long
+ * gonflait l'état persisté jusqu'au quota localStorage. */
+export const MAX_RECORDED_EVENTS = 3000;
 
 interface OpenNote {
   time: number;
   velocity?: number;
 }
 
-export function useRecorder(nowFn: () => number = () => getContext().now()) {
+export function useRecorder(
+  language: Language = "fr",
+  nowFn: () => number = () => getContext().now()
+) {
   const [isRecording, setIsRecording] = useState(false);
   // Miroirs refs : les callbacks de capture sont stables (pas de
   // recréation quand isRecording change), ils lisent ces refs à chaud.
@@ -64,15 +74,19 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
     }
     openRef.current = new Map();
     setIsRecording(false);
-    const events = [...eventsRef.current].sort((a, b) => a.time - b.time);
+    const events = [...eventsRef.current]
+      .sort((a, b) => a.time - b.time)
+      // Plafond anti-quota : le morceau reste jouable, seules les
+      // premières notes au-delà du plafond sont perdues.
+      .slice(0, MAX_RECORDED_EVENTS);
     if (events.length === 0) return null;
     return {
       id: `recording-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title: recordedSongTitle(),
+      title: recordedSongTitle(language),
       events,
       source: "imported",
     };
-  }, []);
+  }, [language]);
 
   const captureNoteOff = useCallback((note: string) => {
     if (!isRecordingRef.current) return;
@@ -96,7 +110,10 @@ export function useRecorder(nowFn: () => number = () => getContext().now()) {
       // sans noteOff intermédiaire) — fermer l'ancienne d'abord, sinon
       // elle serait perdue (écrasée) et resterait ouverte jusqu'au stop().
       captureNoteOff(note);
-      openRef.current.set(note, { time: nowFnRef.current() - startRef.current, velocity });
+      openRef.current.set(note, {
+        time: nowFnRef.current() - startRef.current,
+        velocity,
+      });
     },
     [captureNoteOff]
   );

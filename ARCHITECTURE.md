@@ -37,7 +37,8 @@ tout le métier vit dans le frontend).
 ┌───────────────────────────────┴─┐
 │  Tauri (Rust)                  │
 │  lib.rs : fenêtre + plugin     │
-│  opener uniquement             │
+│  updater (inactif avant la    │
+│  clé de release)               │
 └───────────────────────────────┘
 ```
 

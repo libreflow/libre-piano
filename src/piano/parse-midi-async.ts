@@ -3,8 +3,17 @@
 // principal (tests jsdom, très vieux environnements).
 
 import type { MidiLike } from "./midi-import";
-import type { MidiWorkerResult } from "./midi-worker";
 
+/** Erreur d'infrastructure du worker (construction, échec de chargement
+ * du module, message invalide) : le repli synchrone est légitime. */
+export class MidiWorkerInfraError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MidiWorkerInfraError";
+  }
+}
+
+/** Une seule panne d'infrastructure => on ne retente plus le worker. */
 let workerFailed = false;
 
 /** Parse un fichier MIDI en worker ; les données lourdes (parsing binaire,
@@ -14,39 +23,46 @@ export async function parseMidiAsync(buffer: ArrayBuffer): Promise<MidiLike> {
     const { loadMidi } = await import("./midi-import");
     return loadMidi(buffer);
   }
+  let worker: Worker;
   try {
-    const worker = new Worker(new URL("./midi-worker.ts", import.meta.url), {
+    worker = new Worker(new URL("./midi-worker.ts", import.meta.url), {
       type: "module",
     });
-    try {
-      return await new Promise<MidiLike>((resolve, reject) => {
-        worker.onmessage = (
-          e: MessageEvent<{ result?: MidiWorkerResult; error?: string }>
-        ) => {
-          const { result, error } = e.data;
-          if (error) reject(new Error(error));
-          else if (result) resolve(result);
-          else reject(new Error("Réponse du worker MIDI invalide."));
-        };
-        worker.onerror = (e) => reject(new Error(e.message || "Erreur du worker MIDI."));
-        // Pas de transfer list : postMessage clone le buffer par
-        // structured clone et l'original reste utilisable côté appelant.
-        // Transférer `[buffer]` détacherait l'original — et le repli
-        // synchrone du catch doit pouvoir relire les mêmes données.
-        worker.postMessage(buffer);
-      });
-    } finally {
-      worker.terminate();
-    }
-  } catch (err) {
-    // Le worker échoue (construction, CORS…) : ne plus essayer et
-    // re-essayer synchrone une fois.
+  } catch {
+    // Impossible de créer le worker (CORS, environnement) : repli sync,
+    // et ne plus essayer le worker pour les imports suivants.
     workerFailed = true;
-    if (err instanceof Error && /Aucune note exploitable|MIDI/.test(err.message)) {
-      // Erreur métier du parsing (pas un problème de worker) : la relancer.
-      throw err;
-    }
     const { loadMidi } = await import("./midi-import");
     return loadMidi(buffer);
+  }
+  try {
+    return await new Promise<MidiLike>((resolve, reject) => {
+      worker.onmessage = (e: MessageEvent<{ result?: unknown; error?: string }>) => {
+        const { result, error } = e.data;
+        // Erreur métier du parsing (fichier corrompu...) : elle doit
+        // remonter telle quelle, SANS coller le drapeau workerFailed.
+        if (error) reject(new Error(error));
+        else if (result) resolve(result as MidiLike);
+        else reject(new MidiWorkerInfraError("Réponse du worker MIDI invalide."));
+      };
+      worker.onerror = (e) =>
+        reject(new MidiWorkerInfraError(e.message || "Erreur du worker MIDI."));
+      // Pas de transfer list : postMessage clone le buffer par
+      // structured clone et l'original reste utilisable côté appelant.
+      // Transférer `[buffer]` détacherait l'original — et le repli
+      // synchrone du catch doit pouvoir relire les mêmes données.
+      worker.postMessage(buffer);
+    });
+  } catch (err) {
+    // Seule une panne d'infrastructure retente en synchrone : une erreur
+    // de parsing (fichier invalide) rééchouerait à l'identique.
+    if (err instanceof MidiWorkerInfraError) {
+      workerFailed = true;
+      const { loadMidi } = await import("./midi-import");
+      return loadMidi(buffer);
+    }
+    throw err;
+  } finally {
+    worker.terminate();
   }
 }

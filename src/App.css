@@ -11,6 +11,8 @@
   --text-faint: #8b90a3;
   --accent: #7c5cff;
   --accent-soft: rgba(124, 92, 255, 0.15);
+  /* Couloirs « touche noire » de la pluie de notes (thémés, audit). */
+  --rain-black: #3d3a6e;
   /* E4 (audit ergonomie) : contraste 4.5:1 minimum sur boutons (texte blanc) */
   --play: #237a3c;
   --stop: #b03030;
@@ -43,10 +45,8 @@
   --sp-5: 1.25rem;
   --sp-6: 1.5rem;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3),
-    0 4px 14px rgba(0, 0, 0, 0.18);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35),
-    0 12px 32px rgba(0, 0, 0, 0.28);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
 
   font-family:
     "Inter",
@@ -82,13 +82,12 @@
   --text-faint: #6a7089;
   --accent: #6244d8;
   --accent-soft: rgba(98, 68, 216, 0.1);
+  --rain-black: #4a4780;
   --play: #1e6b34;
   --stop: #9c2828;
   --sustain: #7c5cff;
-  --shadow-sm: 0 1px 3px rgba(24, 28, 50, 0.12),
-    0 4px 14px rgba(24, 28, 50, 0.08);
-  --shadow-md: 0 2px 6px rgba(24, 28, 50, 0.14),
-    0 12px 32px rgba(24, 28, 50, 0.12);
+  --shadow-sm: 0 1px 3px rgba(24, 28, 50, 0.12), 0 4px 14px rgba(24, 28, 50, 0.08);
+  --shadow-md: 0 2px 6px rgba(24, 28, 50, 0.14), 0 12px 32px rgba(24, 28, 50, 0.12);
   background-image:
     radial-gradient(ellipse at 20% -10%, rgba(98, 68, 216, 0.06), transparent 50%),
     radial-gradient(ellipse at 90% 110%, rgba(79, 156, 255, 0.05), transparent 50%);

@@ -228,16 +228,20 @@ const fr: Record<string, string> = {
   echoPhraseLabel: "Phrase {current}/{total}",
   echoNoteProgress: "note {step}/{total}",
   recordSaved: "Enregistrement sauvegardé : « {title} » ({count} notes).",
+  recordingTitle: "Enregistrement {date}",
   recordEmpty: "Enregistrement vide : aucune note capturée.",
   replaySelected: "Dernier enregistrement sélectionné — ▶ pour le rejouer.",
   exportFailed: "Échec de l'export MIDI.",
+  audioStartFailed:
+    "Impossible de démarrer l'audio — rejoue une note ou relance la lecture.",
   importFailed: "Échec de l'import : {message}",
-  importNotMidi:
-    "Ce fichier n'est pas un fichier MIDI (.mid / .midi) — import annulé.",
+  importNotMidi: "Ce fichier n'est pas un fichier MIDI (.mid / .midi) — import annulé.",
   importNoTracks: "Ce fichier ne contient aucune note exploitable.",
-  importNoNotesSelected: "Aucune note exploitable dans la ou les piste(s) sélectionnée(s).",
+  importNoNotesSelected:
+    "Aucune note exploitable dans la ou les piste(s) sélectionnée(s).",
   importTruncated: "Fichier tronqué aux {max} premières notes ({total} au total).",
-  importTransposed: "{count} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (A0–C8).",
+  importTransposed:
+    "{count} note(s) décalée(s) d'une ou plusieurs octaves pour tenir sur le clavier (A0–C8).",
   importNoSelection: "Sélectionne au moins une piste à importer.",
   importSuccess: "« {title} » importé avec succès ({count} notes).",
   importSuccessWarn: "« {title} » importé — {warnings}",
@@ -464,15 +468,18 @@ const en: Record<string, string> = {
   echoPhraseLabel: "Phrase {current}/{total}",
   echoNoteProgress: "note {step}/{total}",
   recordSaved: "Recording saved: \u00ab {title} \u00bb ({count} notes).",
+  recordingTitle: "Recording {date}",
   recordEmpty: "Empty recording: no notes captured.",
   replaySelected: "Last recording selected \u2014 \u25b6 to play it.",
   exportFailed: "MIDI export failed.",
+  audioStartFailed: "Could not start audio — play a note or press play again.",
   importFailed: "Import failed: {message}",
   importNotMidi: "This file is not a MIDI file (.mid / .midi) — import cancelled.",
   importNoTracks: "This file contains no playable notes.",
   importNoNotesSelected: "No playable notes in the selected track(s).",
   importTruncated: "File truncated to the first {max} notes ({total} total).",
-  importTransposed: "{count} note(s) shifted by one or more octaves to fit the keyboard (A0–C8).",
+  importTransposed:
+    "{count} note(s) shifted by one or more octaves to fit the keyboard (A0–C8).",
   importNoSelection: "Select at least one track to import.",
   importSuccess: "\u00ab {title} \u00bb imported successfully ({count} notes).",
   importSuccessWarn: "\u00ab {title} \u00bb imported \u2014 {warnings}",
@@ -501,7 +508,9 @@ export function translate(lang: Language, key: string): string {
 }
 
 /** Interpole les placeholders {name} dans une chaîne traduite. */
-export function interpolate(template: string, vars: Record<string, string | number>): string {
+export function interpolate(
+  template: string,
+  vars: Record<string, string | number>
+): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
 }
-

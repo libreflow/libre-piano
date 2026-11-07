@@ -32,6 +32,11 @@ export const MAX_IMPORTED_EVENTS = 3000;
  * réelle, pour un rendu plus net). */
 export const NOTE_HIGHLIGHT_RELEASE_FRACTION = 0.92;
 
+/** Longueur minimale d'une section de boucle A-B : plus courte, la boucle
+ * serait un cycle vide/joué en rafale — on élargit la section à ce minimum
+ * (partagé par la lecture réelle et les affichages, cf. playback-clock). */
+export const MIN_LOOP_SECTION_SEC = 0.1;
+
 /** Marge de sécurité (secondes) ajoutée après la fin calculée d'un morceau
  * avant de déclencher l'arrêt automatique de la lecture. */
 export const PLAYBACK_END_BUFFER_SEC = 0.1;

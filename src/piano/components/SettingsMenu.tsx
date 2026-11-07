@@ -97,7 +97,8 @@ const SettingsMenu = memo(function SettingsMenu({
       if (e.key === "ArrowDown") {
         nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % list.length;
       } else {
-        nextIdx = currentIdx < 0 ? list.length - 1 : (currentIdx - 1 + list.length) % list.length;
+        nextIdx =
+          currentIdx < 0 ? list.length - 1 : (currentIdx - 1 + list.length) % list.length;
       }
       list[nextIdx]?.focus();
     };
@@ -111,7 +112,6 @@ const SettingsMenu = memo(function SettingsMenu({
         <button
           className={`import-btn ${open ? "seg-active" : ""}`}
           onClick={() => onOpenChange(!open)}
-          aria-haspopup="menu"
           aria-expanded={open}
           aria-pressed={open}
           title={t("settings")}
@@ -123,7 +123,7 @@ const SettingsMenu = memo(function SettingsMenu({
           <div
             ref={panelRef}
             className="settings-panel"
-            role="menu"
+            role="group"
             aria-label={t("settingsMenu")}
           >
             <h4>{t("groupDisplay")}</h4>
@@ -165,7 +165,11 @@ const SettingsMenu = memo(function SettingsMenu({
             >
               {showNoteRain ? t("noteRainOn") : t("noteRainOff")}
             </button>
-            <button className="import-btn" onClick={onToggleFullscreen} aria-pressed={isFullscreen}>
+            <button
+              className="import-btn"
+              onClick={onToggleFullscreen}
+              aria-pressed={isFullscreen}
+            >
               {isFullscreen ? <CollapseIcon /> : <ExpandIcon />}
               {isFullscreen ? t("fullscreenQuit") : t("fullscreen")}
             </button>

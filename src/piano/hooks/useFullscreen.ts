@@ -1,9 +1,19 @@
 // Plein écran (refactor Phase A4) : état synchronisé avec les sorties
-// natives (F11, Échap) — B9 (audit) : sinon le bouton s'inverse par
-// rapport à la réalité.
+// natives (Échap en navigateur) — B9 (audit) : sinon le bouton s'inverse
+// par rapport à la réalité.
+// Audit : le fullscreen NATIF Tauri ne déclenche PAS l'événement DOM
+// fullscreenchange (c'est la fenêtre OS qui passe en plein écran, pas le
+// document) — l'état est donc resynchronisé après l'appel via
+// win.isFullscreen(), avec repli sur le DOM quand l'API Tauri manque
+// (navigateur pur, tests).
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+
+interface FullscreenWindow {
+  setFullscreen?: (fullscreen: boolean) => Promise<void>;
+  isFullscreen?: () => Promise<boolean>;
+}
 
 export function useFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -16,16 +26,26 @@ export function useFullscreen() {
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = useCallback(async () => {
+    const next = !isFullscreen;
     try {
-      const win = getCurrentWindow();
-      const next = !isFullscreen;
+      const win = getCurrentWindow() as unknown as FullscreenWindow;
+      if (typeof win.setFullscreen !== "function") {
+        // API Tauri indisponible (ex: navigateur) : repli sur le DOM.
+        setIsFullscreen(Boolean(document.fullscreenElement));
+        return;
+      }
       await win.setFullscreen(next);
-      setIsFullscreen(next);
+      // Vérité terrain : l'état natif réel, pas une supposition.
+      const actual =
+        typeof win.isFullscreen === "function" ? await win.isFullscreen() : next;
+      setIsFullscreen(actual);
     } catch {
-      // API Tauri indisponible (ex: navigateur) : on ignore.
+      // IPC indisponible : rester cohérent avec le DOM plutôt que
+      // d'affirmer un état faux.
+      setIsFullscreen(Boolean(document.fullscreenElement));
     }
-  };
+  }, [isFullscreen]);
 
   return { isFullscreen, toggleFullscreen };
 }

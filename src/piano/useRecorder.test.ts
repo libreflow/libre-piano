@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useRecorder, recordedSongTitle } from "./useRecorder";
+import { useRecorder, recordedSongTitle, MAX_RECORDED_EVENTS } from "./useRecorder";
 
 vi.mock("./tone-gate", () => ({
   getContext: () => ({ now: () => fakeNow }),
@@ -118,11 +118,38 @@ describe("bug M1 : durée des notes tenues à l'arrêt (temps relatif)", () => {
     act(() => {
       song = result.current.stop();
     });
-    const s = song as { events: { note: string; time: number; duration: number }[] } | null;
+    const s = song as {
+      events: { note: string; time: number; duration: number }[];
+    } | null;
     expect(s).not.toBeNull();
     expect(s!.events).toHaveLength(1);
     expect(s!.events[0].time).toBeCloseTo(5);
     // durée = elapsed (7.5) - time relatif (5) = 2.5 s
     expect(s!.events[0].duration).toBeCloseTo(2.5);
+  });
+});
+
+describe("audit : plafond d'événements et titre localisé", () => {
+  it("plafonne l'enregistrement à MAX_RECORDED_EVENTS événements", () => {
+    fakeNow = 0;
+    const { result } = renderHook(() => useRecorder());
+    act(() => result.current.start());
+    for (let i = 0; i < MAX_RECORDED_EVENTS + 50; i++) {
+      fakeNow += 1;
+      act(() => {
+        result.current.captureNoteOn("C4");
+        result.current.captureNoteOff("C4");
+      });
+    }
+    let song: unknown = null;
+    act(() => {
+      song = result.current.stop();
+    });
+    const s = song as { events: unknown[] };
+    expect(s.events).toHaveLength(MAX_RECORDED_EVENTS);
+  });
+
+  it("produit un titre horodaté en anglais quand language = 'en'", () => {
+    expect(recordedSongTitle("en")).toMatch(/^Recording \d{4}-\d{2}-\d{2} \d{2}h\d{2}$/);
   });
 });

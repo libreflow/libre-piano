@@ -6,11 +6,7 @@
 import { memo, useEffect, useRef } from "react";
 import { getTransport } from "../tone-gate";
 import type { SongEvent } from "../songs";
-import {
-  playbackSeconds,
-  playbackSection,
-  type PlaybackWindow,
-} from "../playback-clock";
+import { playbackSeconds, playbackSection, type PlaybackWindow } from "../playback-clock";
 import {
   NOTE_RAIN_LOOKAHEAD_SEC,
   laneKind,
@@ -62,8 +58,11 @@ const NoteRain = memo(function NoteRain({
     let rainH = RAIN_HEIGHT;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     const accent =
-      getComputedStyle(canvas).getPropertyValue("--accent").trim() ||
-      "#7c5cff";
+      getComputedStyle(canvas).getPropertyValue("--accent").trim() || "#7c5cff";
+    // Audit : couleur des touches noires thémée (var CSS), plus de
+    // constante hardcodée qui cassait le thème clair.
+    const blackLaneColor =
+      getComputedStyle(canvas).getPropertyValue("--rain-black").trim() || "#3d3a6e";
     const measure = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = parseFloat(getComputedStyle(canvas).getPropertyValue("--key-w"));
@@ -96,12 +95,7 @@ const NoteRain = memo(function NoteRain({
         return;
       }
       const { start, end } = playbackSection(loop, songDuration);
-      const now = playbackSeconds(
-        getTransport().seconds,
-        speed,
-        loop,
-        songDuration
-      );
+      const now = playbackSeconds(getTransport().seconds, speed, loop, songDuration);
       ctx.clearRect(0, 0, W, H);
 
       for (const { event, startDelta } of visibleRainEvents(events, now)) {
@@ -120,7 +114,7 @@ const NoteRain = memo(function NoteRain({
         const alpha = Math.min(1, 0.35 + (event.velocity ?? 1) * 0.65);
 
         ctx.globalAlpha = sounding ? 1 : alpha;
-        ctx.fillStyle = kind === "white" ? accent : "#3d3a6e";
+        ctx.fillStyle = kind === "white" ? accent : blackLaneColor;
         ctx.shadowBlur = sounding ? 12 : 0;
         if (sounding) ctx.shadowColor = accent;
         ctx.beginPath();

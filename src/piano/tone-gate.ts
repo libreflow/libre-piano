@@ -30,9 +30,18 @@ export function tuneForLowLatency() {
 
 /** Tone.start() ne résout qu'une fois le contexte démarré ; les appels
  * suivants sont quasi gratuits, mais on mémoïse la promesse pour éviter
- * le moindre await superflu sur le chemin critique d'une touche. */
+ * le moindre await superflu sur le chemin critique d'une touche.
+ * Audit : une REJET de start() (policy autoplay, pas de geste utilisateur)
+ * ne doit PAS rester mémoïsé — sinon le contexte serait suspendu à vie et
+ * plus aucune note ne sonnerait. On purge le cache au rejet pour que le
+ * prochain appel (nécessairement post-geste) reparte de zéro. */
 let startPromise: Promise<void> | null = null;
 export function ensureAudioStarted(): Promise<void> {
-  startPromise ??= start();
+  if (!startPromise) {
+    startPromise = start().catch((err) => {
+      startPromise = null;
+      throw err;
+    });
+  }
   return startPromise;
 }

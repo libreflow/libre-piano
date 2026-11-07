@@ -231,25 +231,24 @@ function PianoInner({
     triggerAttackRelease,
   } = useAudioEngine(volume, reverb, eq);
 
-  // Mode apprentissage : la note attendue est surlignée, la session
-  // avance quand l'utilisateur joue la bonne note.
-  // B1 (audit) : l'apprentissage travaille sur le morceau TRANSPOSÉ —
-  // comme la lecture — sinon la touche attendue ne correspond pas à ce
-  // qui est joué quand une transposition est active.
+  // Morceau à entendre/jouer : TOUJOURS transposé (lecture, apprentissage,
+  // echo, pluie). B1 (audit) : la transposition doit s'appliquer partout
+  // uniformément — sinon la touche attendue ne correspond pas à ce qui
+  // est joué quand une transposition est active.
   const selectedPlayable = useMemo(
     () => (selectedSong ? transposedSong(selectedSong, transpose) : undefined),
     [selectedSong, transpose]
   );
+  // Mode apprentissage : la note attendue est surlignée, la session
+  // avance quand l'utilisateur joue la bonne note.
   const practice = usePractice(selectedPlayable);
-  const { stats, purgeSong } = usePracticeStats(
-    selectedSong,
-    practice.state
-  );
+  const { stats, purgeSong } = usePracticeStats(selectedSong, practice.state);
   const handlePlayedNote = practice.handlePlayedNote;
   const eventsCount = selectedSong?.events.length ?? 0;
   // Call & response (roadmap #43) : l'app joue une phrase, l'utilisateur
-  // la rejoue. Branché sur les notes jouées et la lecture de démo.
-  const callResponse = useCallResponse(selectedSong, triggerAttackRelease);
+  // la rejoue. Audit : branché sur le morceau TRANSPOSÉ, comme la lecture
+  // et l'apprentissage (avant : la démo echo jouait les notes d'origine).
+  const callResponse = useCallResponse(selectedPlayable, triggerAttackRelease);
   const callResponseOnPlayed = callResponse.handlePlayedNote;
   const playedNoteHandler = useCallback(
     (note: string) => {
@@ -268,7 +267,7 @@ function PianoInner({
     stop: stopRecording,
     captureNoteOn,
     captureNoteOff,
-  } = useRecorder();
+  } = useRecorder(language);
 
   const noteOn = useCallback(
     (note: string) => {
@@ -309,17 +308,13 @@ function PianoInner({
     });
   }, [notes, sustainedNotesRef, releaseSustainedNote, captureNoteOff]);
 
-  // P5 (audit perf) : seul le morceau sélectionné est transposé pour la
-  // lecture (avant : toute la bibliothèque était transposée à chaque
-  // changement de transposition, même les morceaux non sélectionnés).
-  const selectedPlayableForPlayback = useMemo(
-    () => (selectedSong ? transposedSong(selectedSong, transpose) : undefined),
-    [selectedSong, transpose]
-  );
+  // P5 (audit perf) : seul le morceau sélectionné est transposé (avant :
+  // toute la bibliothèque était transposée à chaque changement). Le même
+  // mémo sert à la lecture ET à la pluie de notes (une seule instance).
   const { isPlaying, isPlayingRef, selectedSongDuration, playSong, stopPlayback } =
     usePlayback(
       status === "ready",
-      selectedPlayableForPlayback,
+      selectedPlayable,
       speed,
       { loopEnabled, loopStart, loopEnd },
       triggerAttackRelease,
@@ -366,8 +361,10 @@ function PianoInner({
 
   const playSongGuarded = useCallback(() => {
     if (pendingImportRef.current) return;
-    void playSong();
-  }, [playSong]);
+    // Audit : playSong() peut rejeter (démarrage audio refusé) — le
+    // `void` précédent laissait une unhandled rejection silencieuse.
+    playSong().catch(() => setStatusMessageAuto(t("audioStartFailed")));
+  }, [playSong, setStatusMessageAuto, t]);
 
   // Audit : mémoïsé — la version inline d'avant recréait le handler à
   // chaque render, ce qui ré-attachait les listeners clavier du hook.
@@ -445,9 +442,7 @@ function PianoInner({
   // M1 : le hook n'était pas branché après son extraction (#48).
   usePianoScroll(
     pianoScrollRef,
-    practice.state.active && !practice.state.done
-      ? practice.state.expectedNote
-      : null
+    practice.state.active && !practice.state.done ? practice.state.expectedNote : null
   );
 
   // Persistance debouncée (hooks/usePersistSnapshot, P4 audit perf) :
@@ -528,8 +523,10 @@ function PianoInner({
     }),
     [library, setConfigShortcuts, setLanguage, setBuiltinFavoriteIds, setSelectedSongId]
   );
-  const { exportConfig, importConfig, configFlash } = useConfigTransfer(
-    {
+  // Mémoïsé (cohérence B14) : sinon useConfigTransfer recréait exportConfig
+  // à chaque render (l'objet prefs changeait d'identité).
+  const configPrefs = useMemo(
+    () => ({
       importedSongs,
       selectedSongId,
       builtinFavoriteIds,
@@ -545,7 +542,27 @@ function PianoInner({
       noteRain: showNoteRain,
       shortcuts,
       language,
-    },
+    }),
+    [
+      importedSongs,
+      selectedSongId,
+      builtinFavoriteIds,
+      speed,
+      volume,
+      labelMode,
+      keyboardLayout,
+      theme,
+      reverb,
+      transpose,
+      eq,
+      showVisualizer,
+      showNoteRain,
+      shortcuts,
+      language,
+    ]
+  );
+  const { exportConfig, importConfig, configFlash } = useConfigTransfer(
+    configPrefs,
     configSetters,
     setStatusMessageAuto,
     t
@@ -603,7 +620,13 @@ function PianoInner({
       if (practice.state.nextNote === note) return "next";
       return "";
     },
-    [practice.state.expectedNote, practice.state.nextNote, activeNotes, autoActiveNotes, sustainedNotes]
+    [
+      practice.state.expectedNote,
+      practice.state.nextNote,
+      activeNotes,
+      autoActiveNotes,
+      sustainedNotes,
+    ]
   );
 
   // Glisser-déposer un fichier .mid/.midi n'importe où sur la fenêtre.
@@ -662,127 +685,129 @@ function PianoInner({
         {/* Refonte UI : la console se lit en deux rangées —
             transport en haut, réglages son/clavier/boucle dessous. */}
         <div className="console-row">
-        <PlaybackControls
-          songs={allSongs}
-          selectedSongId={selectedSongId}
-          selectedSong={selectedSong}
-          isPlaying={isPlaying}
-          isRecording={isRecording}
-          isImporting={isImporting}
-          statusReady={status === "ready"}
-          hasPendingImport={Boolean(pendingImport)}
-          practiceActive={practice.state.active}
-          echoActive={callResponse.state.active}
-          lastRecordingId={lastRecordingId}
-          fileInputRef={fileInputRef}
-          language={language}
-          onSelectSong={setSelectedSongId}
-          onToggleFavorite={toggleFavorite}
-          onDeleteSong={requestDeleteSong}
-          onPlay={playSongGuarded}
-          onStop={stopPlaybackAndClear}
-          onImportFile={(file) => void importFile(file)}
-          onToggleRecording={toggleRecording}
-          onReplayLastRecording={() => {
-            if (!lastRecordingId) return;
-            setSelectedSongId(lastRecordingId);
-            setStatusMessageAuto(t("replaySelected"));
-          }}
-          onExportMidi={() => {
-            if (selectedSong)
-              void downloadSongAsMidi(selectedSong).then((ok) => {
-                if (!ok) setStatusMessageAuto(t("exportFailed"));
-              });
-          }}
-          onTogglePractice={() => {
-            if (practice.state.active) {
-              practice.stop();
-            } else {
-              if (isPlayingRef.current) stopPlaybackAndClear();
-              practice.start();
-            }
-          }}
-          onToggleEcho={() => {
-            if (callResponse.state.active) {
-              callResponse.stop();
-            } else {
-              if (isPlayingRef.current) stopPlaybackAndClear();
-              if (practice.state.active) practice.stop();
-              // B2 (audit) : start() délègue déjà à playPhrase(0) via
-              // playPhraseRef — ne pas appeler playPhrase(0) en plus.
-              callResponse.start();
-            }
-          }}
-        />
-
-        <div className="control-group labeled" aria-label={t("groupDisplay")}>
-          <span className="group-label">{t("groupDisplay")}</span>
-          <SettingsMenu
-            open={settingsOpen}
-            onOpenChange={setSettingsOpen}
-            menuRef={settingsRef}
-            labelMode={labelMode}
-            onLabelModeChange={setLabelMode}
-            showVisualizer={showVisualizer}
-            onToggleVisualizer={() => setShowVisualizer((v) => !v)}
-            showNoteRain={showNoteRain}
-            onToggleNoteRain={() => setShowNoteRain((v) => !v)}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={toggleFullscreen}
-            language={language}
-            onToggleLanguage={() => setLanguage(language === "fr" ? "en" : "fr")}
-            shortcuts={shortcuts}
-            onRemapSustain={() => {
-              setStatusMessageAuto(t("remapSustainPrompt"));
-              startRemap("sustain");
-              setSettingsOpen(false);
-            }}
-            onRemapTogglePlayback={() => {
-              setStatusMessageAuto(t("remapPlayPrompt"));
-              startRemap("togglePlayback");
-              setSettingsOpen(false);
-            }}
+          <PlaybackControls
+            songs={allSongs}
+            selectedSongId={selectedSongId}
+            selectedSong={selectedSong}
             isPlaying={isPlaying}
-            onExportConfig={exportConfig}
-            onImportConfig={() => configInputRef.current?.click()}
-            configInputRef={configInputRef}
-            onConfigFile={(file) => void importConfig(file)}
-            theme={theme}
-            onToggleTheme={toggleTheme}
+            isRecording={isRecording}
+            isImporting={isImporting}
+            statusReady={status === "ready"}
+            hasPendingImport={Boolean(pendingImport)}
+            practiceActive={practice.state.active}
+            echoActive={callResponse.state.active}
+            lastRecordingId={lastRecordingId}
+            fileInputRef={fileInputRef}
+            language={language}
+            onSelectSong={setSelectedSongId}
+            onToggleFavorite={toggleFavorite}
+            onDeleteSong={requestDeleteSong}
+            onPlay={playSongGuarded}
+            onStop={stopPlaybackAndClear}
+            onImportFile={(file) => void importFile(file)}
+            onToggleRecording={toggleRecording}
+            onReplayLastRecording={() => {
+              if (!lastRecordingId) return;
+              setSelectedSongId(lastRecordingId);
+              setStatusMessageAuto(t("replaySelected"));
+            }}
+            onExportMidi={() => {
+              // Export = ce que l'utilisateur entend : le morceau transposé
+              // (cohérent avec la lecture, l'apprentissage et l'echo).
+              if (selectedPlayable)
+                void downloadSongAsMidi(selectedPlayable).then((ok) => {
+                  if (!ok) setStatusMessageAuto(t("exportFailed"));
+                });
+            }}
+            onTogglePractice={() => {
+              if (practice.state.active) {
+                practice.stop();
+              } else {
+                if (isPlayingRef.current) stopPlaybackAndClear();
+                practice.start();
+              }
+            }}
+            onToggleEcho={() => {
+              if (callResponse.state.active) {
+                callResponse.stop();
+              } else {
+                if (isPlayingRef.current) stopPlaybackAndClear();
+                if (practice.state.active) practice.stop();
+                // B2 (audit) : start() délègue déjà à playPhrase(0) via
+                // playPhraseRef — ne pas appeler playPhrase(0) en plus.
+                callResponse.start();
+              }
+            }}
           />
-          <span
-            className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
-            title={t("sustainHint")}
-          >
-            <SustainIcon />
-            {sustainOn ? t("sustainOn") : t("sustainOff")}
-          </span>
-        </div>
 
-        {/* Refonte IA : Son / Clavier / Boucle vivent dans le panneau
+          <div className="control-group labeled" aria-label={t("groupDisplay")}>
+            <span className="group-label">{t("groupDisplay")}</span>
+            <SettingsMenu
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              menuRef={settingsRef}
+              labelMode={labelMode}
+              onLabelModeChange={setLabelMode}
+              showVisualizer={showVisualizer}
+              onToggleVisualizer={() => setShowVisualizer((v) => !v)}
+              showNoteRain={showNoteRain}
+              onToggleNoteRain={() => setShowNoteRain((v) => !v)}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={toggleFullscreen}
+              language={language}
+              onToggleLanguage={() => setLanguage(language === "fr" ? "en" : "fr")}
+              shortcuts={shortcuts}
+              onRemapSustain={() => {
+                setStatusMessageAuto(t("remapSustainPrompt"));
+                startRemap("sustain");
+                setSettingsOpen(false);
+              }}
+              onRemapTogglePlayback={() => {
+                setStatusMessageAuto(t("remapPlayPrompt"));
+                startRemap("togglePlayback");
+                setSettingsOpen(false);
+              }}
+              isPlaying={isPlaying}
+              onExportConfig={exportConfig}
+              onImportConfig={() => configInputRef.current?.click()}
+              configInputRef={configInputRef}
+              onConfigFile={(file) => void importConfig(file)}
+              theme={theme}
+              onToggleTheme={toggleTheme}
+            />
+            <span
+              className={`pedal-badge ${sustainOn ? "pedal-on" : ""}`}
+              title={t("sustainHint")}
+            >
+              <SustainIcon />
+              {sustainOn ? t("sustainOn") : t("sustainOff")}
+            </span>
+          </div>
+
+          {/* Refonte IA : Son / Clavier / Boucle vivent dans le panneau
             Studio (tiroir latéral) — la surface principale reste épurée.
             Un chip dans le rappel de transport montre la boucle active. */}
-        <div className="control-group labeled">
-          <span className="group-label">{t("studio")}</span>
-          <button
-            className={`import-btn${studioOpen ? " seg-active studio-btn-on" : ""}`}
-            onClick={() => setStudioOpen((o) => !o)}
-            aria-pressed={studioOpen}
-            aria-label={t("studio")}
-            title={t("studioHint")}
-          >
-            <MixerIcon />
-            {t("studio")}
-          </button>
-          {loopEnabled && (
-            <span
-              className="loop-chip on"
-              title={`${t("loopToggle")}: ${loopStart.toFixed(1)}s → ${loopEnd.toFixed(1)}s`}
+          <div className="control-group labeled">
+            <span className="group-label">{t("studio")}</span>
+            <button
+              className={`import-btn${studioOpen ? " seg-active studio-btn-on" : ""}`}
+              onClick={() => setStudioOpen((o) => !o)}
+              aria-pressed={studioOpen}
+              aria-label={t("studio")}
+              title={t("studioHint")}
             >
-              ⟲ {loopStart.toFixed(1)}–{loopEnd.toFixed(1)}s
-            </span>
-          )}
-        </div>
+              <MixerIcon />
+              {t("studio")}
+            </button>
+            {loopEnabled && (
+              <span
+                className="loop-chip on"
+                title={`${t("loopToggle")}: ${loopStart.toFixed(1)}s → ${loopEnd.toFixed(1)}s`}
+              >
+                ⟲ {loopStart.toFixed(1)}–{loopEnd.toFixed(1)}s
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -877,22 +902,23 @@ function PianoInner({
           onCancel={cancelImport}
         />
       )}
-      {showVisualizer && (() => {
-        // B10 (audit) : support HiDPI — la résolution interne est multipliée
-        // par devicePixelRatio (sinon flou sur écrans Retina), la taille CSS
-        // reste 480×48. Le contexte est mis à l'échelle dans useVisualizer.
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        return (
-          <canvas
-            ref={visualizerCanvasRef}
-            className="waveform-canvas"
-            width={Math.round(480 * dpr)}
-            height={Math.round(48 * dpr)}
-            data-dpr={dpr}
-            aria-label={t("lyricsWave")}
-          />
-        );
-      })()}
+      {showVisualizer &&
+        (() => {
+          // B10 (audit) : support HiDPI — la résolution interne est multipliée
+          // par devicePixelRatio (sinon flou sur écrans Retina), la taille CSS
+          // reste 480×48. Le contexte est mis à l'échelle dans useVisualizer.
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          return (
+            <canvas
+              ref={visualizerCanvasRef}
+              className="waveform-canvas"
+              width={Math.round(480 * dpr)}
+              height={Math.round(48 * dpr)}
+              data-dpr={dpr}
+              aria-label={t("lyricsWave")}
+            />
+          );
+        })()}
       {/* B6 (audit) : les paroles ne s'affichent que pendant la lecture
           automatique — pendant l'echo ou l'apprentissage, le temps de
           lecture est périmé et la ligne serait fausse. */}
@@ -926,11 +952,11 @@ function PianoInner({
         keyStateClass={keyStateClass}
         activeNotes={activeNotes}
         overlay={
-          showNoteRain && selectedPlayableForPlayback ? (
+          showNoteRain && selectedPlayable ? (
             <NoteRain
               active={isPlaying}
               theme={theme}
-              events={selectedPlayableForPlayback.events}
+              events={selectedPlayable.events}
               songDuration={selectedSongDuration}
               speed={speed}
               loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
