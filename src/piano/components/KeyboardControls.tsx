@@ -30,7 +30,8 @@ const KeyboardControls = memo(function KeyboardControls({
 }: KeyboardControlsProps) {
   const { t } = useI18n(language);
   return (
-    <div className="control-group" aria-label={t("groupLayout")}>
+    <div className="control-group labeled" aria-label={t("groupLayout")}>
+      <span className="group-label">{t("groupKeyboard")}</span>
       <div
         className="segmented"
         role="group"

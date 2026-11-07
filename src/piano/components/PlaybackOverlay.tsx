@@ -7,18 +7,23 @@ import { memo, useEffect, useState } from "react";
 import { getTransport } from "../tone-gate";
 import type { Song } from "../songs";
 import { REFERENCE_BPM } from "../constants";
+import { useI18n } from "../useI18n";
+import type { Language } from "../i18n";
 
 interface PlaybackOverlayProps {
   song: Song | undefined;
   songDuration: number;
   speed: number;
+  language: Language;
 }
 
 const PlaybackOverlay = memo(function PlaybackOverlay({
   song,
   songDuration,
   speed,
+  language,
 }: PlaybackOverlayProps) {
+  const { t } = useI18n(language);
   // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
   // pendant la lecture, pour les marqueurs de mesures et les paroles.
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
@@ -35,7 +40,15 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
   // transport.seconds avance donc en temps « réduit » — on le ramène en
   // temps x1 avant de comparer aux lyrics et marqueurs de mesures.
   const speedFactor = Math.max(1, speed) / 100;
-  const songSeconds = playbackSeconds * speedFactor;
+  const songSeconds = Math.min(playbackSeconds * speedFactor, songDuration);
+  // Refonte UI (ergonomie) : timecode + barre de progression — un
+  // lecteur pro montre où en est le morceau, pas seulement des mesures.
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  };
+  const progress = songDuration > 0 ? Math.min(100, (songSeconds / songDuration) * 100) : 0;
   // Paroles synchronisées (roadmap #99) : ligne courante du morceau
   // sélectionné, selon le temps de lecture.
   const currentLyric = song?.lyrics
@@ -48,6 +61,15 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
           {currentLyric?.text ?? "…"}
         </div>
       ) : null}
+      <div className="playback-progress" aria-label={t("playbackPosition")}>
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="playback-time">
+          <strong>{fmt(songSeconds)}</strong>
+          <span className="time-total"> / {fmt(songDuration)}</span>
+        </span>
+      </div>
       <div className="measure-track" aria-hidden="true">
         {/* B11 (audit) : le nombre de mesures est dérivé de la durée
             du morceau (avant : plafond fixe de 32 mesures = 76,8 s à

@@ -51,7 +51,7 @@ vi.mock("./piano/tone-gate", () => ({
     scheduleOnce: vi.fn(),
   }),
   getDestination: () => ({ volume: { value: 0 } }),
-  getDraw: () => ({ schedule: vi.fn() }),
+  getDraw: () => ({ schedule: vi.fn(), cancel: vi.fn() }),
   Part: MockPart,
 }));
 

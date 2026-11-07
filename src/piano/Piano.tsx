@@ -78,8 +78,13 @@ export default function Piano({
   }, []);
   return (
     <>
+      {/* UX (refonte) : la barre de profils vit EN HAUT avec la
+          bibliothèque d'un vrai logiciel — en pied de page elle était
+          invisible et l'utilisateur ne découvrait jamais les profils. */}
+      <div className="piano-topbar">
+        <ProfileBar language={language} onSwitch={handleSwitchProfile} />
+      </div>
       <PianoInner key={profile} language={language} setLanguage={setLanguage} />
-      <ProfileBar language={language} onSwitch={handleSwitchProfile} />
     </>
   );
 }
@@ -640,6 +645,9 @@ function PianoInner({
         role="toolbar"
         aria-label={t("controls")}
       >
+        {/* Refonte UI : la console se lit en deux rangées —
+            transport en haut, réglages son/clavier/boucle dessous. */}
+        <div className="console-row">
         <PlaybackControls
           songs={allSongs}
           selectedSongId={selectedSongId}
@@ -693,31 +701,8 @@ function PianoInner({
           }}
         />
 
-        <SoundControls
-          speed={speed}
-          onSpeedChange={setSpeed}
-          volume={volume}
-          onVolumeChange={setVolume}
-          reverb={reverb}
-          onReverbChange={setReverb}
-          eq={eq}
-          onEqChange={setEq}
-          transpose={transpose}
-          onTransposeChange={setTranspose}
-          isPlaying={isPlaying}
-          language={language}
-        />
-
-        <KeyboardControls
-          octaveShift={octaveShift}
-          onOctaveShiftChange={setOctaveShift}
-          keyboardLayout={keyboardLayout}
-          onLayoutChange={setKeyboardLayout}
-          practiceActive={practice.state.active}
-          language={language}
-        />
-
-        <div className="control-group" aria-label={t("groupDisplay")}>
+        <div className="control-group labeled" aria-label={t("groupDisplay")}>
+          <span className="group-label">{t("groupDisplay")}</span>
           <SettingsMenu
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
@@ -757,19 +742,46 @@ function PianoInner({
             {sustainOn ? t("sustainOn") : t("sustainOff")}
           </span>
         </div>
-      </div>
+        </div>
 
-      <LoopControls
-        loopEnabled={loopEnabled}
-        loopStart={loopStart}
-        loopEnd={loopEnd}
-        songDuration={selectedSongDuration}
-        isPlaying={isPlaying}
-        language={language}
-        onToggle={setLoopEnabled}
-        onStartChange={setLoopStart}
-        onEndChange={setLoopEnd}
-      />
+        <div className="console-row">
+        <SoundControls
+          speed={speed}
+          onSpeedChange={setSpeed}
+          volume={volume}
+          onVolumeChange={setVolume}
+          reverb={reverb}
+          onReverbChange={setReverb}
+          eq={eq}
+          onEqChange={setEq}
+          transpose={transpose}
+          onTransposeChange={setTranspose}
+          isPlaying={isPlaying}
+          language={language}
+        />
+
+        <KeyboardControls
+          octaveShift={octaveShift}
+          onOctaveShiftChange={setOctaveShift}
+          keyboardLayout={keyboardLayout}
+          onLayoutChange={setKeyboardLayout}
+          practiceActive={practice.state.active}
+          language={language}
+        />
+
+        <LoopControls
+          loopEnabled={loopEnabled}
+          loopStart={loopStart}
+          loopEnd={loopEnd}
+          songDuration={selectedSongDuration}
+          isPlaying={isPlaying}
+          language={language}
+          onToggle={setLoopEnabled}
+          onStartChange={setLoopStart}
+          onEndChange={setLoopEnd}
+        />
+        </div>
+      </div>
 
 
 
@@ -846,6 +858,7 @@ function PianoInner({
           song={selectedSong}
           songDuration={selectedSongDuration}
           speed={speed}
+          language={language}
         />
       )}
       <PianoKeyboard

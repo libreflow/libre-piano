@@ -16,6 +16,18 @@
   --stop: #b03030;
   --sustain: #9a6cff;
 
+  /* Refonte UI : tokens de mise en page — une seule source pour
+     les hauteurs, rayons et ombres de l'interface. */
+  --control-h: 2.35rem;
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 7px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.28);
+  --ring: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--accent);
+
   font-family:
     "Inter",
     "Segoe UI",
@@ -53,6 +65,10 @@
   --play: #1e6b34;
   --stop: #9c2828;
   --sustain: #7c5cff;
+  --shadow-sm: 0 1px 3px rgba(24, 28, 50, 0.12),
+    0 4px 14px rgba(24, 28, 50, 0.08);
+  --shadow-md: 0 2px 6px rgba(24, 28, 50, 0.14),
+    0 12px 32px rgba(24, 28, 50, 0.12);
   background-image:
     radial-gradient(ellipse at 20% -10%, rgba(98, 68, 216, 0.06), transparent 50%),
     radial-gradient(ellipse at 90% 110%, rgba(79, 156, 255, 0.05), transparent 50%);
@@ -68,44 +84,51 @@ body {
 
 .container {
   margin: 0 auto;
-  padding: 1.5rem 1.5rem 3rem;
+  padding: 1rem 1.25rem 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
-  max-width: 1200px;
+  gap: 0.9rem;
+  max-width: 1240px;
 }
 
+/* ---------- Barre applicative (refonte) ---------- */
+
 .app-header {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.5rem 0;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .app-header img {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(124, 92, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(124, 92, 255, 0.28);
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   letter-spacing: -0.02em;
   background: linear-gradient(90deg, #e8eaf2, #b8a8ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
 }
 
 .hint {
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  max-width: 640px;
-  margin: -0.5rem 0 0;
+  font-size: 0.85rem;
+  margin: -0.15rem 0 0;
   text-align: center;
 }
 
@@ -114,21 +137,31 @@ body {
   font-weight: 600;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
+  border-bottom-width: 2px;
   border-radius: 5px;
-  padding: 0.05rem 0.4rem;
-  font-size: 0.82rem;
+  padding: 0.02rem 0.38rem;
+  font-size: 0.78rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  white-space: nowrap;
 }
 
 @media (max-width: 700px) {
   .container {
-    padding: 1rem 0.75rem 2rem;
+    padding: 0.75rem 0.6rem 1.5rem;
+  }
+  .app-header {
+    justify-content: center;
+    padding: 0.5rem;
   }
   .app-header img {
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
   }
   .app-header h1 {
-    font-size: 1.3rem;
+    font-size: 1.05rem;
+  }
+  .hint {
+    font-size: 0.78rem;
   }
 }
 
@@ -138,7 +171,8 @@ body {
   padding: 1.5rem 2rem;
   background: var(--bg-panel);
   border: 1px solid var(--stop);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   text-align: center;
 }
 

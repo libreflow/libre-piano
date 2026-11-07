@@ -79,8 +79,10 @@ const PlaybackControls = memo(function PlaybackControls({
   // mémoïsation des <option> enfants).
   const sortedSongs = useMemo(() => sortLibrary(songs), [songs]);
   return (
-    <div className="control-group" aria-label={t("groupPlayback")}>
-      <select
+    <div className="groups-chunk" aria-label={t("groupPlayback")}>
+      <div className="control-group labeled">
+        <span className="group-label">{t("groupLibrary")}</span>
+        <select
         value={selectedSongId}
         onChange={(e) => onSelectSong(e.target.value)}
         // B3 (audit) : désactiver aussi pendant l'echo — changer de morceau
@@ -100,36 +102,39 @@ const PlaybackControls = memo(function PlaybackControls({
           ))}
       </select>
 
-      {selectedSong && (
-        <button
-          className="import-btn"
-          onClick={() => onToggleFavorite(selectedSong.id)}
-          disabled={isPlaying || echoActive}
-          aria-pressed={Boolean(selectedSong.favorite)}
-          title={
-            selectedSong.favorite
-              ? t("removeFavorite")
-              : t("addFavorite")
-          }
-          aria-label={t("toggleFavorite")}
-        >
-          <StarIcon />
-        </button>
-      )}
-      {selectedSong?.source === "imported" && (
-        <button
-          className="import-btn delete-song"
-          onClick={() => onDeleteSong(selectedSong.id)}
-          // B3 (audit) : aussi désactivé pendant l'echo.
-          disabled={isPlaying || isImporting || practiceActive || echoActive}
-          title={t("deleteSongHint")}
-          aria-label={t("deleteSongHint")}
-        >
-          <TrashIcon />
-        </button>
-      )}
+        {selectedSong && (
+          <button
+            className="import-btn icon-btn"
+            onClick={() => onToggleFavorite(selectedSong.id)}
+            disabled={isPlaying || echoActive}
+            aria-pressed={Boolean(selectedSong.favorite)}
+            title={
+              selectedSong.favorite
+                ? t("removeFavorite")
+                : t("addFavorite")
+            }
+            aria-label={t("toggleFavorite")}
+          >
+            <StarIcon />
+          </button>
+        )}
+        {selectedSong?.source === "imported" && (
+          <button
+            className="import-btn icon-btn delete-song"
+            onClick={() => onDeleteSong(selectedSong.id)}
+            // B3 (audit) : aussi désactivé pendant l'echo.
+            disabled={isPlaying || isImporting || practiceActive || echoActive}
+            title={t("deleteSongHint")}
+            aria-label={t("deleteSongHint")}
+          >
+            <TrashIcon />
+          </button>
+        )}
+      </div>
 
-      {!isPlaying ? (
+      <div className="control-group labeled">
+        <span className="group-label">{t("groupTransport")}</span>
+        {!isPlaying ? (
         <button
           className="play-btn"
           onClick={onPlay}
@@ -157,7 +162,7 @@ const PlaybackControls = memo(function PlaybackControls({
         )}
       </button>
       <button
-        className={`import-btn ${isRecording ? "stop-btn" : ""}`}
+        className="import-btn"
         onClick={onToggleRecording}
         // M6 (audit) : l'arrêt d'enregistrement reste possible pendant la
         // lecture — sinon le démarrage de la lecture en plein enregistrement
@@ -166,6 +171,11 @@ const PlaybackControls = memo(function PlaybackControls({
         aria-pressed={isRecording}
         title={isRecording ? t("recordStopHint") : t("recordHint")}
       >
+        {isRecording ? (
+          <span className="rec-dot recording" aria-hidden="true" />
+        ) : (
+          <span className="rec-dot" aria-hidden="true" />
+        )}
         {isRecording ? t("recordStopBtn") : t("recordStart")}
       </button>
       {/* E10 (audit ergonomie) : toujours visible, désactivé si pas d'enregistrement */}
@@ -197,7 +207,10 @@ const PlaybackControls = memo(function PlaybackControls({
         }}
         style={{ display: "none" }}
       />
+      </div>
 
+      <div className="control-group labeled">
+        <span className="group-label">{t("groupModes")}</span>
       <button
         className="import-btn"
         onClick={onTogglePractice}
@@ -217,6 +230,7 @@ const PlaybackControls = memo(function PlaybackControls({
       >
         {t("echoToggle")}
       </button>
+      </div>
     </div>
   );
 });

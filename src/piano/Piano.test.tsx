@@ -66,7 +66,7 @@ vi.mock("./tone-gate", () => ({
     scheduleOnce: vi.fn(),
   }),
   getDestination: () => ({ volume: { value: 0 } }),
-  getDraw: () => ({ schedule: vi.fn() }),
+  getDraw: () => ({ schedule: vi.fn(), cancel: vi.fn() }),
   Part: MockPart,
 }));
 
@@ -101,9 +101,12 @@ describe("Piano (rendu)", () => {
 
   it("affiche les morceaux intégrés dans le sélecteur (une seule option par chanson)", () => {
     render(<Piano />);
-    const selects = screen.getAllByRole("combobox");
-    // Le premier combobox est le sélecteur de morceaux, le second la disposition.
-    const songSelect = selects[0];
+    // Refonte UI : le sélecteur de profils (combobox) vit désormais dans
+    // la barre supérieure AVANT la console — l'index positionnel ne veut
+    // plus rien dire. On cible le sélecteur par son aria-label (E1).
+    const songSelect = screen.getByRole("combobox", {
+      name: "Morceau à jouer",
+    }) as HTMLSelectElement;
     const titles = Array.from(songSelect.querySelectorAll("option")).map(
       (o) => o.textContent
     );

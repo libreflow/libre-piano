@@ -54,7 +54,8 @@ const SoundControls = memo(function SoundControls({
 }: SoundControlsProps) {
   const { t } = useI18n(language);
   return (
-    <div className="control-group" aria-label={t("groupSettings")}>
+    <div className="control-group labeled" aria-label={t("groupSettings")}>
+      <span className="group-label">{t("groupSound")}</span>
       <label className="speed-label">
         {t("speedLabel")}
         <input
