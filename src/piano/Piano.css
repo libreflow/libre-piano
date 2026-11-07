@@ -98,12 +98,12 @@
 }
 
 /* Groupe à libellé : micro-titre de section, comme un canal de console.
-   Le libellé est un marquage visuel (les groupes gardent leur aria-label). */
+   Le libellé est un surcouche (position absolute) : le groupe reste une
+   RANGÉE de contrôles — le libellé vit dans le padding-top réservé.
+   (Audit de la refonte : flex-direction column empilait les contrôles.) */
 .control-group.labeled {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.3rem;
+  position: relative;
+  padding-top: 1.2rem;
   min-width: 0;
 }
 
@@ -119,7 +119,25 @@
   padding-left: 0.6rem;
 }
 
+/* Audit de la refonte : la console alterne chunks et groupes — le
+   sélecteur ".control-group + .control-group" ne matchait pas les
+   voisins de groups-chunk. */
+.groups-chunk + .control-group {
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 0.6rem;
+}
+
+/* La boucle ferme la 2e rangée : même filet que les autres groupes. */
+.control-group + .loop-controls {
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 0.6rem;
+}
+
 .group-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: block;
   font-size: 0.62rem;
   font-weight: 700;
@@ -130,6 +148,8 @@
   user-select: none;
   pointer-events: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Sur écran étroit les groupes passent chacun sur leur propre ligne :
@@ -139,7 +159,9 @@
     gap: 0.5rem;
   }
   .control-group + .control-group,
-  .groups-chunk .control-group + .control-group {
+  .groups-chunk .control-group + .control-group,
+  .groups-chunk + .control-group,
+  .control-group + .loop-controls {
     border-left: none;
     padding-left: 0;
   }
@@ -1139,28 +1161,28 @@ button:active:not(:disabled) {
   text-align: left;
 }
 
+/* Audit de la refonte : le bouton thème vivait en position:fixed et
+   chevauchait la nouvelle barre applicative. Il vit désormais DANS le
+   groupe Affichage, comme les autres contrôles de la console. */
 .theme-toggle {
-  position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
-  z-index: 50;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: var(--control-h);
+  height: var(--control-h);
   padding: 0;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
   border-radius: 50%;
-  background: var(--bg-panel);
+  background: var(--bg-input);
   color: var(--text-primary);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
 }
 
 .theme-toggle:hover {
   border-color: var(--accent);
+  background: var(--bg-panel-hover);
   transform: scale(1.06);
 }
 

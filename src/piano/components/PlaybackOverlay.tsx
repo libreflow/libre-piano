@@ -15,6 +15,9 @@ interface PlaybackOverlayProps {
   songDuration: number;
   speed: number;
   language: Language;
+  /** Fenêtre de lecture boucle A-B (audit refonte : sans elle, le
+   * timecode restait plaqué à 100 % pendant toute la boucle). */
+  loop: { enabled: boolean; start: number; end: number };
 }
 
 const PlaybackOverlay = memo(function PlaybackOverlay({
@@ -22,6 +25,7 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
   songDuration,
   speed,
   language,
+  loop,
 }: PlaybackOverlayProps) {
   const { t } = useI18n(language);
   // Temps de lecture courant (roadmaps #41/#99) : rafraîchi par RAF
@@ -39,8 +43,19 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
   // M4 (audit) : les événements du morceau sont scalés par speedFactor,
   // transport.seconds avance donc en temps « réduit » — on le ramène en
   // temps x1 avant de comparer aux lyrics et marqueurs de mesures.
-  const speedFactor = Math.max(1, speed) / 100;
-  const songSeconds = Math.min(playbackSeconds * speedFactor, songDuration);
+  const speedFactor = speed / 100;
+  // Position dans la fenêtre jouée : en boucle A-B, la lecture tourne
+  // sur la section — le timecode doit défiler DANS la section, pas
+  // rester plaqué à la fin du morceau (audit refonte).
+  const clampedStart = Math.max(0, Math.min(loop.start, songDuration));
+  const clampedEnd = Math.max(clampedStart, Math.min(loop.end, songDuration));
+  const sectionStart = loop.enabled ? clampedStart : 0;
+  const sectionEnd = loop.enabled ? clampedEnd : songDuration;
+  const inSection = Math.min(
+    Math.max(playbackSeconds * speedFactor, 0),
+    Math.max(0, sectionEnd - sectionStart)
+  );
+  const songSeconds = Math.min(inSection + sectionStart, songDuration);
   // Refonte UI (ergonomie) : timecode + barre de progression — un
   // lecteur pro montre où en est le morceau, pas seulement des mesures.
   const fmt = (s: number) => {
@@ -61,11 +76,20 @@ const PlaybackOverlay = memo(function PlaybackOverlay({
           {currentLyric?.text ?? "…"}
         </div>
       ) : null}
-      <div className="playback-progress" aria-label={t("playbackPosition")}>
-        <div className="progress-track">
+      {/* Audit refonte : role=progressbar + valeurs — un aria-label sur
+          une div sans rôle est ignoré par les lecteurs d'écran. */}
+      <div className="playback-progress">
+        <div
+          className="progress-track"
+          role="progressbar"
+          aria-label={t("playbackPosition")}
+          aria-valuemin={0}
+          aria-valuemax={Math.round(songDuration)}
+          aria-valuenow={Math.round(songSeconds)}
+        >
           <div className="progress-fill" style={{ width: `${progress}%` }} />
         </div>
-        <span className="playback-time">
+        <span className="playback-time" aria-hidden="true">
           <strong>{fmt(songSeconds)}</strong>
           <span className="time-total"> / {fmt(songDuration)}</span>
         </span>

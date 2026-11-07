@@ -859,6 +859,7 @@ function PianoInner({
           songDuration={selectedSongDuration}
           speed={speed}
           language={language}
+          loop={{ enabled: loopEnabled, start: loopStart, end: loopEnd }}
         />
       )}
       <PianoKeyboard
