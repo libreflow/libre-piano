@@ -85,6 +85,21 @@ export function useAudioEngine(
   const [status, setStatus] = useState<SamplerStatus>("loading");
   // Progression : nombre de buffers effectivement décodés (n/SAMPLE_COUNT).
   const [loadedCount, setLoadedCount] = useState(0);
+  // M3 (audit) : miroirs des réglages courants — les effets ci-dessous
+  // s'exécutent au montage, AVANT que les nœuds reverb/EQ existent
+  // (créés après le chargement asynchrone des échantillons). Sans ce
+  // pont, les valeurs persistées restaient affichées dans les sliders
+  // mais jamais appliquées à l'audio jusqu'au premier mouvement.
+  const reverbPercentRef = useRef(reverbPercent);
+  const eqSettingsRef = useRef(eq);
+  useEffect(() => {
+    reverbPercentRef.current = reverbPercent;
+  }, [reverbPercent]);
+  useEffect(() => {
+    eqSettingsRef.current = eq;
+  }, [eq]);
+  const clampDb = (v: number) =>
+    Math.max(EQ_MIN_DB, Math.min(EQ_MAX_DB, Number.isFinite(v) ? v : 0));
   // Retry (roadmap #73) : numéro de tentative, incrémenté par
   // l'utilisateur depuis le message d'erreur. L'effect de chargement
   // dépend de ce compteur et se relance proprement (dispose inclus).
@@ -138,10 +153,21 @@ export function useAudioEngine(
       }
       const eq = new EQ3().toDestination();
       trackNodeCreate();
+      // M3 : appliquer les réglages persistés dès la création (les
+      // effets de synchro ont déjà tourné au montage, nœud null).
+      const eqWanted = eqSettingsRef.current;
+      eq.low.value = clampDb(eqWanted.low);
+      eq.mid.value = clampDb(eqWanted.mid);
+      eq.high.value = clampDb(eqWanted.high);
       eqRef.current = eq;
       const reverb = new Reverb({ decay: 2.4, preDelay: 0.02 }).connect(eq);
       trackNodeCreate();
-      reverb.wet.value = 0;
+      // M3 : idem pour la réverbe (wet forcé à 0 par défaut ci-dessus).
+      const pct = Math.max(
+        REVERB_MIN_PERCENT,
+        Math.min(REVERB_MAX_PERCENT, reverbPercentRef.current)
+      );
+      reverb.wet.value = pct / 100;
       reverbRef.current = reverb;
       samplerRef.current = new Sampler({
         urls: samples,

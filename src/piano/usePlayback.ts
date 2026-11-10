@@ -44,6 +44,11 @@ export function usePlayback(
       transport.clear(endEventIdRef.current);
       endEventIdRef.current = null;
     }
+    // m3 (audit) : Tone.Draw garde sa propre timeline (rAF + temps
+    // audio), indépendante du Transport — transport.stop() ne purge pas
+    // les callbacks de surbrillance déjà planifiés : ils tireraient
+    // après l'arrêt et allumeraient des touches sans son.
+    getDraw().cancel();
     partRef.current?.dispose();
     partRef.current = null;
     setIsPlaying(false);

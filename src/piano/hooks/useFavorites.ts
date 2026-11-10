@@ -1,6 +1,7 @@
 // Favoris (refactor Phase A3) : les favoris des morceaux importés sont
-// persistés dans la bibliothèque ; ceux des morceaux intégrés (constantes
-// du module songs) vivent en mémoire dans un Set séparé.
+// persistés dans la bibliothèque ; ceux des morceaux intégrés vivent
+// dans un Set dédié — désormais persisté aussi (audit : ils étaient
+// perdus à chaque redémarrage contrairement aux importés).
 
 import { useCallback, useState } from "react";
 import type { Song } from "../songs";
@@ -19,7 +20,7 @@ export function useFavorites(initialFavoriteIds: string[]) {
     });
   }, []);
 
-  return { builtinFavorites, toggleFavorite };
+  return { builtinFavorites, setBuiltinFavorites, toggleFavorite };
 }
 
 /** Applique les favoris intégrés à la liste fusionnée builtin + importés. */
@@ -35,12 +36,17 @@ export function applyBuiltinFavorites(
   );
 }
 
-/** Tri d'affichage de la bibliothèque : favoris en tête, puis imports
- * récents avant les morceaux intégrés (roadmap #54/#60). */
+/** Tri d'affichage de la bibliothèque (roadmap #54/#60) : favoris en
+ * tête, puis imports récents avant les morceaux intégrés.
+ * m1 (audit) : un seul tri avec comparateur composé. Deux .sort()
+ * chaînés (favoris puis source) rendaient la DERNIÈRE clé primaire :
+ * un favori intégré passait sous un importé non favori. */
 export function sortLibrary(songs: Song[]): Song[] {
-  return [...songs]
-    .sort((a, b) => Number(b.favorite ?? false) - Number(a.favorite ?? false))
-    .sort((a, b) => Number(b.source === "imported") - Number(a.source === "imported"));
+  return [...songs].sort((a, b) => {
+    const favDiff = Number(b.favorite ?? false) - Number(a.favorite ?? false);
+    if (favDiff !== 0) return favDiff;
+    return Number(b.source === "imported") - Number(a.source === "imported");
+  });
 }
 
 /** Identifiants des favoris persistés (importés). */

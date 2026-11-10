@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { useI18n } from "../useI18n";
-import { detectLanguage } from "../i18n";
+import type { Language } from "../i18n";
 import {
   getActiveProfile,
   listProfiles,
@@ -15,15 +15,17 @@ import {
 } from "../storage";
 
 interface ProfileBarProps {
+  /** Langue de l'interface (audit i18n) — n'était plus suivie ici. */
+  language: Language;
   /** Appelé après le changement de profil persisté : remonte Piano (key). */
   onSwitch: (profile: string) => void;
 }
 
-const ProfileBar = function ProfileBar({ onSwitch }: ProfileBarProps) {
+const ProfileBar = function ProfileBar({ language, onSwitch }: ProfileBarProps) {
   const [profile, setProfile] = useState(getActiveProfile);
   const [profiles, setProfiles] = useState(listProfiles);
   const [newProfile, setNewProfile] = useState("");
-  const { t } = useI18n(detectLanguage());
+  const { t } = useI18n(language);
 
   const switchProfile = (next: string) => {
     setActiveProfile(next);

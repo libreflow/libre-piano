@@ -752,6 +752,14 @@ button:active:not(:disabled) {
   vertical-align: middle;
 }
 
+/* UX (audit) : en thème clair le panneau est blanc — l'or clair
+   (#ffd77a) y était illisible (~1.9:1). Variante or foncé. */
+:root[data-theme="light"] .melody-tag {
+  color: #7a5600;
+  background: rgba(255, 200, 90, 0.22);
+  border-color: rgba(186, 133, 20, 0.45);
+}
+
 .melody-tag svg {
   width: 11px;
   height: 11px;

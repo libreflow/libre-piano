@@ -16,7 +16,8 @@
         "width": 1000,
         "height": 650,
         "minWidth": 560,
-        "minHeight": 420
+        "minHeight": 420,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -56,7 +57,7 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "dialog": true,
       "pubkey": "REMPLACER_PAR_LA_CLE_PUBLIQUE_UPDATER",
       "endpoints": [

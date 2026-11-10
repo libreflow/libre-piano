@@ -183,10 +183,19 @@ describe("décalage d'octave automatique pour une note", () => {
     expect(getOctaveShiftForNote("X", 0)).toBeNull();
   });
 
-  it("couvre toutes les notes du piano 88 touches", () => {
+  it("couvre toutes les notes du piano 88 touches au-dessus de C1", () => {
+    // M4 (audit) : la fenêtre ne descend plus sous C1 (shift -2).
+    // A0-B0 (midi 21-23) restent jouables à la souris mais hors de la
+    // fenêtre PC : getOctaveShiftForNote retourne null (défensif) au lieu
+    // de décaler sur des notes fantômes invisibles (C0-B0 sous A0).
     const { keys } = getKeyboardLayout();
     for (const k of keys) {
-      expect(getOctaveShiftForNote(k.note, 0)).not.toBeNull();
+      const shift = getOctaveShiftForNote(k.note, 0);
+      if (k.midi >= 24) {
+        expect(shift).not.toBeNull();
+      } else {
+        expect(shift).toBeNull();
+      }
     }
   });
 });

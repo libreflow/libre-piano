@@ -29,10 +29,11 @@ export async function parseMidiAsync(buffer: ArrayBuffer): Promise<MidiLike> {
           else reject(new Error("Réponse du worker MIDI invalide."));
         };
         worker.onerror = (e) => reject(new Error(e.message || "Erreur du worker MIDI."));
-        // Copie avant transfert : le transfert détache le buffer de
-        // l'appelant — le repli synchrone catch ci-dessous doit pouvoir
-        // relire les mêmes données sur un buffer encore utilisable.
-        worker.postMessage(structuredClone(buffer), [buffer]);
+        // Pas de transfer list : postMessage clone le buffer par
+        // structured clone et l'original reste utilisable côté appelant.
+        // Transférer `[buffer]` détacherait l'original — et le repli
+        // synchrone du catch doit pouvoir relire les mêmes données.
+        worker.postMessage(buffer);
       });
     } finally {
       worker.terminate();

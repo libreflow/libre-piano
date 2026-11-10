@@ -19,6 +19,7 @@ import {
   MoonIcon,
 } from "../icons";
 import { useI18n } from "../useI18n";
+import { formatShortcutCode } from "../useKeyboardInput";
 
 export interface SettingsMenuProps {
   open: boolean;
@@ -170,7 +171,10 @@ const SettingsMenu = memo(function SettingsMenu({
               onClick={onRemapSustain}
               title={t("shortcutPedalHint")}
             >
-              {t("shortcutPedal")} : {shortcuts.sustain === "Space" ? t("sustainOff") : shortcuts.sustain}
+              {t("shortcutPedal")} :{" "}
+              {shortcuts.sustain === "Space"
+                ? t("sustainOff")
+                : formatShortcutCode(shortcuts.sustain)}
             </button>
             <button
               className="import-btn"
@@ -180,7 +184,7 @@ const SettingsMenu = memo(function SettingsMenu({
               {t("shortcutPlay")} :{" "}
               {shortcuts.togglePlayback === "Enter"
                 ? t("keyEnter")
-                : shortcuts.togglePlayback}
+                : formatShortcutCode(shortcuts.togglePlayback)}
             </button>
             <h4>{t("groupConfig")}</h4>
             <button

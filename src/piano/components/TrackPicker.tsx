@@ -2,7 +2,7 @@
 // choisis les pistes à importer, pré-écoute possible.
 // E1 (audit ergonomie) : textes traduits via useI18n.
 
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import { PlayIcon, StopIcon, StarIcon } from "../icons";
 import { DISPLAY_CHORD_RATIO_THRESHOLD } from "../constants";
 import type { PendingImport } from "../useMidiImport";
@@ -35,8 +35,28 @@ const TrackPicker = memo(function TrackPicker({
   onCancel,
 }: TrackPickerProps) {
   const { t } = useI18n(language);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  // UX (audit) : comme ConfirmDialog — Escape annule (le dialogue
+  // n'était pas fermable au clavier) et le focus entre dans le
+  // dialogue au lieu de rester sur la toolbar arrière-plan.
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
   return (
-    <div className="track-picker">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className="track-picker"
+      role="dialog"
+      aria-modal="true"
+      aria-label={interpolate(t("tracksTitle"), { title: pendingImport.title })}
+      style={{ outline: "none" }}
+    >
       <h3>{interpolate(t("tracksTitle"), { title: pendingImport.title })}</h3>
       <p className="track-picker-hint">
         {t("trackPickerHint")}
